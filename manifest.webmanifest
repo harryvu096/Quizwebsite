@@ -1,0 +1,17 @@
+{
+  "name": "AHW Quizverse — VU Exam Arena",
+  "short_name": "AHW Quizverse",
+  "description": "Gamified VU MCQ practice: 68 subjects, 4,152 past-paper style MCQs, levels, streaks, boss battles & certificates. Learn. Play. Conquer.",
+  "start_url": ".",
+  "scope": ".",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#5b21b6",
+  "theme_color": "#7c3aed",
+  "categories": ["education", "games"],
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+  ]
+}
