@@ -846,7 +846,7 @@ section#screen-mock{padding-bottom:80px}
     <div class="cpp-tools">
       <button class="btn btn-green" id="cppRunBtn" onclick="cppRun()">▶ Run</button>
       <button class="btn btn-gray" onclick="cppToggleStdin()">⌨️ Input</button>
-      <span class="ide-hint">Multi-file: main.cpp + .h files — sab sath compile hoti hain (tabs switch karein)</span>
+      <span class="ide-hint">Multi-file: main.cpp + .h files — all files compile together (switch tabs)</span>
     </div>
     <div class="cpp-grid">
       <div>
@@ -859,10 +859,10 @@ section#screen-mock{padding-bottom:80px}
           <textarea id="cppStdin" class="cpp-stdin" rows="3" spellcheck="false"></textarea>
         </div>
         <div class="cpp-lab" style="margin-top:12px">Output Console</div>
-        <pre id="cppOut" class="cpp-out">▶ Run dabayen — GCC 14 chain (Judge0 → Wandbox → proxies → Piston) compile karegi. Internet zaroori hai.</pre>
+        <pre id="cppOut" class="cpp-out">▶ Press Run — the GCC-14 chain (Judge0 → Wandbox → proxies → Piston) compiles your code. Internet required.</pre>
       </div>
       <aside>
-        <div class="cpp-lab">🎯 VU Challenges <span style="opacity:.7">— solve karo, XP kamao!</span></div>
+        <div class="cpp-lab">🎯 VU Challenges <span style="opacity:.7">— solve them, earn XP!</span></div>
         <div class="cat-chips" id="cppChips" data-filter="all" style="margin:6px 0 10px">
           <button class="chip on" onclick="cppFilter('all',this)">All</button>
           <button class="chip" onclick="cppFilter('CS201',this)">CS201</button>
@@ -881,7 +881,7 @@ section#screen-mock{padding-bottom:80px}
   <div class="modal" style="max-width:470px">
     <button class="close-x" onclick="closeModal('modal-cppset')">✖</button>
     <h2>⚙️ Compiler Settings</h2>
-    <p class="sub">Experts ke liye — defaults students ke liye perfect hain.</p>
+    <p class="sub">For experts — the defaults are perfect for students.</p>
     <label style="font-size:12px;font-weight:800;color:#6b6490">C++ Standard</label>
     <select id="setStd" style="width:100%;margin:4px 0 10px;padding:10px;border-radius:10px;border:2px solid #ddd6fe;font-weight:700">
       <option value="c++14">C++14</option><option value="c++17" selected>C++17 (recommended)</option><option value="c++20">C++20</option>
@@ -890,7 +890,7 @@ section#screen-mock{padding-bottom:80px}
     <select id="setOpt" style="width:100%;margin:4px 0 10px;padding:10px;border-radius:10px;border:2px solid #ddd6fe;font-weight:700">
       <option value="-O0" selected>-O0 (fast compile, debug)</option><option value="-O2">-O2 (optimized)</option>
     </select>
-    <label class="vu-check" style="margin:2px 0 10px"><input type="checkbox" id="setWarn"> -Wall warnings enable karein</label>
+    <label class="vu-check" style="margin:2px 0 10px"><input type="checkbox" id="setWarn"> -Wall warnings</label>
     <label style="font-size:12px;font-weight:800;color:#6b6490">Custom Compiler API (Piston-compatible URL — optional)</label>
     <input id="setCustom" style="width:100%;box-sizing:border-box;margin:4px 0 10px;padding:10px;border-radius:10px;border:2px solid #ddd6fe;font-weight:700" placeholder="https://your-piston-server.com">
     <label style="font-size:12px;font-weight:800;color:#6b6490">Editor font size: <span id="setFsVal">13.5</span>px</label>
@@ -905,7 +905,7 @@ section#screen-mock{padding-bottom:80px}
   <div class="modal" style="max-width:520px">
     <button class="close-x" onclick="closeModal('modal-cppsnip')">✖</button>
     <h2>🧩 VU Code Snippets</h2>
-    <p class="sub">Assignment patterns — one tap mein editor mein insert.</p>
+    <p class="sub">Assignment patterns — insert with one tap.</p>
     <div id="cppSnipBody" style="margin-top:10px"></div>
   </div>
 </div>
@@ -1097,7 +1097,7 @@ if(!Object.keys(MCQS).length){
   document.addEventListener("DOMContentLoaded", function(){
     const n=document.getElementById("liveCountNote");
     if(n){ n.style.color="#e21b3c";
-      n.innerHTML="⚠️ MCQ data load nahi ho saki! Sirf index.html kafi nahi — poori folder download karein ya <b>standalone.html</b> wali link kholein."; }
+      n.innerHTML="⚠️ MCQ data could not be loaded! index.html alone is not enough — download the full folder or open the <b>standalone.html</b> link."; }
   });
 }
 
@@ -2507,10 +2507,10 @@ function cppSetCode(code, fname){
 
 /* ---------------- files: new / open(multi) / download ---------------- */
 function cppNewFile(){
-  const n = prompt("Nayi file ka naam:", "file"+(CPP_FILES.length+1)+".cpp");
+  const n = prompt("New file name:", "file"+(CPP_FILES.length+1)+".cpp");
   if(!n) return;
   let name=n.trim(); if(!/\.(cpp|cc|c|h|hpp|txt)$/i.test(name)) name+=".cpp";
-  if(CPP_FILES.some(f=>f.name===name)){ alert("Ye file pehle se khuli hai."); return; }
+  if(CPP_FILES.some(f=>f.name===name)){ alert("This file is already open."); return; }
   CPP_FILES.push({name:name, code:""}); CPP_CUR=CPP_FILES.length-1;
   cppRenderTabs(); cppLoadCurrent(); sfx.click();
 }
@@ -2527,7 +2527,7 @@ function cppOpenFiles(){
         if(i<0){ CPP_FILES.push({name:f.name, code:String(r.result)}); }
         else CPP_FILES[i].code=String(r.result);
         if(--pending===0){ CPP_CUR=CPP_FILES.length-1; cppRenderTabs(); cppLoadCurrent();
-          streakBanner("📂 "+files.length+" file(s) opened — tabs mein switch karein!"); }
+          streakBanner("📂 "+files.length+" file(s) opened — switch tabs to edit them!"); }
       };
       r.readAsText(f);
     });
@@ -2687,7 +2687,7 @@ async function cppRun(){
   const { main, extras } = mainAndExtras();
   const filesArr=[main, ...extras];
   if(!main.code.trim()) return;
-  out.className="cpp-out run"; out.textContent="⏳ compilers race ho rahe hain — sab se fast jeetega...";
+  out.className="cpp-out run"; out.textContent="⏳ Racing compilers — the fastest one wins...";
   const S=profile.cppSettings;
   const jobs=[];
   if(S.customUrl) jobs.push(()=>runPistonAt(S.customUrl, filesArr, stdin));
@@ -2711,7 +2711,7 @@ async function cppRun(){
   if(!result){
     out.className="cpp-out err";
     out.textContent="❌ Sab compilers fail (internet/CORS/rate-limit):\n"+errs.slice(0,7).join("\n")+
-      "\n\n💡 Settings ⚙️ mein apna free Piston server URL dalein = hamesha fast + reliable.";
+      "\n\n💡 Tip: set your own free Piston server URL in Settings for fast, reliable compiles.";
     return;
   }
   CPP_LAST_VIA=result.via;
@@ -2719,7 +2719,7 @@ async function cppRun(){
   if(result.compileErr) txt+="❌ COMPILE ERROR:\n"+result.compileErr+"\n";
   if(result.stdout) txt+="✅ OUTPUT:\n"+result.stdout;
   if(result.stderr) txt+=(result.stdout?"\n":"")+"⚠️ STDERR:\n"+result.stderr+"\n";
-  if(!result.stdout && !result.stderr && !result.compileErr) txt+="(koi output nahi — program ne kuch print nahi kiya)";
+  if(!result.stdout && !result.stderr && !result.compileErr) txt+="(no output — the program printed nothing)";
   if(result.statusDesc) txt+="\n\n[status: "+result.statusDesc+"]";
   out.className="cpp-out "+(result.compileErr?"err":"ok");
   out.textContent=txt;
@@ -2747,97 +2747,97 @@ function cppChallengeCheck(stdout, hadCompileErr){
 /* ---------------- VU CHALLENGES (handout-based, exact-output specs) ---- */
 const CPP_CHALLENGES = [
 { id:"c1", course:"CS201", diff:"Easy", title:"First Program — Hello VU",
-  task:"Print EXACTLY these two lines (no extra spaces):\nAssalam-o-Alaikum, VU!\nCS201 se C++ ka safar shuru!",
-  stdin:"", expected:"Assalam-o-Alaikum, VU!\nCS201 se C++ ka safar shuru!",
-  hint:"cout << \"text\" << endl; do lines print karne ke liye.",
-  starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    // yahan 2 lines print karein\n\n    return 0;\n}\n" },
+  task:"Print EXACTLY these two lines (no extra spaces):\nHello, VU!\nCS201: my C++ journey starts here!",
+  stdin:"", expected:"Hello, VU!\nCS201: my C++ journey starts here!",
+  hint:"Use cout << \"text\" << endl; for each line.",
+  starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    // print the two lines here\n\n    return 0;\n}\n" },
 { id:"c2", course:"CS201", diff:"Easy", title:"Sum of Two Numbers",
-  task:"Do integers input lein (space separated) aur print karein: Sum = X\nExample: input '7 8' -> output 'Sum = 15'",
+  task:"Read two integers (space separated) and print: Sum = X\nExample: input '7 8' -> output 'Sum = 15'",
   stdin:"7 8", expected:"Sum = 15",
-  hint:"cin >> a >> b; phir cout << \"Sum = \" << a+b;",
-  starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int a, b;\n    cin >> a >> b;\n    // Sum print karein exact format mein\n\n    return 0;\n}\n" },
+  hint:"cin >> a >> b; then cout << \"Sum = \" << a+b;",
+  starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int a, b;\n    cin >> a >> b;\n    // print Sum in the exact format\n\n    return 0;\n}\n" },
 { id:"c3", course:"CS201", diff:"Easy", title:"Even or Odd",
-  task:"Ek integer input lein. Agar even ho to print 'Even' warna 'Odd' (sirf ek lafz).",
+  task:"Read one integer. Print 'Even' if it is even, otherwise 'Odd' (single word only).",
   stdin:"8", expected:"Even", hint:"if (n % 2 == 0) ...",
   starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int n;\n    cin >> n;\n\n    return 0;\n}\n" },
 { id:"c4", course:"CS201", diff:"Easy", title:"Table Generator (for loop)",
-  task:"Ek number n input lein aur table 1 se 10 tak print karein, har line ka format:\n5 x 1 = 5 ... 5 x 10 = 50",
+  task:"Read a number n and print its table from 1 to 10. Each line format:\n5 x 1 = 5 ... 5 x 10 = 50",
   stdin:"5", expected:"5 x 1 = 5\n5 x 2 = 10\n5 x 3 = 15\n5 x 4 = 20\n5 x 5 = 25\n5 x 6 = 30\n5 x 7 = 35\n5 x 8 = 40\n5 x 9 = 45\n5 x 10 = 50",
   hint:"for(int i=1;i<=10;i++) cout << n << \" x \" << i << \" = \" << n*i << endl;",
-  starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int n;\n    cin >> n;\n    // for loop likhein\n\n    return 0;\n}\n" },
+  starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int n;\n    cin >> n;\n    // write the for loop here\n\n    return 0;\n}\n" },
 { id:"c5", course:"CS201", diff:"Medium", title:"Factorial (loop practice)",
-  task:"n input lein aur print karein: Factorial = X  (e.g. 5 -> Factorial = 120)",
+  task:"Read n and print: Factorial = X  (e.g. 5 -> Factorial = 120)",
   stdin:"5", expected:"Factorial = 120",
-  hint:"long long use karein; result = 1 se start kar ke multiply karte jayen.",
-  starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int n;\n    cin >> n;\n    long long fact = 1;\n    // loop likhein\n\n    return 0;\n}\n" },
+  hint:"Use long long; start with result = 1 and keep multiplying.",
+  starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int n;\n    cin >> n;\n    long long fact = 1;\n    // write the loop here\n\n    return 0;\n}\n" },
 { id:"c6", course:"CS201", diff:"Easy", title:"Max of Three (if-else)",
-  task:"Teen numbers input lein, print karein: Max = X",
-  stdin:"3 9 4", expected:"Max = 9", hint:"Nested if-else ya && conditions use karein.",
+  task:"Read three numbers and print: Max = X",
+  stdin:"3 9 4", expected:"Max = 9", hint:"Use nested if-else or && conditions.",
   starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int a, b, c;\n    cin >> a >> b >> c;\n\n    return 0;\n}\n" },
 { id:"c7", course:"CS201", diff:"Medium", title:"Reverse a Number (while loop)",
-  task:"Ek number input lein, uska ulta print karein: Reversed = X  (1234 -> Reversed = 4321)",
+  task:"Read a number and print its reverse: Reversed = X  (1234 -> Reversed = 4321)",
   stdin:"1234", expected:"Reversed = 4321", hint:"rev = rev*10 + n%10; n /= 10; while(n>0)",
   starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int n;\n    cin >> n;\n    int rev = 0;\n\n    return 0;\n}\n" },
 { id:"c8", course:"CS201", diff:"Medium", title:"Swap with POINTERS",
-  task:"Do numbers input lein aur POINTERS (& and *) use kar ke swap karein.\nOutput format (2 lines):\nBefore: 3 5\nAfter: 5 3",
+  task:"Read two numbers and swap them using POINTERS (& and *).\nOutput format (2 lines):\nBefore: 3 5\nAfter: 5 3",
   stdin:"3 5", expected:"Before: 3 5\nAfter: 5 3", hint:"void swap(int*, int*); call: swap(&a,&b);",
-  starter:"#include <iostream>\nusing namespace std;\n\nvoid swap(int *x, int *y){\n    // pointer swap likhein\n}\n\nint main(){\n    int a, b;\n    cin >> a >> b;\n    cout << \"Before: \" << a << \" \" << b << endl;\n    // swap call karein\n    // After print karein\n    return 0;\n}\n" },
+  starter:"#include <iostream>\nusing namespace std;\n\nvoid swap(int *x, int *y){\n    // implement the pointer swap here\n}\n\nint main(){\n    int a, b;\n    cin >> a >> b;\n    cout << \"Before: \" << a << \" \" << b << endl;\n    // call swap here\n    // print the After line\n    return 0;\n}\n" },
 { id:"c9", course:"CS201", diff:"Medium", title:"Array Average (2 decimals)",
-  task:"Pehle n, phir n numbers input lein. Print karein: Average = X.XX (exactly 2 decimals).\nInput: 3\\n4 6 8 -> Average = 6.00",
+  task:"Read n, then n numbers. Print: Average = X.XX (exactly 2 decimals).\nInput: 3\\n4 6 8 -> Average = 6.00",
   stdin:"3\n4 6 8", expected:"Average = 6.00",
   hint:"#include <iomanip> ; cout << fixed << setprecision(2)",
   starter:"#include <iostream>\n#include <iomanip>\nusing namespace std;\n\nint main(){\n    int n;\n    cin >> n;\n    int arr[100];\n    // input + sum + average\n\n    return 0;\n}\n" },
 { id:"c10", course:"CS201", diff:"Medium", title:"Prime Checker",
-  task:"n input lein; prime ho to 'Prime' warna 'Not Prime' print karein.",
-  stdin:"7", expected:"Prime", hint:"2 se n/2 tak loop; koi divisor mile to not prime.",
+  task:"Read n; print 'Prime' if it is prime, otherwise 'Not Prime'.",
+  stdin:"7", expected:"Prime", hint:"Loop from 2 to n/2; if any divisor is found, it is not prime.",
   starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int n;\n    cin >> n;\n\n    return 0;\n}\n" },
 { id:"o1", course:"CS304", diff:"Easy", title:"Constructor & Destructor",
-  task:"Ek class banayen jis ka constructor 'Constructor called' aur destructor 'Destructor called' print kare. main mein object banayen.\nExact output:\nConstructor called\nDestructor called",
+  task:"Create a class whose constructor 'Constructor called' and destructor prints 'Destructor called'. Create an object in main.\nExact output:\nConstructor called\nDestructor called",
   stdin:"", expected:"Constructor called\nDestructor called",
   hint:"class Demo { public: Demo(){...} ~Demo(){...} };",
-  starter:"#include <iostream>\nusing namespace std;\n\nclass Demo{\npublic:\n    // constructor & destructor\n};\n\nint main(){\n    // object banayen\n    return 0;\n}\n" },
+  starter:"#include <iostream>\nusing namespace std;\n\nclass Demo{\npublic:\n    // constructor & destructor here\n};\n\nint main(){\n    // create the object here\n    return 0;\n}\n" },
 { id:"o2", course:"CS304", diff:"Medium", title:"Class + Grade Logic",
-  task:"Input: name marks (e.g. 'Ali 84'). Class Student use karein aur print karein:\nName: Ali, Grade: A\nGrade rule: >=80 A, >=65 B, >=50 C, warna F.",
+  task:"Input: name marks (e.g. 'Ali 84'). Use a Student class and print:\nName: Ali, Grade: A\nGrade rule: >=80 A, >=65 B, >=50 C, else F.",
   stdin:"Ali 84", expected:"Name: Ali, Grade: A",
-  hint:"class ke andar string name; int marks; member function grade() rakhein.",
-  starter:"#include <iostream>\n#include <string>\nusing namespace std;\n\nclass Student{\n    string name;\n    int marks;\npublic:\n    // setData / show likhein\n};\n\nint main(){\n\n    return 0;\n}\n" },
+  hint:"Keep string name; int marks; and a member function grade() inside the class.",
+  starter:"#include <iostream>\n#include <string>\nusing namespace std;\n\nclass Student{\n    string name;\n    int marks;\npublic:\n    // write setData / show here\n};\n\nint main(){\n\n    return 0;\n}\n" },
 { id:"o3", course:"CS304", diff:"Medium", title:"Inheritance — Areas",
-  task:"Base class Shape aur derived Rectangle + Circle. Input: w h r (e.g. 4 5 3).\nPrint (2 decimals, pi = 3.14):\nRectangle Area = 20.00\nCircle Area = 28.26",
+  task:"Base class Shape with derived Rectangle + Circle. Input: w h r (e.g. 4 5 3).\nPrint (2 decimals, pi = 3.14):\nRectangle Area = 20.00\nCircle Area = 28.26",
   stdin:"4 5 3", expected:"Rectangle Area = 20.00\nCircle Area = 28.26",
-  hint:"Har derived class mein apna area() — simple inheritance.",
-  starter:"#include <iostream>\n#include <iomanip>\nusing namespace std;\n\nclass Shape{ public: virtual void area(){} };\n// Rectangle & Circle derive karein\n\nint main(){\n    // input w h r, objects banayen\n    return 0;\n}\n" },
+  hint:"Each derived class implements its own area() — simple inheritance.",
+  starter:"#include <iostream>\n#include <iomanip>\nusing namespace std;\n\nclass Shape{ public: virtual void area(){} };\n// derive Rectangle & Circle here\n\nint main(){\n    // read w h r and create the objects\n    return 0;\n}\n" },
 { id:"o4", course:"CS304", diff:"Hard", title:"Operator Overloading (+)",
-  task:"Complex class (real, imag). operator+ overload karein.\nInput: 2 3 4 5  ->  print: Sum = 6+8i",
+  task:"Complex class (real, imag). overload operator+.\nInput: 2 3 4 5  ->  print: Sum = 6+8i",
   stdin:"2 3 4 5", expected:"Sum = 6+8i",
   hint:"Complex operator+(Complex c){ return Complex(real+c.real, imag+c.imag); }",
-  starter:"#include <iostream>\nusing namespace std;\n\nclass Complex{\n    int re, im;\npublic:\n    Complex(int r=0,int i=0):re(r),im(i){}\n    // operator+ overload karein\n    void show(){ cout << \"Sum = \" << re << \"+\" << im << \"i\" << endl; }\n};\n\nint main(){\n    // 4 numbers input, 2 objects, sum.show()\n    return 0;\n}\n" },
+  starter:"#include <iostream>\nusing namespace std;\n\nclass Complex{\n    int re, im;\npublic:\n    Complex(int r=0,int i=0):re(r),im(i){}\n    // overload operator+ here\n    void show(){ cout << \"Sum = \" << re << \"+\" << im << \"i\" << endl; }\n};\n\nint main(){\n    // read 4 numbers, create 2 objects, call sum.show()\n    return 0;\n}\n" },
 { id:"o5", course:"CS304", diff:"Medium", title:"Function Templates",
-  task:"Template function myMax likhein jo do values ka max de. Input: 12 7 -> print: Max = 12",
+  task:"Write a template function myMax that returns the max of two values. Input: 12 7 -> print: Max = 12",
   stdin:"12 7", expected:"Max = 12",
   hint:"template <class T> T myMax(T a, T b){ return (a>b)?a:b; }",
-  starter:"#include <iostream>\nusing namespace std;\n\n// template function yahan\n\nint main(){\n    int a, b;\n    cin >> a >> b;\n    return 0;\n}\n" },
+  starter:"#include <iostream>\nusing namespace std;\n\n// template function here\n\nint main(){\n    int a, b;\n    cin >> a >> b;\n    return 0;\n}\n" },
 { id:"o6", course:"CS304", diff:"Hard", title:"Polymorphism (virtual)",
-  task:"Base Animal* pointers se Cat aur Dog ka sound call karein (virtual function).\nExact output:\nMeow!\nWoof!",
+  task:"Call the Cat and Dog sounds through base Animal* pointers (virtual function).\nExact output:\nMeow!\nWoof!",
   stdin:"", expected:"Meow!\nWoof!",
-  hint:"virtual void sound() base mein; base* ptr = &cat; ptr->sound();",
-  starter:"#include <iostream>\nusing namespace std;\n\nclass Animal{ public: /* virtual sound */ };\n// Cat, Dog classes\n\nint main(){\n    // base pointers se call karein\n    return 0;\n}\n" },
+  hint:"Declare virtual void sound() in the base; then base* ptr = &cat; ptr->sound();",
+  starter:"#include <iostream>\nusing namespace std;\n\nclass Animal{ public: /* virtual sound */ };\n// Cat, Dog classes\n\nint main(){\n    // call through base pointers here\n    return 0;\n}\n" },
 { id:"d1", course:"CS301", diff:"Medium", title:"Stack (array) — Push/Pop",
-  task:"Pehli line n operations. '1 x' = push x, '2' = pop (pop value print karein; khali ho to 'Empty').\nInput:\n5\n1 10\n1 20\n2\n1 30\n2\nOutput:\n20\n30",
+  task:"First line: n operations. '1 x' = push x, '2' = pop (print the popped value; print 'Empty' if the stack is empty).\nInput:\n5\n1 10\n1 20\n2\n1 30\n2\nOutput:\n20\n30",
   stdin:"5\n1 10\n1 20\n2\n1 30\n2", expected:"20\n30",
   hint:"int top=-1; push: arr[++top]=x; pop: arr[top--].",
-  starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int n;\n    cin >> n;\n    int st[100]; int top=-1;\n    // operations loop\n    return 0;\n}\n" },
+  starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int n;\n    cin >> n;\n    int st[100]; int top=-1;\n    // process the operations here\n    return 0;\n}\n" },
 { id:"d2", course:"CS301", diff:"Medium", title:"Linked List — Insert at Head",
-  task:"n values input lein, har nayi value HEAD par insert karein, phir list print karein:\nInput: 3\\n1 2 3 -> List: 3 2 1",
+  task:"Read n values, insert each new value at the HEAD, then print the list:\nInput: 3\\n1 2 3 -> List: 3 2 1",
   stdin:"3\n1 2 3", expected:"List: 3 2 1",
   hint:"struct Node{int d; Node* n;}; head = newNode -> head.",
-  starter:"#include <iostream>\nusing namespace std;\n\nstruct Node{ int data; Node* next; };\n\nint main(){\n    Node* head = nullptr;\n    // insert at head, phir print\n    return 0;\n}\n" },
+  starter:"#include <iostream>\nusing namespace std;\n\nstruct Node{ int data; Node* next; };\n\nint main(){\n    Node* head = nullptr;\n    // insert at head, then print\n    return 0;\n}\n" },
 { id:"d3", course:"CS301", diff:"Medium", title:"Binary Search",
-  task:"Sorted array input: pehle n, phir n sorted numbers, phir key.\nKey mile to 'Found at index i' (0-based), warna 'Not found'.\nInput: 5\\n1 3 5 7 9\\n7 -> Found at index 3",
+  task:"Sorted array input: first n, then n sorted numbers, then the key.\nPrint 'Found at index i' (0-based) if found, otherwise 'Not found'.\nInput: 5\\n1 3 5 7 9\\n7 -> Found at index 3",
   stdin:"5\n1 3 5 7 9\n7", expected:"Found at index 3",
   hint:"low=0, high=n-1; mid=(low+high)/2 compare karte jayen.",
   starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int n; cin >> n;\n    int a[100];\n    // input, key, binary search\n    return 0;\n}\n" },
 { id:"d4", course:"CS301", diff:"Hard", title:"Queue — Enqueue/Dequeue",
-  task:"'1 x' = enqueue, '2' = dequeue (value print; khali ho to 'Empty').\nInput:\n4\n1 5\n1 7\n2\n2\nOutput:\n5\n7",
+  task:"'1 x' = enqueue, '2' = dequeue (print the value; print 'Empty' if empty).\nInput:\n4\n1 5\n1 7\n2\n2\nOutput:\n5\n7",
   stdin:"4\n1 5\n1 7\n2\n2", expected:"5\n7", hint:"front/rear indices; dequeue: q[front++].",
   starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int q[100]; int front=0, rear=0;\n    // operations\n    return 0;\n}\n" }
 ];
@@ -2846,7 +2846,7 @@ const CPP_CHALLENGES = [
 const CPP_SNIPPETS = [
 { name:"Menu-driven program", code:"\n// VU assignment classic: menu-driven program\nint choice;\ndo{\n    cout << \"\\n1. Option A\\n2. Option B\\n0. Exit\\nEnter choice: \";\n    cin >> choice;\n    switch(choice){\n        case 1: cout << \"Option A selected\" << endl; break;\n        case 2: cout << \"Option B selected\" << endl; break;\n        case 0: cout << \"Bye!\" << endl; break;\n        default: cout << \"Invalid choice\" << endl;\n    }\n}while(choice != 0);\n" },
 { name:"Class skeleton", code:"\nclass Student{\nprivate:\n    string name;\n    int rollNo;\n    float marks;\npublic:\n    Student(){ name=\"\"; rollNo=0; marks=0; }\n    Student(string n, int r, float m){ name=n; rollNo=r; marks=m; }\n    void show() const{\n        cout << name << \" (\" << rollNo << \") marks: \" << marks << endl;\n    }\n};\n" },
-{ name:"Header file example (utils.h)", code:"\n// ye code alag file utils.h mein paste karein (New File 📄)\n#ifndef UTILS_H\n#define UTILS_H\n#include <iostream>\nusing namespace std;\n\ninline int square(int x){ return x*x; }\ninline void greet(){ cout << \"Hello from utils.h!\" << endl; }\n#endif\n" },
+{ name:"Header file example (utils.h)", code:"\n// paste this code into a separate file utils.h (New File 📄)\n#ifndef UTILS_H\n#define UTILS_H\n#include <iostream>\nusing namespace std;\n\ninline int square(int x){ return x*x; }\ninline void greet(){ cout << \"Hello from utils.h!\" << endl; }\n#endif\n" },
 { name:"File write + read", code:"\n#include <fstream>\nofstream out(\"data.txt\");\nout << \"Hello from AHW C++ Lab\" << endl;\nout.close();\nifstream in(\"data.txt\");\nstring line;\nwhile(getline(in, line)) cout << line << endl;\nin.close();\n" },
 { name:"Pointer basics", code:"\nint x = 42;\nint *p = &x;\ncout << \"Value: \" << *p << endl;\ncout << \"Address: \" << p << endl;\n*p = 99;\ncout << \"New value: \" << x << endl;\n" },
 { name:"2D array print", code:"\nint mat[2][3] = {{1,2,3},{4,5,6}};\nfor(int i=0;i<2;i++){\n    for(int j=0;j<3;j++) cout << mat[i][j] << \" \";\n    cout << endl;\n}\n" }
@@ -2917,7 +2917,7 @@ function showCppLab(){
   sfx.click();
   cppLoadPersisted();
   if(!CPP_FILES[CPP_CUR].code)
-    CPP_FILES[CPP_CUR].code='#include <iostream>\nusing namespace std;\n\nint main(){\n    cout << "Assalam-o-Alaikum, VU!" << endl;\n    return 0;\n}\n';
+    CPP_FILES[CPP_CUR].code='#include <iostream>\nusing namespace std;\n\nint main(){\n    cout << "Hello, VU!" << endl;\n    return 0;\n}\n';
   cppRenderTabs(); cppLoadCurrent(); cppRenderChallenges();
   show("screen-cpp");
 }

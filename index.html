@@ -366,7 +366,7 @@
     <div class="cpp-tools">
       <button class="btn btn-green" id="cppRunBtn" onclick="cppRun()">▶ Run</button>
       <button class="btn btn-gray" onclick="cppToggleStdin()">⌨️ Input</button>
-      <span class="ide-hint">Multi-file: main.cpp + .h files — sab sath compile hoti hain (tabs switch karein)</span>
+      <span class="ide-hint">Multi-file: main.cpp + .h files — all files compile together (switch tabs)</span>
     </div>
     <div class="cpp-grid">
       <div>
@@ -379,10 +379,10 @@
           <textarea id="cppStdin" class="cpp-stdin" rows="3" spellcheck="false"></textarea>
         </div>
         <div class="cpp-lab" style="margin-top:12px">Output Console</div>
-        <pre id="cppOut" class="cpp-out">▶ Run dabayen — GCC 14 chain (Judge0 → Wandbox → proxies → Piston) compile karegi. Internet zaroori hai.</pre>
+        <pre id="cppOut" class="cpp-out">▶ Press Run — the GCC-14 chain (Judge0 → Wandbox → proxies → Piston) compiles your code. Internet required.</pre>
       </div>
       <aside>
-        <div class="cpp-lab">🎯 VU Challenges <span style="opacity:.7">— solve karo, XP kamao!</span></div>
+        <div class="cpp-lab">🎯 VU Challenges <span style="opacity:.7">— solve them, earn XP!</span></div>
         <div class="cat-chips" id="cppChips" data-filter="all" style="margin:6px 0 10px">
           <button class="chip on" onclick="cppFilter('all',this)">All</button>
           <button class="chip" onclick="cppFilter('CS201',this)">CS201</button>
@@ -401,7 +401,7 @@
   <div class="modal" style="max-width:470px">
     <button class="close-x" onclick="closeModal('modal-cppset')">✖</button>
     <h2>⚙️ Compiler Settings</h2>
-    <p class="sub">Experts ke liye — defaults students ke liye perfect hain.</p>
+    <p class="sub">For experts — the defaults are perfect for students.</p>
     <label style="font-size:12px;font-weight:800;color:#6b6490">C++ Standard</label>
     <select id="setStd" style="width:100%;margin:4px 0 10px;padding:10px;border-radius:10px;border:2px solid #ddd6fe;font-weight:700">
       <option value="c++14">C++14</option><option value="c++17" selected>C++17 (recommended)</option><option value="c++20">C++20</option>
@@ -410,7 +410,7 @@
     <select id="setOpt" style="width:100%;margin:4px 0 10px;padding:10px;border-radius:10px;border:2px solid #ddd6fe;font-weight:700">
       <option value="-O0" selected>-O0 (fast compile, debug)</option><option value="-O2">-O2 (optimized)</option>
     </select>
-    <label class="vu-check" style="margin:2px 0 10px"><input type="checkbox" id="setWarn"> -Wall warnings enable karein</label>
+    <label class="vu-check" style="margin:2px 0 10px"><input type="checkbox" id="setWarn"> -Wall warnings</label>
     <label style="font-size:12px;font-weight:800;color:#6b6490">Custom Compiler API (Piston-compatible URL — optional)</label>
     <input id="setCustom" style="width:100%;box-sizing:border-box;margin:4px 0 10px;padding:10px;border-radius:10px;border:2px solid #ddd6fe;font-weight:700" placeholder="https://your-piston-server.com">
     <label style="font-size:12px;font-weight:800;color:#6b6490">Editor font size: <span id="setFsVal">13.5</span>px</label>
@@ -425,7 +425,7 @@
   <div class="modal" style="max-width:520px">
     <button class="close-x" onclick="closeModal('modal-cppsnip')">✖</button>
     <h2>🧩 VU Code Snippets</h2>
-    <p class="sub">Assignment patterns — one tap mein editor mein insert.</p>
+    <p class="sub">Assignment patterns — insert with one tap.</p>
     <div id="cppSnipBody" style="margin-top:10px"></div>
   </div>
 </div>

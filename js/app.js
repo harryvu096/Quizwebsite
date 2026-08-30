@@ -19,7 +19,7 @@ if(!Object.keys(MCQS).length){
   document.addEventListener("DOMContentLoaded", function(){
     const n=document.getElementById("liveCountNote");
     if(n){ n.style.color="#e21b3c";
-      n.innerHTML="⚠️ MCQ data load nahi ho saki! Sirf index.html kafi nahi — poori folder download karein ya <b>standalone.html</b> wali link kholein."; }
+      n.innerHTML="⚠️ MCQ data could not be loaded! index.html alone is not enough — download the full folder or open the <b>standalone.html</b> link."; }
   });
 }
 
