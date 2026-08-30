@@ -2537,7 +2537,7 @@ function cppOpenFiles(){
 function cppDownload(){
   const f=CPP_FILES[CPP_CUR];
   let name=f.name; if(!/\.(cpp|cc|c|h|hpp)$/i.test(name)) name+=".cpp";
-  const blob=new Blob([f.code],{type:"text/plain"});
+  const blob=new Blob([f.code],{type:"application/octet-stream"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob); a.download=name;
   document.body.appendChild(a); a.click(); a.remove();
@@ -2579,6 +2579,33 @@ function cppSaveSettings(){
    1) custom Piston URL (settings)  2) Judge0 CE direct  3) Wandbox direct
    4) Judge0 via CORS proxy  5) Wandbox via CORS proxy  6) emkc Piston
    ====================================================================== */
+function jfetch(url, opts, ms){
+  opts = opts || {};
+  try{ opts.signal = AbortSignal.timeout(ms || 20000); }catch(e){}
+  return fetch(url, opts);
+}
+async function runGodbolt(filesArr, stdin){
+  if(filesArr.length>1) throw new Error("single-file only");
+  const ids=["g142","g141","g132"];
+  let last="no gcc id";
+  for(const id of ids){
+    const r=await jfetch("https://godbolt.org/api/compiler/"+id+"/compile",{method:"POST",
+      headers:{"Content-Type":"application/json","Accept":"application/json"},
+      body:JSON.stringify({source:filesArr[0].code,
+        options:{userArguments:cppFlags(), execArgs:stdin||"", compilerOptions:{}},
+        filters:{execute:true}})},15000);
+    if(!r.ok){ last="HTTP "+r.status; continue; }
+    const j=await r.json();
+    if(j && (j.code!==undefined || j.execResult)){
+      const ex=j.execResult||{};
+      const compErr=(j.code!==0 && !ex.stdout && (j.stderr||""))? (Array.isArray(j.stderr)?j.stderr.join("\n"):j.stderr) : "";
+      return { via:"Compiler Explorer · "+id, compileErr:compErr,
+        stdout:ex.stdout||j.stdout||"", stderr:ex.stderr||"", code:ex.code!=null?ex.code:(j.code===0?0:1) };
+    }
+    last="bad response";
+  }
+  throw new Error(last);
+}
 const CORS_PROXIES = [
   u => "https://corsproxy.io/?url=" + encodeURIComponent(u),
   u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u)
@@ -2586,7 +2613,7 @@ const CORS_PROXIES = [
 let J0_LANG = null;
 async function j0Pick(){
   if(J0_LANG) return J0_LANG;
-  const r=await fetch("https://ce.judge0.com/languages");
+  const r=await jfetch("https://ce.judge0.com/languages");
   if(!r.ok) throw new Error("HTTP "+r.status);
   const L=await r.json();
   J0_LANG = (L.find(l=>/C\+\+ \(GCC 1[4-9]/.test(l.name)) || L.find(l=>/C\+\+ \(GCC/.test(l.name)) || L.find(l=>l.name.indexOf("C++")===0) || {}).id || 54;
@@ -2599,12 +2626,12 @@ function mainAndExtras(){
   return { main: CPP_FILES[mi], extras: CPP_FILES.filter((_,i)=>i!==mi) };
 }
 async function runPistonAt(base, filesArr, stdin){
-  const rr=await fetch(base+"/api/v2/piston/runtimes");
+  const rr=await jfetch(base+"/api/v2/piston/runtimes");
   if(!rr.ok) throw new Error("runtimes HTTP "+rr.status);
   const list=await rr.json();
   const hit=list.find(x=>x.language==="c++"||(x.aliases||[]).includes("g++"));
   if(!hit) throw new Error("no C++ runtime");
-  const r=await fetch(base+"/api/v2/piston/execute",{method:"POST",headers:{"Content-Type":"application/json"},
+  const r=await jfetch(base+"/api/v2/piston/execute",{method:"POST",headers:{"Content-Type":"application/json"},
     body:JSON.stringify({language:"c++",version:hit.version,
       files:filesArr.map(f=>({name:f.name,content:f.code})),
       stdin:stdin||"", compile_flags:cppFlags().split(" ")})});
@@ -2620,7 +2647,7 @@ async function runJudge0(filesArr, stdin, base){
   const { main, extras } = (()=>{ const m=filesArr[0]; return { main:m, extras:filesArr.slice(1) }; })();
   const body = { source_code: main.code, language_id: lid, stdin: stdin||"", compiler_options: cppFlags() };
   if(extras.length) body.additional_files = extras.map(f=>({name:f.name,content:f.code}));
-  const r=await fetch(base+"/submissions?wait=true&base64_encoded=false",{method:"POST",
+  const r=await jfetch(base+"/submissions?wait=true&base64_encoded=false",{method:"POST",
     headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
   if(r.status===429) throw new Error("rate-limit 429");
   if(!r.ok) throw new Error("HTTP "+r.status);
@@ -2636,7 +2663,7 @@ async function runWandbox(filesArr, stdin, base){
   for(const c of names){
     const body={compiler:c, code:main.code, stdin:stdin||"", compiler_option:cppFlags(), options:"", save:false};
     if(extras.length){ body.files={}; extras.forEach(f=>body.files[f.name]=f.code); }
-    const r=await fetch(base+"/api/compile.json",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    const r=await jfetch(base+"/api/compile.json",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
     if(!r.ok){ last="HTTP "+r.status; continue; }
     const j=await r.json();
     if(j && ("status" in j || "compiler_message" in j || "program_message" in j))
@@ -2650,31 +2677,36 @@ async function cppRun(){
   const out=document.getElementById("cppOut");
   const { main, extras } = mainAndExtras();
   const filesArr=[main, ...extras];
-  if(!main.code.trim()){ return; }
-  out.className="cpp-out run"; out.textContent="⏳ Compiling ("+profile.cppSettings.std.toUpperCase()+") on GCC-14 chain...";
+  if(!main.code.trim()) return;
+  out.className="cpp-out run"; out.textContent="⏳ compilers race ho rahe hain — sab se fast jeetega...";
   const S=profile.cppSettings;
-  const chain=[];
-  if(S.customUrl) chain.push(["Custom", ()=>runPistonAt(S.customUrl, filesArr, stdin)]);
-  chain.push(["Judge0", ()=>runJudge0(filesArr, stdin)]);
-  chain.push(["Wandbox", ()=>runWandbox(filesArr, stdin)]);
-  CORS_PROXIES.forEach(px=>{
-    chain.push(["Judge0⇄proxy", ()=>runJudge0(filesArr, stdin, px("https://ce.judge0.com"))]);
-    chain.push(["Wandbox⇄proxy", ()=>runWandbox(filesArr, stdin, px("https://wandbox.org"))]);
-  });
-  chain.push(["Piston", ()=>runPistonAt("https://emkc.org", filesArr, stdin)]);
-  let result=null; const errs=[];
-  for(const [name, fn] of chain){
-    try{ result=await fn(); break; }
-    catch(e){ errs.push("• "+name+": "+(e.message||e)); }
+  const jobs=[];
+  if(S.customUrl) jobs.push(()=>runPistonAt(S.customUrl, filesArr, stdin));
+  jobs.push(()=>runWandbox(filesArr, stdin));
+  jobs.push(()=>runJudge0(filesArr, stdin));
+  jobs.push(()=>runGodbolt(filesArr, stdin));
+  jobs.push(()=>runJudge0(filesArr, stdin, CORS_PROXIES[0]("https://ce.judge0.com")));
+  jobs.push(()=>runWandbox(filesArr, stdin, CORS_PROXIES[0]("https://wandbox.org")));
+  jobs.push(()=>runPistonAt("https://emkc.org", filesArr, stdin));
+  const t0=Date.now();
+  let result=null, errs=[];
+  try{
+    result = await Promise.any(jobs.map(async fn=>{
+      const r=await fn();
+      r.via += "  ⚡ " + ((Date.now()-t0)/1000).toFixed(1) + "s";
+      return r;
+    }));
+  }catch(e){
+    errs = (e && e.errors) ? e.errors.map(x=>"• "+x.message) : [String(e)];
   }
   if(!result){
     out.className="cpp-out err";
-    out.textContent="❌ Compiler chain fail (internet/CORS/rate-limit):\n"+errs.slice(0,6).join("\n")+
-      "\n\n💡 Tips: 1) dobara try karein (rate-limit)  2) Settings ⚙️ mein apna free Piston/Judge0 server URL dalein — hamesha ke liye hal.";
+    out.textContent="❌ Sab compilers fail (internet/CORS/rate-limit):\n"+errs.slice(0,7).join("\n")+
+      "\n\n💡 Settings ⚙️ mein apna free Piston server URL dalein = hamesha fast + reliable.";
     return;
   }
   CPP_LAST_VIA=result.via;
-  let txt="🔧 "+result.via+"  ·  "+profile.cppSettings.std.toUpperCase()+" "+profile.cppSettings.opt+(profile.cppSettings.warn?" -Wall":"")+"\n──────────────────────────────\n";
+  let txt="🔧 "+result.via+"  ·  "+S.std.toUpperCase()+" "+S.opt+(S.warn?" -Wall":"")+"\n──────────────────────────────\n";
   if(result.compileErr) txt+="❌ COMPILE ERROR:\n"+result.compileErr+"\n";
   if(result.stdout) txt+="✅ OUTPUT:\n"+result.stdout;
   if(result.stderr) txt+=(result.stdout?"\n":"")+"⚠️ STDERR:\n"+result.stderr+"\n";
