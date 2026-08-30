@@ -7,6 +7,19 @@
    - .cpp download / open / auto-save, snippets, VU challenges with XP
    ====================================================================== */
 
+/* Build self-heal: agar index.html aur compiler.js ke versions mix ho jayen
+   (stale cache), ek dafa auto-reload kar ke fresh pair le lo. */
+const AHW_BUILD="ahw7";
+(function(){
+  try{
+    const b=document.body ? document.body.getAttribute("data-build") : null;
+    if(b!==AHW_BUILD && !sessionStorage.getItem("ahw_resync")){
+      sessionStorage.setItem("ahw_resync","1");
+      setTimeout(function(){ location.reload(); }, 50);
+    }
+    if(b===AHW_BUILD) sessionStorage.removeItem("ahw_resync");
+  }catch(e){}
+})();
 /* ---------------- state ---------------- */
 if (!profile.cppSolved || typeof profile.cppSolved !== "object") profile.cppSolved = {};
 if (!profile.cppSettings || typeof profile.cppSettings !== "object")
@@ -56,7 +69,7 @@ function cppCaret(){
 function cppStatus(){
   const el=document.getElementById("cppStatus"); if(!el) return;
   const c=cppCaret(), s=profile.cppSettings;
-  el.innerHTML = "🔧 " + CPP_LAST_VIA + " &nbsp;·&nbsp; " + s.std.toUpperCase() + " " + s.opt + (s.warn?" -Wall":"") +
+  el.innerHTML = "🔧 " + CPP_LAST_VIA + " · " + AHW_BUILD + " &nbsp;·&nbsp; " + s.std.toUpperCase() + " " + s.opt + (s.warn?" -Wall":"") +
     " &nbsp;·&nbsp; Ln " + c.ln + ", Col " + c.col + " &nbsp;·&nbsp; " + CPP_FILES.length + " file(s)";
 }
 function cppEditorSync(){
