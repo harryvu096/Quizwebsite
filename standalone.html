@@ -844,7 +844,7 @@ section#screen-mock{padding-bottom:80px}
     </div>
     <div class="ide-tabs" id="cppTabs"></div>
     <div class="cpp-tools">
-      <button class="btn btn-green" id="cppRunBtn" onclick="cppRun()">▶ Run</button>
+      <button class="btn btn-green" id="cppRunBtn" onclick="cppRunClick()">▶ Run</button>
       <button class="btn btn-gray" onclick="cppToggleStdin()">⌨️ Input</button>
       <span class="ide-hint">Multi-file: main.cpp + .h files — all files compile together (switch tabs)</span>
     </div>
@@ -2538,19 +2538,24 @@ function cppDownload(){
   const f=CPP_FILES[CPP_CUR];
   let name=f.name.replace(/[^\w.\-]+/g,"_");
   if(!/\.(cpp|cc|c|h|hpp)$/i.test(name)) name+=".cpp";
-  window.__CPP_SAVE={name:name, code:f.code};
+  const doBlob=()=>{ const blob=new Blob([f.code],{type:"text/x-c++src"});
+    const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),3000); };
   const swOk = navigator.serviceWorker && navigator.serviceWorker.controller && location.protocol.indexOf("http")===0;
-  const a=document.createElement("a");
   if(swOk){
-    /* SW route: real .cpp URL + Content-Disposition -> har browser .cpp hi save karega */
-    a.href="__save__/"+name; a.download=name;
-    document.body.appendChild(a); a.click(); a.remove();
-  }else{
-    const blob=new Blob([f.code],{type:"text/x-c++src"});
-    a.href=URL.createObjectURL(blob); a.download=name;
-    document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(a.href),3000);
-  }
+    /* page pre-caches the file at a real .cpp URL with Content-Disposition;
+       the SW serves it back => every browser saves it as .cpp */
+    const url="__save__/"+name;
+    const res=new Response(f.code,{status:200,headers:{
+      "Content-Type":"text/x-c++src",
+      "Content-Disposition":"attachment; filename=\""+name+"\""}});
+    caches.open("ahw-save").then(cc=>cc.put(new Request(url),res)).then(()=>{
+      const a=document.createElement("a"); a.href=url; a.download=name;
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(()=>caches.open("ahw-save").then(cc=>cc.delete(new Request(url))).catch(()=>{}),8000);
+    }).catch(doBlob);
+  } else doBlob();
   streakBanner("💾 Downloading "+name);
   sfx.click();
 }
@@ -2681,6 +2686,18 @@ async function runWandbox(filesArr, stdin, base){
   }
   throw new Error(last);
 }
+function cppRunClick(){
+  const code=CPP_FILES[CPP_CUR].code;
+  const needs=/\bcin\b|\bscanf\b|\bgetchar\b/.test(code);
+  const wrap=document.getElementById("cppStdinWrap");
+  if(needs && wrap.style.display==="none"){
+    wrap.style.display=""; 
+    const t=document.getElementById("cppStdin"); if(t) t.focus();
+    streakBanner("⌨️ This program reads input — type it in the Input box, then press Run again.");
+    return;
+  }
+  cppRun();
+}
 async function cppRun(){
   const stdin=document.getElementById("cppStdin").value;
   const out=document.getElementById("cppOut");
@@ -2747,8 +2764,8 @@ function cppChallengeCheck(stdout, hadCompileErr){
 /* ---------------- VU CHALLENGES (handout-based, exact-output specs) ---- */
 const CPP_CHALLENGES = [
 { id:"c1", course:"CS201", diff:"Easy", title:"First Program — Hello VU",
-  task:"Print EXACTLY these two lines (no extra spaces):\nHello, VU!\nCS201: my C++ journey starts here!",
-  stdin:"", expected:"Hello, VU!\nCS201: my C++ journey starts here!",
+  task:"Print EXACTLY these two lines (no extra spaces):\nAssalam o Alaikum, VU!\nCS201: my C++ journey starts here!",
+  stdin:"", expected:"Assalam o Alaikum, VU!\nCS201: my C++ journey starts here!",
   hint:"Use cout << \"text\" << endl; for each line.",
   starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    // print the two lines here\n\n    return 0;\n}\n" },
 { id:"c2", course:"CS201", diff:"Easy", title:"Sum of Two Numbers",
@@ -2903,21 +2920,12 @@ function cppSnippets(){
   openModal("modal-cppsnip");
 }
 
-/* SW download bridge: jab SW __save__ route puche to current file bhejo */
-if (navigator.serviceWorker){
-  navigator.serviceWorker.addEventListener("message", function(e){
-    if(e.data && e.data.type==="GET_SAVE" && e.ports && e.ports[0]){
-      e.ports[0].postMessage(window.__CPP_SAVE || {name:"program.cpp", code:""});
-    }
-  });
-}
-
 /* ---------------- boot ---------------- */
 function showCppLab(){
   sfx.click();
   cppLoadPersisted();
   if(!CPP_FILES[CPP_CUR].code)
-    CPP_FILES[CPP_CUR].code='#include <iostream>\nusing namespace std;\n\nint main(){\n    cout << "Hello, VU!" << endl;\n    return 0;\n}\n';
+    CPP_FILES[CPP_CUR].code='#include <iostream>\nusing namespace std;\n\nint main(){\n    cout << "Assalam o Alaikum, VU!" << endl;\n    return 0;\n}\n';
   cppRenderTabs(); cppLoadCurrent(); cppRenderChallenges();
   show("screen-cpp");
 }
