@@ -479,6 +479,26 @@ section#screen-mock{padding-bottom:80px}
 .cpp-ch-btns{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
 .cpp-hint{margin-top:8px;font-size:12px;color:#7a5c00;background:#fff8e1;border-radius:8px;padding:8px 10px;font-weight:700}
 
+/* ---------- C++ LAB v2 IDE ---------- */
+.ide-top{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;background:#0f172a;border-radius:14px 14px 0 0;padding:8px 12px}
+.ide-brand{font-weight:900;color:#fff;font-size:16px;letter-spacing:.3px}
+.ide-brand span{font-size:10.5px;color:#94a3b8;font-weight:700;margin-left:6px;letter-spacing:1px;text-transform:uppercase}
+.ide-actions{display:flex;gap:6px;flex-wrap:wrap}
+.ide-tabs{display:flex;gap:4px;overflow-x:auto;background:#16213e;padding:6px 8px 0;border-radius:0}
+.ide-tab{display:flex;align-items:center;gap:8px;background:#1e293b;color:#cbd5e1;font:700 12px Consolas,Menlo,monospace;padding:8px 12px;border-radius:10px 10px 0 0;cursor:pointer;white-space:nowrap;border:1px solid #334155;border-bottom:none}
+.ide-tab.on{background:#0f172a;color:#facc15;border-color:#7c3aed}
+.ide-tabx{color:#64748b;font-size:11px;padding:0 2px}
+.ide-tabx:hover{color:#f87171}
+.ide-hint{font-size:11px;font-weight:700;color:#e9d5ff;opacity:.85}
+.cpp-status{margin-top:12px;background:#0f172a;color:#94a3b8;border:1px solid #334155;border-radius:10px;padding:7px 12px;font:700 11px Consolas,Menlo,monospace;overflow-x:auto;white-space:nowrap}
+.ced-wrap{border-radius:0 0 14px 14px;height:380px}
+.ced-wrap.light{background:#fdfdfb}
+.ced-wrap.light .ced-gutter{background:#f1f0ec;color:#8a8a86}
+.ced-wrap.light #cedHl{color:#1e293b}
+.ced-wrap.light textarea{caret-color:#7c3aed}
+.ced-wrap.light .tk-k{color:#7c3aed}.ced-wrap.light .tk-s{color:#15803d}.ced-wrap.light .tk-c{color:#94a3b8}.ced-wrap.light .tk-n{color:#b45309}.ced-wrap.light .tk-p{color:#be185d}
+@media(max-width:640px){.ced-wrap{height:300px}.ide-hint{display:none}}
+
 </style>
 </head>
 <body>
@@ -809,21 +829,24 @@ section#screen-mock{padding-bottom:80px}
     <div id="mrBody" style="margin-top:16px"></div>
   </section>
 
-  <!-- ============ C++ LAB (online compiler + VU challenges) ============ -->
+  <!-- ============ C++ LAB v2 (mini-IDE: multi-file + settings) ============ -->
   <section id="screen-cpp" class="screen">
-    <div class="topbar">
-      <div class="mini-logo" onclick="goHome()" style="cursor:pointer" title="Home">💻 C++ Lab <span style="opacity:.8;font-size:13px">· CS201 · CS301 · CS304 · VU</span></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div class="ide-top">
+      <div class="ide-brand" onclick="goHome()" style="cursor:pointer" title="Home">💻 C++ Lab <span>VU Edition · mini-IDE</span></div>
+      <div class="ide-actions">
         <button class="icon-btn" onclick="goHome()" title="Home" aria-label="Home">🏠</button>
-        <button class="icon-btn" onclick="cppOpenFile()" title="Open .cpp file" aria-label="Open .cpp file">📂</button>
-        <button class="icon-btn" onclick="cppDownload()" title="Download .cpp file" aria-label="Download .cpp">💾</button>
-        <button class="icon-btn" onclick="cppSnippets()" title="Code snippets" aria-label="Snippets">🧩</button>
+        <button class="icon-btn" onclick="cppNewFile()" title="New file" aria-label="New file">📄</button>
+        <button class="icon-btn" onclick="cppOpenFiles()" title="Open files (multiple allowed)" aria-label="Open files">📂</button>
+        <button class="icon-btn" onclick="cppDownload()" title="Download current file (.cpp)" aria-label="Download">💾</button>
+        <button class="icon-btn" onclick="cppSnippets()" title="VU snippets" aria-label="Snippets">🧩</button>
+        <button class="icon-btn" onclick="cppSettings()" title="Compiler settings" aria-label="Settings">⚙️</button>
       </div>
     </div>
+    <div class="ide-tabs" id="cppTabs"></div>
     <div class="cpp-tools">
-      <input id="cppFileName" class="cpp-fname" value="program.cpp" spellcheck="false" title="File name">
-      <button class="btn btn-green" id="cppRunBtn" onclick="cppRun()">▶ Run Code</button>
+      <button class="btn btn-green" id="cppRunBtn" onclick="cppRun()">▶ Run</button>
       <button class="btn btn-gray" onclick="cppToggleStdin()">⌨️ Input</button>
+      <span class="ide-hint">Multi-file: main.cpp + .h files — sab sath compile hoti hain (tabs switch karein)</span>
     </div>
     <div class="cpp-grid">
       <div>
@@ -836,7 +859,7 @@ section#screen-mock{padding-bottom:80px}
           <textarea id="cppStdin" class="cpp-stdin" rows="3" spellcheck="false"></textarea>
         </div>
         <div class="cpp-lab" style="margin-top:12px">Output Console</div>
-        <pre id="cppOut" class="cpp-out">▶ Run dabayen — aap ka code remote g++ server par compile &amp; run hoga. Internet zaroori hai.</pre>
+        <pre id="cppOut" class="cpp-out">▶ Run dabayen — GCC 14 chain (Judge0 → Wandbox → proxies → Piston) compile karegi. Internet zaroori hai.</pre>
       </div>
       <aside>
         <div class="cpp-lab">🎯 VU Challenges <span style="opacity:.7">— solve karo, XP kamao!</span></div>
@@ -849,7 +872,32 @@ section#screen-mock{padding-bottom:80px}
         <div id="cppChList"></div>
       </aside>
     </div>
+    <div class="cpp-status" id="cppStatus">🔧 —</div>
   </section>
+</div>
+
+<!-- ============ C++ SETTINGS MODAL ============ -->
+<div class="modal-bg" id="modal-cppset">
+  <div class="modal" style="max-width:470px">
+    <button class="close-x" onclick="closeModal('modal-cppset')">✖</button>
+    <h2>⚙️ Compiler Settings</h2>
+    <p class="sub">Experts ke liye — defaults students ke liye perfect hain.</p>
+    <label style="font-size:12px;font-weight:800;color:#6b6490">C++ Standard</label>
+    <select id="setStd" style="width:100%;margin:4px 0 10px;padding:10px;border-radius:10px;border:2px solid #ddd6fe;font-weight:700">
+      <option value="c++14">C++14</option><option value="c++17" selected>C++17 (recommended)</option><option value="c++20">C++20</option>
+    </select>
+    <label style="font-size:12px;font-weight:800;color:#6b6490">Optimization</label>
+    <select id="setOpt" style="width:100%;margin:4px 0 10px;padding:10px;border-radius:10px;border:2px solid #ddd6fe;font-weight:700">
+      <option value="-O0" selected>-O0 (fast compile, debug)</option><option value="-O2">-O2 (optimized)</option>
+    </select>
+    <label class="vu-check" style="margin:2px 0 10px"><input type="checkbox" id="setWarn"> -Wall warnings enable karein</label>
+    <label style="font-size:12px;font-weight:800;color:#6b6490">Custom Compiler API (Piston-compatible URL — optional)</label>
+    <input id="setCustom" style="width:100%;box-sizing:border-box;margin:4px 0 10px;padding:10px;border-radius:10px;border:2px solid #ddd6fe;font-weight:700" placeholder="https://your-piston-server.com">
+    <label style="font-size:12px;font-weight:800;color:#6b6490">Editor font size: <span id="setFsVal">13.5</span>px</label>
+    <input type="range" id="setFs" min="12" max="18" step="0.5" value="13.5" style="width:100%;margin:4px 0 10px" oninput="document.getElementById('setFsVal').textContent=this.value">
+    <label class="vu-check" style="margin:2px 0 12px"><input type="checkbox" id="setLight"> Light editor theme</label>
+    <div class="btn-row" style="justify-content:center"><button class="btn btn-green" onclick="cppSaveSettings()">✅ Save Settings</button></div>
+  </div>
 </div>
 
 <!-- ============ C++ SNIPPETS MODAL ============ -->
@@ -2356,20 +2404,307 @@ globalThis.AHW={SUBJECTS,profile,getG:()=>G};
 </script>
 <script>
 /* ======================================================================
-   AHW QUIZVERSE - C++ LAB (c) 2026 AHW Quizverse / All VU Students.
-   Online C++ compiler for VU students (CS201 / CS301 / CS304).
-   - Real compile+run via free Piston API (emkc.org) - no key needed
-   - Editor with line numbers + syntax highlighting
-   - .cpp download / open / auto-save
-   - VU handout-based challenges with AUTO-CHECK + XP rewards
+   AHW QUIZVERSE - C++ LAB v2 (mini-IDE) (c) 2026 AHW Quizverse / All VU Students.
+   - Multi-file tabs (main.cpp + headers), open several files at once
+   - Real compile+run: Judge0 CE (GCC 14) -> Wandbox (GCC 14) -> CORS-proxy
+     fallbacks -> Piston (self-host support via Settings)
+   - Settings: C++ standard, -O0/-O2, -Wall, custom API URL, font size, theme
+   - .cpp download / open / auto-save, snippets, VU challenges with XP
    ====================================================================== */
 
-const CPP_XP = { Easy: 10, Medium: 15, Hard: 25 };
+/* ---------------- state ---------------- */
 if (!profile.cppSolved || typeof profile.cppSolved !== "object") profile.cppSolved = {};
+if (!profile.cppSettings || typeof profile.cppSettings !== "object")
+  profile.cppSettings = { std:"c++17", opt:"-O0", warn:false, customUrl:"", fontSize:13.5, light:false };
+const CPP_XP = { Easy: 10, Medium: 15, Hard: 25 };
 
-/* ---------------- VU CHALLENGES (handout-based, exact-output specs) --- */
+let CPP_FILES = [{ name:"main.cpp", code:"" }];
+let CPP_CUR = 0;
+let CPP_ACTIVE = null;
+let CPP_LAST_VIA = "—";
+
+function cppFlags(){
+  const s = profile.cppSettings;
+  return ("-std=" + s.std + " " + (s.opt||"-O0") + (s.warn ? " -Wall" : "")).trim();
+}
+function cppPersist(){
+  try{ localStorage.setItem("ahw_cpp_files", JSON.stringify(CPP_FILES));
+       localStorage.setItem("ahw_cpp_cur", String(CPP_CUR)); }catch(e){}
+}
+function cppLoadPersisted(){
+  try{
+    const f = localStorage.getItem("ahw_cpp_files");
+    if(f){ const arr = JSON.parse(f); if(Array.isArray(arr) && arr.length && arr[0].name) CPP_FILES = arr; }
+    CPP_CUR = Math.min(CPP_FILES.length-1, parseInt(localStorage.getItem("ahw_cpp_cur")||"0",10)||0);
+  }catch(e){}
+  if(!CPP_FILES[CPP_CUR]) CPP_CUR = 0;
+}
+
+/* ---------------- editor core ---------------- */
+function cppEscape(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function cppHighlight(src){
+  const re=/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|(\"(?:[^\"\\\n]|\\.)*\"|'(?:[^'\\\n]|\\.)*')|(^ *#[a-z]+)|\b(int|float|double|char|bool|void|long|short|unsigned|signed|class|struct|public|private|protected|virtual|override|template|typename|namespace|using|new|delete|return|if|else|for|while|do|switch|case|break|continue|default|const|static|this|true|false|nullptr|include|iostream|fstream|sstream|iomanip|string|vector|cin|cout|endl|main)\b|(\b\d+(\.\d+)?\b)/gm;
+  return cppEscape(src).replace(re, function(m, com, str, pre, kw, num){
+    if(com) return '<span class="tk-c">'+m+'</span>';
+    if(str) return '<span class="tk-s">'+m+'</span>';
+    if(pre) return '<span class="tk-p">'+m+'</span>';
+    if(kw)  return '<span class="tk-k">'+m+'</span>';
+    if(num) return '<span class="tk-n">'+m+'</span>';
+    return m;
+  });
+}
+function cppCaret(){
+  const ta=document.getElementById("cedCode"); if(!ta) return {ln:1,col:1};
+  const upto=ta.value.slice(0, ta.selectionStart||0).split("\n");
+  return { ln: upto.length, col: upto[upto.length-1].length+1 };
+}
+function cppStatus(){
+  const el=document.getElementById("cppStatus"); if(!el) return;
+  const c=cppCaret(), s=profile.cppSettings;
+  el.innerHTML = "🔧 " + CPP_LAST_VIA + " &nbsp;·&nbsp; " + s.std.toUpperCase() + " " + s.opt + (s.warn?" -Wall":"") +
+    " &nbsp;·&nbsp; Ln " + c.ln + ", Col " + c.col + " &nbsp;·&nbsp; " + CPP_FILES.length + " file(s)";
+}
+function cppEditorSync(){
+  const ta=document.getElementById("cedCode"), pre=document.getElementById("cedHl"), gut=document.getElementById("cedGutter");
+  if(!ta) return;
+  CPP_FILES[CPP_CUR].code = ta.value;
+  pre.innerHTML = cppHighlight(ta.value) + "\n";
+  gut.textContent = ta.value.split("\n").map((_,i)=>i+1).join("\n");
+  pre.scrollTop = ta.scrollTop; gut.scrollTop = ta.scrollTop;
+  const rb=document.getElementById("cppRunBtn"); if(rb) rb.disabled = !ta.value.trim();
+  cppPersist(); cppStatus();
+}
+function cppRenderTabs(){
+  const wrap=document.getElementById("cppTabs"); if(!wrap) return;
+  wrap.innerHTML="";
+  CPP_FILES.forEach((f,i)=>{
+    const t=document.createElement("div");
+    t.className="ide-tab"+(i===CPP_CUR?" on":"");
+    t.innerHTML='<span class="ide-tabname"></span>'+(CPP_FILES.length>1?'<span class="ide-tabx" title="Close">✕</span>':"");
+    t.querySelector(".ide-tabname").textContent=f.name;
+    t.onclick=()=>{ if(i!==CPP_CUR){ CPP_CUR=i; cppLoadCurrent(); } };
+    const x=t.querySelector(".ide-tabx");
+    if(x) x.onclick=(e)=>{ e.stopPropagation(); CPP_FILES.splice(i,1); CPP_CUR=Math.max(0,Math.min(CPP_CUR, CPP_FILES.length-1)); if(!CPP_FILES.length) CPP_FILES=[{name:"main.cpp",code:""}]; cppRenderTabs(); cppLoadCurrent(); };
+    wrap.appendChild(t);
+  });
+}
+function cppLoadCurrent(){
+  const ta=document.getElementById("cedCode");
+  ta.value = CPP_FILES[CPP_CUR].code;
+  cppRenderTabs(); cppEditorSync(); cppApplyTheme();
+}
+function cppApplyTheme(){
+  const s=profile.cppSettings;
+  const w=document.querySelector(".ced-wrap"); if(w) w.classList.toggle("light", !!s.light);
+  ["cedCode","cedHl","cedGutter"].forEach(id=>{ const e=document.getElementById(id); if(e) e.style.fontSize=s.fontSize+"px"; });
+}
+function cppSetCode(code, fname){
+  let i = CPP_FILES.findIndex(f=>f.name===fname);
+  if(i<0){ CPP_FILES.push({name:fname, code:code}); i=CPP_FILES.length-1; }
+  else CPP_FILES[i].code = code;
+  CPP_CUR=i; cppLoadCurrent();
+}
+
+/* ---------------- files: new / open(multi) / download ---------------- */
+function cppNewFile(){
+  const n = prompt("Nayi file ka naam:", "file"+(CPP_FILES.length+1)+".cpp");
+  if(!n) return;
+  let name=n.trim(); if(!/\.(cpp|cc|c|h|hpp|txt)$/i.test(name)) name+=".cpp";
+  if(CPP_FILES.some(f=>f.name===name)){ alert("Ye file pehle se khuli hai."); return; }
+  CPP_FILES.push({name:name, code:""}); CPP_CUR=CPP_FILES.length-1;
+  cppRenderTabs(); cppLoadCurrent(); sfx.click();
+}
+function cppOpenFiles(){
+  const inp=document.createElement("input");
+  inp.type="file"; inp.multiple=true; inp.accept=".cpp,.cc,.c,.h,.hpp,.txt";
+  inp.onchange=()=>{
+    const files=[...(inp.files||[])]; if(!files.length) return;
+    let pending=files.length;
+    files.forEach(f=>{
+      const r=new FileReader();
+      r.onload=()=>{ 
+        let i=CPP_FILES.findIndex(x=>x.name===f.name);
+        if(i<0){ CPP_FILES.push({name:f.name, code:String(r.result)}); }
+        else CPP_FILES[i].code=String(r.result);
+        if(--pending===0){ CPP_CUR=CPP_FILES.length-1; cppRenderTabs(); cppLoadCurrent();
+          streakBanner("📂 "+files.length+" file(s) opened — tabs mein switch karein!"); }
+      };
+      r.readAsText(f);
+    });
+  };
+  inp.click();
+}
+function cppDownload(){
+  const f=CPP_FILES[CPP_CUR];
+  let name=f.name; if(!/\.(cpp|cc|c|h|hpp)$/i.test(name)) name+=".cpp";
+  const blob=new Blob([f.code],{type:"text/plain"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob); a.download=name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  streakBanner("💾 Downloaded "+name);
+  sfx.click();
+}
+function cppToggleStdin(){
+  const w=document.getElementById("cppStdinWrap");
+  w.style.display = w.style.display==="none" ? "" : "none";
+}
+
+/* ---------------- settings ---------------- */
+function cppSettings(){
+  const s=profile.cppSettings;
+  document.getElementById("setStd").value=s.std;
+  document.getElementById("setOpt").value=s.opt;
+  document.getElementById("setWarn").checked=!!s.warn;
+  document.getElementById("setCustom").value=s.customUrl||"";
+  document.getElementById("setFs").value=s.fontSize;
+  document.getElementById("setFsVal").textContent=s.fontSize;
+  document.getElementById("setLight").checked=!!s.light;
+  openModal("modal-cppset");
+}
+function cppSaveSettings(){
+  const s=profile.cppSettings;
+  s.std=document.getElementById("setStd").value;
+  s.opt=document.getElementById("setOpt").value;
+  s.warn=document.getElementById("setWarn").checked;
+  s.customUrl=(document.getElementById("setCustom").value||"").trim().replace(/\/+$/,"");
+  s.fontSize=parseFloat(document.getElementById("setFs").value)||13.5;
+  s.light=document.getElementById("setLight").checked;
+  save(); cppApplyTheme(); cppStatus(); closeModal("modal-cppset");
+  streakBanner("⚙️ Settings saved: "+s.std.toUpperCase()+" "+s.opt+(s.warn?" -Wall":""));
+}
+
+/* ======================================================================
+   COMPILER PROVIDERS — modern resilient chain
+   1) custom Piston URL (settings)  2) Judge0 CE direct  3) Wandbox direct
+   4) Judge0 via CORS proxy  5) Wandbox via CORS proxy  6) emkc Piston
+   ====================================================================== */
+const CORS_PROXIES = [
+  u => "https://corsproxy.io/?url=" + encodeURIComponent(u),
+  u => "https://api.allorigins.win/raw?url=" + encodeURIComponent(u)
+];
+let J0_LANG = null;
+async function j0Pick(){
+  if(J0_LANG) return J0_LANG;
+  const r=await fetch("https://ce.judge0.com/languages");
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  const L=await r.json();
+  J0_LANG = (L.find(l=>/C\+\+ \(GCC 1[4-9]/.test(l.name)) || L.find(l=>/C\+\+ \(GCC/.test(l.name)) || L.find(l=>l.name.indexOf("C++")===0) || {}).id || 54;
+  return J0_LANG;
+}
+function mainAndExtras(){
+  let mi = CPP_CUR;
+  if(!/\.cpp$/i.test(CPP_FILES[mi].name)) mi = CPP_FILES.findIndex(f=>/\.cpp$/i.test(f.name));
+  if(mi<0) mi=0;
+  return { main: CPP_FILES[mi], extras: CPP_FILES.filter((_,i)=>i!==mi) };
+}
+async function runPistonAt(base, filesArr, stdin){
+  const rr=await fetch(base+"/api/v2/piston/runtimes");
+  if(!rr.ok) throw new Error("runtimes HTTP "+rr.status);
+  const list=await rr.json();
+  const hit=list.find(x=>x.language==="c++"||(x.aliases||[]).includes("g++"));
+  if(!hit) throw new Error("no C++ runtime");
+  const r=await fetch(base+"/api/v2/piston/execute",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({language:"c++",version:hit.version,
+      files:filesArr.map(f=>({name:f.name,content:f.code})),
+      stdin:stdin||"", compile_flags:cppFlags().split(" ")})});
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  const j=await r.json();
+  if(j.message) throw new Error(j.message);
+  return { via:"Piston · g++ "+hit.version, compileErr:(j.compile&&j.compile.stderr)||"",
+    stdout:(j.run&&j.run.stdout)||"", stderr:(j.run&&j.run.stderr)||"", code:j.run?j.run.code:1 };
+}
+async function runJudge0(filesArr, stdin, base){
+  base = base || "https://ce.judge0.com";
+  const lid = await j0Pick();
+  const { main, extras } = (()=>{ const m=filesArr[0]; return { main:m, extras:filesArr.slice(1) }; })();
+  const body = { source_code: main.code, language_id: lid, stdin: stdin||"", compiler_options: cppFlags() };
+  if(extras.length) body.additional_files = extras.map(f=>({name:f.name,content:f.code}));
+  const r=await fetch(base+"/submissions?wait=true&base64_encoded=false",{method:"POST",
+    headers:{"Content-Type":"application/json"}, body:JSON.stringify(body)});
+  if(r.status===429) throw new Error("rate-limit 429");
+  if(!r.ok) throw new Error("HTTP "+r.status);
+  const j=await r.json();
+  return { via:"Judge0 · GCC 14", compileErr:j.compile_output||"", stdout:j.stdout||"",
+    stderr:j.stderr||"", code:(j.status&&j.status.id===3)?0:1, statusDesc:j.status?j.status.description:"" };
+}
+async function runWandbox(filesArr, stdin, base){
+  base = base || "https://wandbox.org";
+  const names=["gcc-14.2.0","gcc-14.1.0","gcc-head"];
+  let last="unreachable";
+  const { main, extras } = (()=>{ const m=filesArr[0]; return { main:m, extras:filesArr.slice(1) }; })();
+  for(const c of names){
+    const body={compiler:c, code:main.code, stdin:stdin||"", compiler_option:cppFlags(), options:"", save:false};
+    if(extras.length){ body.files={}; extras.forEach(f=>body.files[f.name]=f.code); }
+    const r=await fetch(base+"/api/compile.json",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify(body)});
+    if(!r.ok){ last="HTTP "+r.status; continue; }
+    const j=await r.json();
+    if(j && ("status" in j || "compiler_message" in j || "program_message" in j))
+      return { via:"Wandbox · "+c, compileErr:j.compiler_message||"", stdout:j.program_message||"", stderr:j.stderr||"", code:(j.status!=null&&parseInt(j.status,10)===0)?0:1 };
+    last="bad response";
+  }
+  throw new Error(last);
+}
+async function cppRun(){
+  const stdin=document.getElementById("cppStdin").value;
+  const out=document.getElementById("cppOut");
+  const { main, extras } = mainAndExtras();
+  const filesArr=[main, ...extras];
+  if(!main.code.trim()){ return; }
+  out.className="cpp-out run"; out.textContent="⏳ Compiling ("+profile.cppSettings.std.toUpperCase()+") on GCC-14 chain...";
+  const S=profile.cppSettings;
+  const chain=[];
+  if(S.customUrl) chain.push(["Custom", ()=>runPistonAt(S.customUrl, filesArr, stdin)]);
+  chain.push(["Judge0", ()=>runJudge0(filesArr, stdin)]);
+  chain.push(["Wandbox", ()=>runWandbox(filesArr, stdin)]);
+  CORS_PROXIES.forEach(px=>{
+    chain.push(["Judge0⇄proxy", ()=>runJudge0(filesArr, stdin, px("https://ce.judge0.com"))]);
+    chain.push(["Wandbox⇄proxy", ()=>runWandbox(filesArr, stdin, px("https://wandbox.org"))]);
+  });
+  chain.push(["Piston", ()=>runPistonAt("https://emkc.org", filesArr, stdin)]);
+  let result=null; const errs=[];
+  for(const [name, fn] of chain){
+    try{ result=await fn(); break; }
+    catch(e){ errs.push("• "+name+": "+(e.message||e)); }
+  }
+  if(!result){
+    out.className="cpp-out err";
+    out.textContent="❌ Compiler chain fail (internet/CORS/rate-limit):\n"+errs.slice(0,6).join("\n")+
+      "\n\n💡 Tips: 1) dobara try karein (rate-limit)  2) Settings ⚙️ mein apna free Piston/Judge0 server URL dalein — hamesha ke liye hal.";
+    return;
+  }
+  CPP_LAST_VIA=result.via;
+  let txt="🔧 "+result.via+"  ·  "+profile.cppSettings.std.toUpperCase()+" "+profile.cppSettings.opt+(profile.cppSettings.warn?" -Wall":"")+"\n──────────────────────────────\n";
+  if(result.compileErr) txt+="❌ COMPILE ERROR:\n"+result.compileErr+"\n";
+  if(result.stdout) txt+="✅ OUTPUT:\n"+result.stdout;
+  if(result.stderr) txt+=(result.stdout?"\n":"")+"⚠️ STDERR:\n"+result.stderr+"\n";
+  if(!result.stdout && !result.stderr && !result.compileErr) txt+="(koi output nahi — program ne kuch print nahi kiya)";
+  if(result.statusDesc) txt+="\n\n[status: "+result.statusDesc+"]";
+  out.className="cpp-out "+(result.compileErr?"err":"ok");
+  out.textContent=txt;
+  cppStatus();
+  cppChallengeCheck(result.stdout||"", !!result.compileErr);
+}
+
+/* ---------------- challenge auto-check ---------------- */
+function normOut(s){ return s.split("\n").map(l=>l.replace(/\s+$/,"")).join("\n").trim(); }
+function cppChallengeCheck(stdout, hadCompileErr){
+  if(!CPP_ACTIVE || hadCompileErr) return;
+  if(normOut(stdout)===normOut(CPP_ACTIVE.expected)){
+    const first=!profile.cppSolved[CPP_ACTIVE.id];
+    profile.cppSolved[CPP_ACTIVE.id]=true; save();
+    if(first){
+      const xp=CPP_XP[CPP_ACTIVE.diff]||10;
+      profile.xp+=xp; save();
+      streakBanner("🏆 Challenge PASSED! +"+xp+" XP ("+CPP_ACTIVE.title+")");
+      sfx.fanfare(); celebrate(); buzz([60,40,120]);
+    } else { streakBanner("✅ Challenge PASSED (already solved)"); sfx.correct(); }
+    cppRenderChallenges();
+  }
+}
+
+/* ---------------- VU CHALLENGES (handout-based, exact-output specs) ---- */
 const CPP_CHALLENGES = [
-/* ---------- CS201 ---------- */
 { id:"c1", course:"CS201", diff:"Easy", title:"First Program — Hello VU",
   task:"Print EXACTLY these two lines (no extra spaces):\nAssalam-o-Alaikum, VU!\nCS201 se C++ ka safar shuru!",
   stdin:"", expected:"Assalam-o-Alaikum, VU!\nCS201 se C++ ka safar shuru!",
@@ -2382,8 +2717,7 @@ const CPP_CHALLENGES = [
   starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int a, b;\n    cin >> a >> b;\n    // Sum print karein exact format mein\n\n    return 0;\n}\n" },
 { id:"c3", course:"CS201", diff:"Easy", title:"Even or Odd",
   task:"Ek integer input lein. Agar even ho to print 'Even' warna 'Odd' (sirf ek lafz).",
-  stdin:"8", expected:"Even",
-  hint:"if (n % 2 == 0) ...",
+  stdin:"8", expected:"Even", hint:"if (n % 2 == 0) ...",
   starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int n;\n    cin >> n;\n\n    return 0;\n}\n" },
 { id:"c4", course:"CS201", diff:"Easy", title:"Table Generator (for loop)",
   task:"Ek number n input lein aur table 1 se 10 tak print karein, har line ka format:\n5 x 1 = 5 ... 5 x 10 = 50",
@@ -2397,18 +2731,15 @@ const CPP_CHALLENGES = [
   starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int n;\n    cin >> n;\n    long long fact = 1;\n    // loop likhein\n\n    return 0;\n}\n" },
 { id:"c6", course:"CS201", diff:"Easy", title:"Max of Three (if-else)",
   task:"Teen numbers input lein, print karein: Max = X",
-  stdin:"3 9 4", expected:"Max = 9",
-  hint:"Nested if-else ya && conditions use karein.",
+  stdin:"3 9 4", expected:"Max = 9", hint:"Nested if-else ya && conditions use karein.",
   starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int a, b, c;\n    cin >> a >> b >> c;\n\n    return 0;\n}\n" },
 { id:"c7", course:"CS201", diff:"Medium", title:"Reverse a Number (while loop)",
   task:"Ek number input lein, uska ulta print karein: Reversed = X  (1234 -> Reversed = 4321)",
-  stdin:"1234", expected:"Reversed = 4321",
-  hint:"rev = rev*10 + n%10; n /= 10; while(n>0)",
+  stdin:"1234", expected:"Reversed = 4321", hint:"rev = rev*10 + n%10; n /= 10; while(n>0)",
   starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int n;\n    cin >> n;\n    int rev = 0;\n\n    return 0;\n}\n" },
 { id:"c8", course:"CS201", diff:"Medium", title:"Swap with POINTERS",
   task:"Do numbers input lein aur POINTERS (& and *) use kar ke swap karein.\nOutput format (2 lines):\nBefore: 3 5\nAfter: 5 3",
-  stdin:"3 5", expected:"Before: 3 5\nAfter: 5 3",
-  hint:"void swap(int*, int*); call: swap(&a,&b);",
+  stdin:"3 5", expected:"Before: 3 5\nAfter: 5 3", hint:"void swap(int*, int*); call: swap(&a,&b);",
   starter:"#include <iostream>\nusing namespace std;\n\nvoid swap(int *x, int *y){\n    // pointer swap likhein\n}\n\nint main(){\n    int a, b;\n    cin >> a >> b;\n    cout << \"Before: \" << a << \" \" << b << endl;\n    // swap call karein\n    // After print karein\n    return 0;\n}\n" },
 { id:"c9", course:"CS201", diff:"Medium", title:"Array Average (2 decimals)",
   task:"Pehle n, phir n numbers input lein. Print karein: Average = X.XX (exactly 2 decimals).\nInput: 3\\n4 6 8 -> Average = 6.00",
@@ -2417,10 +2748,8 @@ const CPP_CHALLENGES = [
   starter:"#include <iostream>\n#include <iomanip>\nusing namespace std;\n\nint main(){\n    int n;\n    cin >> n;\n    int arr[100];\n    // input + sum + average\n\n    return 0;\n}\n" },
 { id:"c10", course:"CS201", diff:"Medium", title:"Prime Checker",
   task:"n input lein; prime ho to 'Prime' warna 'Not Prime' print karein.",
-  stdin:"7", expected:"Prime",
-  hint:"2 se n/2 tak loop; koi divisor mile to not prime.",
+  stdin:"7", expected:"Prime", hint:"2 se n/2 tak loop; koi divisor mile to not prime.",
   starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int n;\n    cin >> n;\n\n    return 0;\n}\n" },
-/* ---------- CS304 (OOP) ---------- */
 { id:"o1", course:"CS304", diff:"Easy", title:"Constructor & Destructor",
   task:"Ek class banayen jis ka constructor 'Constructor called' aur destructor 'Destructor called' print kare. main mein object banayen.\nExact output:\nConstructor called\nDestructor called",
   stdin:"", expected:"Constructor called\nDestructor called",
@@ -2451,7 +2780,6 @@ const CPP_CHALLENGES = [
   stdin:"", expected:"Meow!\nWoof!",
   hint:"virtual void sound() base mein; base* ptr = &cat; ptr->sound();",
   starter:"#include <iostream>\nusing namespace std;\n\nclass Animal{ public: /* virtual sound */ };\n// Cat, Dog classes\n\nint main(){\n    // base pointers se call karein\n    return 0;\n}\n" },
-/* ---------- CS301 (Data Structures) ---------- */
 { id:"d1", course:"CS301", diff:"Medium", title:"Stack (array) — Push/Pop",
   task:"Pehli line n operations. '1 x' = push x, '2' = pop (pop value print karein; khali ho to 'Empty').\nInput:\n5\n1 10\n1 20\n2\n1 30\n2\nOutput:\n20\n30",
   stdin:"5\n1 10\n1 20\n2\n1 30\n2", expected:"20\n30",
@@ -2469,269 +2797,97 @@ const CPP_CHALLENGES = [
   starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int n; cin >> n;\n    int a[100];\n    // input, key, binary search\n    return 0;\n}\n" },
 { id:"d4", course:"CS301", diff:"Hard", title:"Queue — Enqueue/Dequeue",
   task:"'1 x' = enqueue, '2' = dequeue (value print; khali ho to 'Empty').\nInput:\n4\n1 5\n1 7\n2\n2\nOutput:\n5\n7",
-  stdin:"4\n1 5\n1 7\n2\n2", expected:"5\n7",
-  hint:"front/rear indices; dequeue: q[front++].",
+  stdin:"4\n1 5\n1 7\n2\n2", expected:"5\n7", hint:"front/rear indices; dequeue: q[front++].",
   starter:"#include <iostream>\nusing namespace std;\n\nint main(){\n    int q[100]; int front=0, rear=0;\n    // operations\n    return 0;\n}\n" }
 ];
 
-/* ---------------- SNIPPETS (one-tap VU assignment patterns) ---------- */
+/* ---------------- SNIPPETS ---------------- */
 const CPP_SNIPPETS = [
 { name:"Menu-driven program", code:"\n// VU assignment classic: menu-driven program\nint choice;\ndo{\n    cout << \"\\n1. Option A\\n2. Option B\\n0. Exit\\nEnter choice: \";\n    cin >> choice;\n    switch(choice){\n        case 1: cout << \"Option A selected\" << endl; break;\n        case 2: cout << \"Option B selected\" << endl; break;\n        case 0: cout << \"Bye!\" << endl; break;\n        default: cout << \"Invalid choice\" << endl;\n    }\n}while(choice != 0);\n" },
-{ name:"Class skeleton", code:"\nclass Student{\nprivate:\n    string name;\n    int rollNo;\n    float marks;\npublic:\n    Student(){ name=\"\"; rollNo=0; marks=0; }          // default ctor\n    Student(string n, int r, float m){ name=n; rollNo=r; marks=m; }\n    void show() const{\n        cout << name << \" (\" << rollNo << \") marks: \" << marks << endl;\n    }\n};\n" },
-{ name:"File write + read", code:"\n#include <fstream>\n// file mein likho\nofstream out(\"data.txt\");\nout << \"Hello from AHW C++ Lab\" << endl;\nout.close();\n// file se parho\nifstream in(\"data.txt\");\nstring line;\nwhile(getline(in, line)) cout << line << endl;\nin.close();\n" },
+{ name:"Class skeleton", code:"\nclass Student{\nprivate:\n    string name;\n    int rollNo;\n    float marks;\npublic:\n    Student(){ name=\"\"; rollNo=0; marks=0; }\n    Student(string n, int r, float m){ name=n; rollNo=r; marks=m; }\n    void show() const{\n        cout << name << \" (\" << rollNo << \") marks: \" << marks << endl;\n    }\n};\n" },
+{ name:"Header file example (utils.h)", code:"\n// ye code alag file utils.h mein paste karein (New File 📄)\n#ifndef UTILS_H\n#define UTILS_H\n#include <iostream>\nusing namespace std;\n\ninline int square(int x){ return x*x; }\ninline void greet(){ cout << \"Hello from utils.h!\" << endl; }\n#endif\n" },
+{ name:"File write + read", code:"\n#include <fstream>\nofstream out(\"data.txt\");\nout << \"Hello from AHW C++ Lab\" << endl;\nout.close();\nifstream in(\"data.txt\");\nstring line;\nwhile(getline(in, line)) cout << line << endl;\nin.close();\n" },
 { name:"Pointer basics", code:"\nint x = 42;\nint *p = &x;\ncout << \"Value: \" << *p << endl;\ncout << \"Address: \" << p << endl;\n*p = 99;\ncout << \"New value: \" << x << endl;\n" },
 { name:"2D array print", code:"\nint mat[2][3] = {{1,2,3},{4,5,6}};\nfor(int i=0;i<2;i++){\n    for(int j=0;j<3;j++) cout << mat[i][j] << \" \";\n    cout << endl;\n}\n" }
 ];
 
-/* ---------------- EDITOR (line numbers + highlighting) ---------------- */
-function cppEscape(s){ return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-function cppHighlight(src){
-  const re=/(\/\/[^\n]*|\/\*[\s\S]*?\*\/)|(\"(?:[^\"\\\n]|\\.)*\"|'(?:[^'\\\n]|\\.)*')|(^ *#[a-z]+)|\b(int|float|double|char|bool|void|long|short|unsigned|signed|class|struct|public|private|protected|virtual|override|template|typename|namespace|using|new|delete|return|if|else|for|while|do|switch|case|break|continue|default|const|static|this|true|false|nullptr|include|iostream|fstream|iomanip|string|cin|cout|endl|main)\b|(\b\d+(\.\d+)?\b)/gm;
-  return cppEscape(src).replace(re, function(m, com, str, pre, kw, num){
-    if(com) return '<span class="tk-c">'+m+'</span>';
-    if(str) return '<span class="tk-s">'+m+'</span>';
-    if(pre) return '<span class="tk-p">'+m+'</span>';
-    if(kw)  return '<span class="tk-k">'+m+'</span>';
-    if(num) return '<span class="tk-n">'+m+'</span>';
-    return m;
-  });
-}
-function cppEditorSync(){
-  const ta=document.getElementById("cedCode"), pre=document.getElementById("cedHl"), gut=document.getElementById("cedGutter");
-  if(!ta) return;
-  pre.innerHTML = cppHighlight(ta.value) + "\n";
-  const lines = ta.value.split("\n").length;
-  gut.textContent = Array.from({length:lines}, (_,i)=>i+1).join("\n");
-  pre.scrollTop = ta.scrollTop; pre.scrollLeft = ta.scrollLeft;
-  gut.scrollTop = ta.scrollTop;
-  try{ localStorage.setItem("ahw_cpp_code", ta.value); }catch(e){}
-  cppSaveState();
-}
-function cppSetCode(code, fname){
-  const ta=document.getElementById("cedCode");
-  ta.value = code;
-  if(fname) document.getElementById("cppFileName").value = fname;
-  cppEditorSync();
-}
-function cppSaveState(){
-  const b=document.getElementById("cppRunBtn");
-  if(b) b.disabled = !document.getElementById("cedCode").value.trim();
-}
-
-/* ---------------- COMPILER PROVIDERS (free, no key) ----------------
-   Chain: Judge0 CE (GCC 14.1) -> Wandbox (GCC 14.2/head) -> Piston.
-   Jo pehle respond kare wahi chalta hai; CORS/rate-limit/whitelist par
-   automatic next provider par chala jata hai. */
-async function runViaJudge0(code, stdin){
-  const lr = await fetch("https://ce.judge0.com/languages");
-  if(!lr.ok) throw new Error("Judge0 languages HTTP "+lr.status);
-  const langs = await lr.json();
-  const pick = langs.find(l=>/C\+\+ \(GCC 1[4-9]/.test(l.name)) || langs.find(l=>/C\+\+ \(GCC/.test(l.name)) || langs.find(l=>l.name.indexOf("C++")===0);
-  if(!pick) throw new Error("Judge0: koi C++ runtime nahi mili");
-  const r = await fetch("https://ce.judge0.com/submissions?wait=true&base64_encoded=false", {
-    method:"POST", headers:{ "Content-Type":"application/json" },
-    body: JSON.stringify({ source_code: code, language_id: pick.id, stdin: stdin||"", compiler_options:"-std=c++17" })
-  });
-  if(r.status===429) throw new Error("Judge0 rate-limit (thori der baad try karein)");
-  if(!r.ok) throw new Error("Judge0 HTTP "+r.status);
-  const j = await r.json();
-  return { via:"Judge0 CE · "+pick.name,
-    compileErr: j.compile_output || "",
-    stdout: j.stdout || "", stderr: j.stderr || "",
-    code: (j.status && j.status.id===3) ? 0 : 1,
-    statusDesc: j.status ? j.status.description : "" };
-}
-async function runViaWandbox(code, stdin){
-  const names=["gcc-14.2.0","gcc-14.1.0","gcc-head"];
-  let lastErr="Wandbox unreachable";
-  for(const c of names){
-    try{
-      const r=await fetch("https://wandbox.org/api/compile.json",{method:"POST",headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({compiler:c, code:code, stdin:stdin||"", compiler_option:"-std=c++17", options:"", save:false})});
-      if(!r.ok){ lastErr="Wandbox HTTP "+r.status; continue; }
-      const j=await r.json();
-      if(j && ("status" in j || "compiler_message" in j || "program_message" in j)){
-        return { via:"Wandbox · "+c, compileErr:j.compiler_message||"", stdout:j.program_message||"",
-          stderr:j.stderr||"", code:(j.status!=null && parseInt(j.status,10)===0)?0:1 };
-      }
-      lastErr="Wandbox bad response";
-    }catch(e){ lastErr=e.message; }
-  }
-  throw new Error(lastErr);
-}
-async function runViaPiston(code, stdin){
-  const rr = await fetch("https://emkc.org/api/v2/piston/runtimes");
-  if(!rr.ok) throw new Error("Piston runtimes HTTP "+rr.status);
-  const list = await rr.json();
-  const hit = list.find(x=>x.language==="c++"||(x.aliases||[]).includes("g++"));
-  if(!hit) throw new Error("Piston: C++ runtime nahi");
-  const r = await fetch("https://emkc.org/api/v2/piston/execute",{method:"POST",headers:{"Content-Type":"application/json"},
-    body:JSON.stringify({language:"c++",version:hit.version,files:[{name:"main.cpp",content:code}],stdin:stdin||"",args:[]})});
-  if(!r.ok) throw new Error("Piston HTTP "+r.status+" (public API ab whitelist-only hai)");
-  const j=await r.json();
-  return { via:"Piston · g++ "+hit.version, compileErr:(j.compile&&j.compile.stderr)||"",
-    stdout:(j.run&&j.run.stdout)||"", stderr:(j.run&&j.run.stderr)||"", code:j.run?j.run.code:1 };
-}
-const CPP_PROVIDERS=[runViaJudge0, runViaWandbox, runViaPiston];
-
-async function cppRun(){
-  const code = document.getElementById("cedCode").value;
-  const stdin = document.getElementById("cppStdin").value;
-  const out = document.getElementById("cppOut");
-  if(!code.trim()) return;
-  out.className = "cpp-out run"; out.textContent = "⏳ Compiling & running on GCC 14 chain...";
-  let result=null; const errors=[];
-  for(const p of CPP_PROVIDERS){
-    try{ result = await p(code, stdin); break; }
-    catch(e){ errors.push("• "+e.message); }
-  }
-  if(!result){
-    out.className="cpp-out err";
-    out.textContent="❌ Teeno free compiler APIs fail ho gayin (internet / CORS / rate-limit):\n"+errors.join("\n")+"\n\nThori der baad dobara try karein. (Agar masla persist kare to apna free Piston instance host kar ke provider list mein add kar sakte hain.)";
-    return;
-  }
-  let txt = "🔧 Compiler: " + result.via + "\n──────────────────────────────\n";
-  if(result.compileErr) txt += "❌ COMPILE ERROR:\n" + result.compileErr + "\n";
-  if(result.stdout) txt += "✅ OUTPUT:\n" + result.stdout;
-  if(result.stderr) txt += (result.stdout? "\n":"") + "⚠️ STDERR:\n" + result.stderr + "\n";
-  if(!result.stdout && !result.stderr && !result.compileErr) txt += "(koi output nahi — program ne kuch print nahi kiya)";
-  if(result.statusDesc) txt += "\n\n[status: " + result.statusDesc + "]";
-  out.className = "cpp-out " + (result.compileErr ? "err" : "ok");
-  out.textContent = txt;
-  cppChallengeCheck(result.stdout || "", !!result.compileErr);
-}
-
-/* ---------------- CHALLENGES UI + AUTO CHECK ---------------- */
-let CPP_ACTIVE = null;
-function normOut(s){ return s.split("\n").map(l=>l.replace(/\s+$/,"")).join("\n").trim(); }
-function cppChallengeCheck(stdout, hadCompileErr){
-  if(!CPP_ACTIVE || hadCompileErr) return;
-  if(normOut(stdout) === normOut(CPP_ACTIVE.expected)){
-    const first = !profile.cppSolved[CPP_ACTIVE.id];
-    profile.cppSolved[CPP_ACTIVE.id] = true; save();
-    if(first){
-      const xp = CPP_XP[CPP_ACTIVE.diff] || 10;
-      profile.xp += xp; save();
-      streakBanner("🏆 Challenge PASSED! +" + xp + " XP (" + CPP_ACTIVE.title + ")");
-      sfx.fanfare(); celebrate(); buzz([60,40,120]);
-    } else {
-      streakBanner("✅ Challenge PASSED (already solved)");
-      sfx.correct();
-    }
-    cppRenderChallenges();
-  }
-}
+/* ---------------- challenges UI ---------------- */
 function cppRenderChallenges(){
-  const wrap = document.getElementById("cppChips");
-  const cur = wrap.dataset.filter || "all";
-  const list = document.getElementById("cppChList"); list.innerHTML = "";
-  CPP_CHALLENGES.filter(c => cur==="all" || c.course===cur).forEach(c=>{
-    const done = !!profile.cppSolved[c.id];
-    const d = document.createElement("div");
-    d.className = "cpp-ch" + (CPP_ACTIVE && CPP_ACTIVE.id===c.id ? " active" : "");
-    d.innerHTML = '<div class="cpp-ch-top"><b>'+c.course+'</b><span class="cpp-diff '+c.diff.toLowerCase()+'">'+c.diff+'</span>'+(done?'<span class="cpp-done">✅</span>':"")+'</div>'+
+  const wrap=document.getElementById("cppChips"); if(!wrap) return;
+  const cur=wrap.dataset.filter||"all";
+  const list=document.getElementById("cppChList"); list.innerHTML="";
+  CPP_CHALLENGES.filter(c=>cur==="all"||c.course===cur).forEach(c=>{
+    const done=!!profile.cppSolved[c.id];
+    const d=document.createElement("div");
+    d.className="cpp-ch"+(CPP_ACTIVE&&CPP_ACTIVE.id===c.id?" active":"");
+    d.innerHTML='<div class="cpp-ch-top"><b>'+c.course+'</b><span class="cpp-diff '+c.diff.toLowerCase()+'">'+c.diff+'</span>'+(done?'<span class="cpp-done">✅</span>':"")+'</div>'+
       '<div class="cpp-ch-title">'+c.title+'</div>'+
       '<div class="cpp-ch-task">'+c.task.replace(/\n/g,"<br>")+'</div>'+
       '<div class="cpp-ch-btns"><button class="btn btn-blue" style="padding:8px 14px;font-size:12px">📥 Load in Editor</button>'+
-      '<button class="btn btn-gray cpp-hintbtn" style="padding:8px 14px;font-size:12px">💡 Hint</button></div>'+
+      '<button class="btn btn-gray" style="padding:8px 14px;font-size:12px">💡 Hint</button></div>'+
       '<div class="cpp-hint" style="display:none">💡 '+c.hint+'</div>';
-    const [loadBtn, hintBtn] = d.querySelectorAll("button");
-    loadBtn.onclick = ()=>{ CPP_ACTIVE=c; sfx.click();
+    const btns=d.querySelectorAll("button");
+    btns[0].onclick=()=>{ CPP_ACTIVE=c; sfx.click();
       cppSetCode(c.starter, c.course.toLowerCase()+"_"+c.id+".cpp");
-      document.getElementById("cppStdin").value = c.stdin;
-      document.getElementById("cppStdinWrap").style.display = c.stdin ? "" : "none";
-      streakBanner("🎯 Loaded: " + c.title + " — solve & Run!");
-      cppRenderChallenges();
-      window.scrollTo({top:0,behavior:"smooth"});
+      document.getElementById("cppStdin").value=c.stdin;
+      document.getElementById("cppStdinWrap").style.display=c.stdin?"":"none";
+      streakBanner("🎯 Loaded: "+c.title+" — solve & Run!");
+      cppRenderChallenges(); window.scrollTo({top:0,behavior:"smooth"});
     };
-    hintBtn.onclick = ()=>{ const h=d.querySelector(".cpp-hint"); h.style.display = h.style.display==="none" ? "" : "none"; };
+    btns[1].onclick=()=>{ const h=d.querySelector(".cpp-hint"); h.style.display=h.style.display==="none"?"":"none"; };
     list.appendChild(d);
   });
 }
 function cppFilter(f, el){
   const wrap=document.getElementById("cppChips");
-  wrap.dataset.filter = f;
+  wrap.dataset.filter=f;
   wrap.querySelectorAll(".chip").forEach(c=>c.classList.remove("on"));
   el.classList.add("on");
   cppRenderChallenges();
 }
-
-/* ---------------- FILES: download / open / snippets ---------------- */
-function cppDownload(){
-  const code=document.getElementById("cedCode").value;
-  let name=(document.getElementById("cppFileName").value||"program.cpp").trim();
-  if(!/\.cpp$/i.test(name)) name += ".cpp";
-  const blob=new Blob([code], {type:"text/plain"});
-  const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob); a.download=name;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
-  streakBanner("💾 Downloaded " + name + " — assignment ready!");
-  sfx.click();
-}
-function cppOpenFile(){
-  const inp=document.createElement("input");
-  inp.type="file"; inp.accept=".cpp,.c,.h,.txt,.cc";
-  inp.onchange=()=>{ const f=inp.files && inp.files[0]; if(!f) return;
-    const r=new FileReader();
-    r.onload=()=>{ cppSetCode(r.result, f.name); CPP_ACTIVE=null;
-      streakBanner("📂 Opened " + f.name + " — edit & run!"); };
-    r.readAsText(f);
-  };
-  inp.click();
-}
-function cppToggleStdin(){
-  const w=document.getElementById("cppStdinWrap");
-  w.style.display = w.style.display==="none" ? "" : "none";
-}
 function cppSnippets(){
-  const m=document.getElementById("modal-cppsnip");
   const body=document.getElementById("cppSnipBody"); body.innerHTML="";
   CPP_SNIPPETS.forEach(s=>{
     const d=document.createElement("div"); d.className="cpp-ch";
-    d.innerHTML='<div class="cpp-ch-title">'+s.name+'</div><div class="cpp-ch-btns"><button class="btn btn-purple" style="padding:8px 14px;font-size:12px">➕ Insert at cursor/end</button></div>';
+    d.innerHTML='<div class="cpp-ch-title">'+s.name+'</div><div class="cpp-ch-btns"><button class="btn btn-purple" style="padding:8px 14px;font-size:12px">➕ Insert in current file</button></div>';
     d.querySelector("button").onclick=()=>{
       const ta=document.getElementById("cedCode");
       const pos=ta.selectionStart!=null?ta.selectionStart:ta.value.length;
       ta.value=ta.value.slice(0,pos)+s.code+ta.value.slice(pos);
       cppEditorSync(); closeModal("modal-cppsnip");
-      streakBanner("➕ Snippet inserted: " + s.name);
+      streakBanner("➕ Snippet inserted: "+s.name);
     };
     body.appendChild(d);
   });
   openModal("modal-cppsnip");
 }
 
-/* ---------------- SCREEN BOOT ---------------- */
+/* ---------------- boot ---------------- */
 function showCppLab(){
   sfx.click();
-  const ta=document.getElementById("cedCode");
-  let savedCode=null, savedName=null;
-  try{ savedCode=localStorage.getItem("ahw_cpp_code"); savedName=localStorage.getItem("ahw_cpp_name"); }catch(e){}
-  if(savedCode!=null && !ta.value) { ta.value=savedCode; if(savedName) document.getElementById("cppFileName").value=savedName; }
-  if(!ta.value) ta.value='#include <iostream>\nusing namespace std;\n\nint main(){\n    cout << "Assalam-o-Alaikum, VU!" << endl;\n    return 0;\n}\n';
-  cppEditorSync();
-  cppRenderChallenges();
+  cppLoadPersisted();
+  if(!CPP_FILES[CPP_CUR].code)
+    CPP_FILES[CPP_CUR].code='#include <iostream>\nusing namespace std;\n\nint main(){\n    cout << "Assalam-o-Alaikum, VU!" << endl;\n    return 0;\n}\n';
+  cppRenderTabs(); cppLoadCurrent(); cppRenderChallenges();
   show("screen-cpp");
 }
 document.addEventListener("DOMContentLoaded", function(){
-  const ta=document.getElementById("cedCode");
-  if(!ta) return;
+  const ta=document.getElementById("cedCode"); if(!ta) return;
   ta.addEventListener("input", cppEditorSync);
   ta.addEventListener("scroll", function(){
     document.getElementById("cedHl").scrollTop=ta.scrollTop;
     document.getElementById("cedHl").scrollLeft=ta.scrollLeft;
     document.getElementById("cedGutter").scrollTop=ta.scrollTop;
   });
-  ta.addEventListener("keydown", function(e){           // Tab = 4 spaces
+  ta.addEventListener("keyup", cppStatus);
+  ta.addEventListener("click", cppStatus);
+  ta.addEventListener("keydown", function(e){
     if(e.key==="Tab"){ e.preventDefault();
       const s=ta.selectionStart;
       ta.value=ta.value.slice(0,s)+"    "+ta.value.slice(ta.selectionEnd);
       ta.selectionStart=ta.selectionEnd=s+4; cppEditorSync();
     }
   });
-  const fn=document.getElementById("cppFileName");
-  if(fn) fn.addEventListener("input", function(){ try{ localStorage.setItem("ahw_cpp_name", fn.value); }catch(e){} });
 });
 
 </script>

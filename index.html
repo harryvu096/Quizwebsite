@@ -349,21 +349,24 @@
     <div id="mrBody" style="margin-top:16px"></div>
   </section>
 
-  <!-- ============ C++ LAB (online compiler + VU challenges) ============ -->
+  <!-- ============ C++ LAB v2 (mini-IDE: multi-file + settings) ============ -->
   <section id="screen-cpp" class="screen">
-    <div class="topbar">
-      <div class="mini-logo" onclick="goHome()" style="cursor:pointer" title="Home">💻 C++ Lab <span style="opacity:.8;font-size:13px">· CS201 · CS301 · CS304 · VU</span></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap">
+    <div class="ide-top">
+      <div class="ide-brand" onclick="goHome()" style="cursor:pointer" title="Home">💻 C++ Lab <span>VU Edition · mini-IDE</span></div>
+      <div class="ide-actions">
         <button class="icon-btn" onclick="goHome()" title="Home" aria-label="Home">🏠</button>
-        <button class="icon-btn" onclick="cppOpenFile()" title="Open .cpp file" aria-label="Open .cpp file">📂</button>
-        <button class="icon-btn" onclick="cppDownload()" title="Download .cpp file" aria-label="Download .cpp">💾</button>
-        <button class="icon-btn" onclick="cppSnippets()" title="Code snippets" aria-label="Snippets">🧩</button>
+        <button class="icon-btn" onclick="cppNewFile()" title="New file" aria-label="New file">📄</button>
+        <button class="icon-btn" onclick="cppOpenFiles()" title="Open files (multiple allowed)" aria-label="Open files">📂</button>
+        <button class="icon-btn" onclick="cppDownload()" title="Download current file (.cpp)" aria-label="Download">💾</button>
+        <button class="icon-btn" onclick="cppSnippets()" title="VU snippets" aria-label="Snippets">🧩</button>
+        <button class="icon-btn" onclick="cppSettings()" title="Compiler settings" aria-label="Settings">⚙️</button>
       </div>
     </div>
+    <div class="ide-tabs" id="cppTabs"></div>
     <div class="cpp-tools">
-      <input id="cppFileName" class="cpp-fname" value="program.cpp" spellcheck="false" title="File name">
-      <button class="btn btn-green" id="cppRunBtn" onclick="cppRun()">▶ Run Code</button>
+      <button class="btn btn-green" id="cppRunBtn" onclick="cppRun()">▶ Run</button>
       <button class="btn btn-gray" onclick="cppToggleStdin()">⌨️ Input</button>
+      <span class="ide-hint">Multi-file: main.cpp + .h files — sab sath compile hoti hain (tabs switch karein)</span>
     </div>
     <div class="cpp-grid">
       <div>
@@ -376,7 +379,7 @@
           <textarea id="cppStdin" class="cpp-stdin" rows="3" spellcheck="false"></textarea>
         </div>
         <div class="cpp-lab" style="margin-top:12px">Output Console</div>
-        <pre id="cppOut" class="cpp-out">▶ Run dabayen — aap ka code remote g++ server par compile &amp; run hoga. Internet zaroori hai.</pre>
+        <pre id="cppOut" class="cpp-out">▶ Run dabayen — GCC 14 chain (Judge0 → Wandbox → proxies → Piston) compile karegi. Internet zaroori hai.</pre>
       </div>
       <aside>
         <div class="cpp-lab">🎯 VU Challenges <span style="opacity:.7">— solve karo, XP kamao!</span></div>
@@ -389,7 +392,32 @@
         <div id="cppChList"></div>
       </aside>
     </div>
+    <div class="cpp-status" id="cppStatus">🔧 —</div>
   </section>
+</div>
+
+<!-- ============ C++ SETTINGS MODAL ============ -->
+<div class="modal-bg" id="modal-cppset">
+  <div class="modal" style="max-width:470px">
+    <button class="close-x" onclick="closeModal('modal-cppset')">✖</button>
+    <h2>⚙️ Compiler Settings</h2>
+    <p class="sub">Experts ke liye — defaults students ke liye perfect hain.</p>
+    <label style="font-size:12px;font-weight:800;color:#6b6490">C++ Standard</label>
+    <select id="setStd" style="width:100%;margin:4px 0 10px;padding:10px;border-radius:10px;border:2px solid #ddd6fe;font-weight:700">
+      <option value="c++14">C++14</option><option value="c++17" selected>C++17 (recommended)</option><option value="c++20">C++20</option>
+    </select>
+    <label style="font-size:12px;font-weight:800;color:#6b6490">Optimization</label>
+    <select id="setOpt" style="width:100%;margin:4px 0 10px;padding:10px;border-radius:10px;border:2px solid #ddd6fe;font-weight:700">
+      <option value="-O0" selected>-O0 (fast compile, debug)</option><option value="-O2">-O2 (optimized)</option>
+    </select>
+    <label class="vu-check" style="margin:2px 0 10px"><input type="checkbox" id="setWarn"> -Wall warnings enable karein</label>
+    <label style="font-size:12px;font-weight:800;color:#6b6490">Custom Compiler API (Piston-compatible URL — optional)</label>
+    <input id="setCustom" style="width:100%;box-sizing:border-box;margin:4px 0 10px;padding:10px;border-radius:10px;border:2px solid #ddd6fe;font-weight:700" placeholder="https://your-piston-server.com">
+    <label style="font-size:12px;font-weight:800;color:#6b6490">Editor font size: <span id="setFsVal">13.5</span>px</label>
+    <input type="range" id="setFs" min="12" max="18" step="0.5" value="13.5" style="width:100%;margin:4px 0 10px" oninput="document.getElementById('setFsVal').textContent=this.value">
+    <label class="vu-check" style="margin:2px 0 12px"><input type="checkbox" id="setLight"> Light editor theme</label>
+    <div class="btn-row" style="justify-content:center"><button class="btn btn-green" onclick="cppSaveSettings()">✅ Save Settings</button></div>
+  </div>
 </div>
 
 <!-- ============ C++ SNIPPETS MODAL ============ -->
