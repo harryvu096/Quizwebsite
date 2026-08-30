@@ -19,13 +19,9 @@ for (const [n, c] of [["css", css], ["data", data], ["app", app], ["compiler", c
   if (c.includes("</script")) throw new Error(n + " contains </script — cannot inline");
 }
 
-html = html.replace(
-  '<link rel="stylesheet" href="css/style.css">',
-  "<style>\n" + css + "\n</style>"
-);
-html = html.replace(
-  '<script src="data/mcqs.js"></script>\n<script src="js/app.js"></script>\n<script src="js/compiler.js"></script>',
-  "<script>\n" + data + "\n</script>\n<script>\n" + app + "\n</script>\n<script>\n" + comp + "\n</script>"
-);
+html = html.replace(/<link rel="stylesheet" href="css\/style\.css(\?[^"]*)?">/,
+  "<style>\n" + css + "\n</style>");
+html = html.replace(/<script src="data\/mcqs\.js(\?[^"]*)?<\/script>\s*<script src="js\/app\.js(\?[^"]*)?"><\/script>\s*<script src="js\/compiler\.js(\?[^"]*)?"><\/script>/,
+  "<script>\n" + data + "\n</script>\n<script>\n" + app + "\n</script>\n<script>\n" + comp + "\n</script>");
 fs.writeFileSync(path.join(__dirname, "..", "standalone.html"), html);
 console.log("standalone.html built:", (html.length / 1024).toFixed(0), "KB");
