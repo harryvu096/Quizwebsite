@@ -1,8 +1,9 @@
-/* AHW Quizverse service worker v2 - (c) 2026 AHW Quizverse / All VU Students.
-   NETWORK-FIRST strategy: har visit par fresh code milta hai (no stale-cache
-   bug), aur internet na ho to cache se offline chalta hai.
-   Bump CACHE name whenever you want to force-invalidate old clients. */
-const CACHE = "ahw-quizverse-v2";
+/* AHW Quizverse service worker v3 - (c) 2026 AHW Quizverse / All VU Students.
+   - NETWORK-FIRST (fresh code, offline fallback)
+   - /__save__/name.cpp route: serves editor code with Content-Disposition
+     attachment so EVERY browser saves the file with the .cpp name
+   Bump CACHE name to force-invalidate old clients. */
+const CACHE = "ahw-quizverse-v3";
 const CORE = [
   "./",
   "index.html",
@@ -29,10 +30,32 @@ self.addEventListener("activate", e => {
   );
 });
 
+async function handleSave(e){
+  try{
+    const client = await self.clients.get(e.clientId);
+    if(!client) return new Response("not found", {status:404});
+    const payload = await new Promise((resolve, reject)=>{
+      const ch = new MessageChannel();
+      const t = setTimeout(()=>reject(new Error("timeout")), 4000);
+      ch.port1.onmessage = ev => { clearTimeout(t); resolve(ev.data); };
+      client.postMessage({type:"GET_SAVE"}, [ch.port2]);
+    });
+    const name = String(payload.name || "program.cpp").replace(/["\\\r\n]/g, "");
+    return new Response(payload.code || "", { status:200, headers:{
+      "Content-Type":"text/x-c++src",
+      "Content-Disposition":"attachment; filename=\"" + name + "\""
+    }});
+  }catch(err){
+    return new Response("save failed", {status:500});
+  }
+}
+
 self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET" || !req.url.startsWith(self.location.origin)) return;
-  /* network-first: fresh content when online, cache fallback when offline */
+  const url = new URL(req.url);
+  if (url.pathname.includes("__save__/")) { e.respondWith(handleSave(e)); return; }
+  /* network-first: fresh when online, cache when offline */
   e.respondWith(
     fetch(req).then(res => {
       if (res && res.ok) {

@@ -131,13 +131,22 @@ function cppOpenFiles(){
 }
 function cppDownload(){
   const f=CPP_FILES[CPP_CUR];
-  let name=f.name; if(!/\.(cpp|cc|c|h|hpp)$/i.test(name)) name+=".cpp";
-  const blob=new Blob([f.code],{type:"application/octet-stream"});
+  let name=f.name.replace(/[^\w.\-]+/g,"_");
+  if(!/\.(cpp|cc|c|h|hpp)$/i.test(name)) name+=".cpp";
+  window.__CPP_SAVE={name:name, code:f.code};
+  const swOk = navigator.serviceWorker && navigator.serviceWorker.controller && location.protocol.indexOf("http")===0;
   const a=document.createElement("a");
-  a.href=URL.createObjectURL(blob); a.download=name;
-  document.body.appendChild(a); a.click(); a.remove();
-  setTimeout(()=>URL.revokeObjectURL(a.href),3000);
-  streakBanner("💾 Downloaded "+name);
+  if(swOk){
+    /* SW route: real .cpp URL + Content-Disposition -> har browser .cpp hi save karega */
+    a.href="__save__/"+name; a.download=name;
+    document.body.appendChild(a); a.click(); a.remove();
+  }else{
+    const blob=new Blob([f.code],{type:"text/x-c++src"});
+    a.href=URL.createObjectURL(blob); a.download=name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+  }
+  streakBanner("💾 Downloading "+name);
   sfx.click();
 }
 function cppToggleStdin(){
@@ -487,6 +496,15 @@ function cppSnippets(){
     body.appendChild(d);
   });
   openModal("modal-cppsnip");
+}
+
+/* SW download bridge: jab SW __save__ route puche to current file bhejo */
+if (navigator.serviceWorker){
+  navigator.serviceWorker.addEventListener("message", function(e){
+    if(e.data && e.data.type==="GET_SAVE" && e.ports && e.ports[0]){
+      e.ports[0].postMessage(window.__CPP_SAVE || {name:"program.cpp", code:""});
+    }
+  });
 }
 
 /* ---------------- boot ---------------- */
