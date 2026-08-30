@@ -161,47 +161,87 @@ function cppSaveState(){
   if(b) b.disabled = !document.getElementById("cedCode").value.trim();
 }
 
-/* ---------------- PISTON RUNNER ---------------- */
-let CPP_RUNTIME_VER = null;
-async function cppRuntimeVersion(){
-  if(CPP_RUNTIME_VER) return CPP_RUNTIME_VER;
-  const r = await fetch("https://emkc.org/api/v2/piston/runtimes");
-  const list = await r.json();
-  const hit = list.find(x => x.language==="c++" || (x.aliases||[]).includes("c++") || (x.aliases||[]).includes("g++") || x.language==="cpp");
-  CPP_RUNTIME_VER = hit ? hit.version : "12.1.0";
-  return CPP_RUNTIME_VER;
+/* ---------------- COMPILER PROVIDERS (free, no key) ----------------
+   Chain: Judge0 CE (GCC 14.1) -> Wandbox (GCC 14.2/head) -> Piston.
+   Jo pehle respond kare wahi chalta hai; CORS/rate-limit/whitelist par
+   automatic next provider par chala jata hai. */
+async function runViaJudge0(code, stdin){
+  const lr = await fetch("https://ce.judge0.com/languages");
+  if(!lr.ok) throw new Error("Judge0 languages HTTP "+lr.status);
+  const langs = await lr.json();
+  const pick = langs.find(l=>/C\+\+ \(GCC 1[4-9]/.test(l.name)) || langs.find(l=>/C\+\+ \(GCC/.test(l.name)) || langs.find(l=>l.name.indexOf("C++")===0);
+  if(!pick) throw new Error("Judge0: koi C++ runtime nahi mili");
+  const r = await fetch("https://ce.judge0.com/submissions?wait=true&base64_encoded=false", {
+    method:"POST", headers:{ "Content-Type":"application/json" },
+    body: JSON.stringify({ source_code: code, language_id: pick.id, stdin: stdin||"", compiler_options:"-std=c++17" })
+  });
+  if(r.status===429) throw new Error("Judge0 rate-limit (thori der baad try karein)");
+  if(!r.ok) throw new Error("Judge0 HTTP "+r.status);
+  const j = await r.json();
+  return { via:"Judge0 CE · "+pick.name,
+    compileErr: j.compile_output || "",
+    stdout: j.stdout || "", stderr: j.stderr || "",
+    code: (j.status && j.status.id===3) ? 0 : 1,
+    statusDesc: j.status ? j.status.description : "" };
 }
+async function runViaWandbox(code, stdin){
+  const names=["gcc-14.2.0","gcc-14.1.0","gcc-head"];
+  let lastErr="Wandbox unreachable";
+  for(const c of names){
+    try{
+      const r=await fetch("https://wandbox.org/api/compile.json",{method:"POST",headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({compiler:c, code:code, stdin:stdin||"", compiler_option:"-std=c++17", options:"", save:false})});
+      if(!r.ok){ lastErr="Wandbox HTTP "+r.status; continue; }
+      const j=await r.json();
+      if(j && ("status" in j || "compiler_message" in j || "program_message" in j)){
+        return { via:"Wandbox · "+c, compileErr:j.compiler_message||"", stdout:j.program_message||"",
+          stderr:j.stderr||"", code:(j.status!=null && parseInt(j.status,10)===0)?0:1 };
+      }
+      lastErr="Wandbox bad response";
+    }catch(e){ lastErr=e.message; }
+  }
+  throw new Error(lastErr);
+}
+async function runViaPiston(code, stdin){
+  const rr = await fetch("https://emkc.org/api/v2/piston/runtimes");
+  if(!rr.ok) throw new Error("Piston runtimes HTTP "+rr.status);
+  const list = await rr.json();
+  const hit = list.find(x=>x.language==="c++"||(x.aliases||[]).includes("g++"));
+  if(!hit) throw new Error("Piston: C++ runtime nahi");
+  const r = await fetch("https://emkc.org/api/v2/piston/execute",{method:"POST",headers:{"Content-Type":"application/json"},
+    body:JSON.stringify({language:"c++",version:hit.version,files:[{name:"main.cpp",content:code}],stdin:stdin||"",args:[]})});
+  if(!r.ok) throw new Error("Piston HTTP "+r.status+" (public API ab whitelist-only hai)");
+  const j=await r.json();
+  return { via:"Piston · g++ "+hit.version, compileErr:(j.compile&&j.compile.stderr)||"",
+    stdout:(j.run&&j.run.stdout)||"", stderr:(j.run&&j.run.stderr)||"", code:j.run?j.run.code:1 };
+}
+const CPP_PROVIDERS=[runViaJudge0, runViaWandbox, runViaPiston];
+
 async function cppRun(){
   const code = document.getElementById("cedCode").value;
   const stdin = document.getElementById("cppStdin").value;
   const out = document.getElementById("cppOut");
   if(!code.trim()) return;
-  out.className = "cpp-out run"; out.textContent = "⏳ Compiling & running on remote C++ (g++) server...";
-  try{
-    const ver = await cppRuntimeVersion();
-    const res = await fetch("https://emkc.org/api/v2/piston/execute", {
-      method:"POST", headers:{ "Content-Type":"application/json" },
-      body: JSON.stringify({ language:"c++", version:ver, files:[{ name:"main.cpp", content:code }], stdin:stdin, args:[] })
-    });
-    const j = await res.json();
-    let txt = "";
-    if(j.compile && j.compile.stderr) txt += "❌ COMPILE ERROR:\n" + j.compile.stderr + "\n";
-    if(j.run){
-      if(j.run.stdout) txt += (txt? "\n":"") + "✅ OUTPUT:\n" + j.run.stdout;
-      if(j.run.stderr) txt += (txt? "\n":"") + "⚠️ RUNTIME STDERR:\n" + j.run.stderr;
-      if(!j.run.stdout && !j.run.stderr) txt += "(koi output nahi — program ne kuch print nahi kiya)";
-      txt += "\n\n[exit code: " + j.run.code + "]";
-      out.className = "cpp-out " + ((j.compile && j.compile.stderr) ? "err" : "ok");
-      cppChallengeCheck(j.run.stdout || "", !!((j.compile && j.compile.stderr)));
-    } else {
-      txt += "❌ " + (j.message || "Execution failed — API busy, dobara try karein.");
-      out.className = "cpp-out err";
-    }
-    out.textContent = txt;
-  }catch(e){
-    out.className = "cpp-out err";
-    out.textContent = "❌ Internet connection ya API masla: " + e.message + "\n(Compiler ke liye internet zaroori hai — dobara try karein)";
+  out.className = "cpp-out run"; out.textContent = "⏳ Compiling & running on GCC 14 chain...";
+  let result=null; const errors=[];
+  for(const p of CPP_PROVIDERS){
+    try{ result = await p(code, stdin); break; }
+    catch(e){ errors.push("• "+e.message); }
   }
+  if(!result){
+    out.className="cpp-out err";
+    out.textContent="❌ Teeno free compiler APIs fail ho gayin (internet / CORS / rate-limit):\n"+errors.join("\n")+"\n\nThori der baad dobara try karein. (Agar masla persist kare to apna free Piston instance host kar ke provider list mein add kar sakte hain.)";
+    return;
+  }
+  let txt = "🔧 Compiler: " + result.via + "\n──────────────────────────────\n";
+  if(result.compileErr) txt += "❌ COMPILE ERROR:\n" + result.compileErr + "\n";
+  if(result.stdout) txt += "✅ OUTPUT:\n" + result.stdout;
+  if(result.stderr) txt += (result.stdout? "\n":"") + "⚠️ STDERR:\n" + result.stderr + "\n";
+  if(!result.stdout && !result.stderr && !result.compileErr) txt += "(koi output nahi — program ne kuch print nahi kiya)";
+  if(result.statusDesc) txt += "\n\n[status: " + result.statusDesc + "]";
+  out.className = "cpp-out " + (result.compileErr ? "err" : "ok");
+  out.textContent = txt;
+  cppChallengeCheck(result.stdout || "", !!result.compileErr);
 }
 
 /* ---------------- CHALLENGES UI + AUTO CHECK ---------------- */
