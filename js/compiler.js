@@ -9,7 +9,7 @@
 
 /* Build self-heal: agar index.html aur compiler.js ke versions mix ho jayen
    (stale cache), ek dafa auto-reload kar ke fresh pair le lo. */
-const AHW_BUILD="ahw7";
+const AHW_BUILD="ahw8";
 (function(){
   try{
     const b=document.body ? document.body.getAttribute("data-build") : null;
@@ -142,43 +142,62 @@ function cppOpenFiles(){
   };
   inp.click();
 }
-function cppDownload(){
-  const f=CPP_FILES[CPP_CUR];
-  let name=f.name.replace(/[^\w.\-]+/g,"_");
+let SAVE_BLOB_URL=null;
+function cleanCppName(n){
+  let name=String(n||"").trim().replace(/[^\w.\-]+/g,"_");
+  if(!name) name="program";
   if(!/\.(cpp|cc|c|h|hpp)$/i.test(name)) name+=".cpp";
-  /* 1) native share sheet with the real file -> exact .cpp name (Drive/Files) */
+  return name;
+}
+function prepareSaveLink(name){
+  const f=CPP_FILES[CPP_CUR];
+  try{ if(SAVE_BLOB_URL) URL.revokeObjectURL(SAVE_BLOB_URL); }catch(e){}
+  SAVE_BLOB_URL=URL.createObjectURL(new Blob([f.code],{type:"text/x-c++src"}));
+  const a=document.getElementById("saveLink");
+  if(a){ a.href=SAVE_BLOB_URL; a.download=name; }
+}
+function cppDownload(){
+  /* rename dialog: user naam likhe, phir download — exact wahi .cpp file */
+  const f=CPP_FILES[CPP_CUR];
+  document.getElementById("saveName").value=cleanCppName(f.name);
+  prepareSaveLink(cleanCppName(f.name));
+  openModal("modal-cppsave");
+  sfx.click();
+}
+function saveCppNow(){
+  const name=cleanCppName(document.getElementById("saveName").value);
+  prepareSaveLink(name);
+  const f=CPP_FILES[CPP_CUR];
   try{
     const file=new File([f.code], name, {type:"text/plain"});
     if(navigator.canShare && navigator.canShare({files:[file]})){
       navigator.share({files:[file], title:name})
         .then(()=>{ streakBanner("💾 "+name+" saved!"); sfx.correct(); })
-        .catch(()=>shareTextOrBlob(f.code,name));
+        .catch(()=>blobDownload(f.code,name));
       return;
     }
   }catch(e){}
-  shareTextOrBlob(f.code,name);
-}
-function shareTextOrBlob(code,name){
-  /* 2) share as text (Save to Drive keeps the title as file name) */
-  try{
-    if(navigator.share){
-      navigator.share({title:name, text:code})
-        .then(()=>{ streakBanner("💾 Shared — 'Save to Drive' se "+name+" save karein"); sfx.correct(); })
-        .catch(()=>blobDownload(code,name));
-      return;
-    }
-  }catch(e){}
-  blobDownload(code,name);
+  blobDownload(f.code,name);
 }
 function blobDownload(code,name){
-  /* 3) plain blob download (works everywhere; extension browser ke hathon mein) */
   const blob=new Blob([code],{type:"text/x-c++src"});
   const a=document.createElement("a");
   a.href=URL.createObjectURL(blob); a.download=name;
   document.body.appendChild(a); a.click(); a.remove();
   setTimeout(()=>URL.revokeObjectURL(a.href),3000);
-  streakBanner("💾 Download shuru — agar extension .bin/.txt aaye to rename kar ke .cpp karein, ya 📋 Copy use karein");
+  streakBanner("💾 Download shuru — extension ghalat aaye to rename .cpp karein, ya long-press link / Copy use karein");
   sfx.click();
+}
+function cppCopyCode(){
+  const f=CPP_FILES[CPP_CUR];
+  const done=()=>streakBanner("📋 Code copied — paste in any editor & save as .cpp");
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(f.code).then(done).catch(()=>{ fallbackCopy(f.code); done(); });
+      return;
+    }
+  }catch(e){}
+  fallbackCopy(f.code); done();
 }
 function cppToggleStdin(){
   const w=document.getElementById("cppStdinWrap");

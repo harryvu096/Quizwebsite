@@ -19,9 +19,13 @@ for (const [n, c] of [["css", css], ["data", data], ["app", app], ["compiler", c
   if (c.includes("</script")) throw new Error(n + " contains </script — cannot inline");
 }
 
-html = html.replace(/<link rel="stylesheet" href="css\/style\.css(\?[^"]*)?">/,
-  "<style>\n" + css + "\n</style>");
-html = html.replace(/<script src="data\/mcqs\.js(\?[^"]*)?<\/script>\s*<script src="js\/app\.js(\?[^"]*)?"><\/script>\s*<script src="js\/compiler\.js(\?[^"]*)?"><\/script>/,
-  "<script>\n" + data + "\n</script>\n<script>\n" + app + "\n</script>\n<script>\n" + comp + "\n</script>");
+const ci = html.indexOf('<link rel="stylesheet" href="css/style.css');
+if(ci>=0){ const ce = html.indexOf('>', ci); html = html.slice(0,ci) + "<style>\n" + css + "\n</style>" + html.slice(ce+1); }
+const si = html.indexOf('<script src="data/mcqs.js');
+if(si>=0){
+  const cs = html.indexOf('<script src="js/compiler.js', si);
+  const se = html.indexOf('</script>', cs) + 9;
+  html = html.slice(0,si) + "<script>\n" + data + "\n</script>\n<script>\n" + app + "\n</script>\n<script>\n" + comp + "\n</script>" + html.slice(se);
+}
 fs.writeFileSync(path.join(__dirname, "..", "standalone.html"), html);
 console.log("standalone.html built:", (html.length / 1024).toFixed(0), "KB");
