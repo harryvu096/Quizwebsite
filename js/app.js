@@ -203,29 +203,48 @@ function levelInfo(xp){
   return {idx, title:cur[1], pct};
 }
 
-/* ===================== NAV ===================== */
-/* Screens are pushed into browser history so the PHONE BACK button walks
-   screen-by-screen inside the app (subjects -> home etc.) instead of
-   leaving the website. */
-function show(id, fromPop){
+/* ===================== NAV + HASH ROUTING =====================
+   Every main screen owns a URL hash (#/cpp, #/map/cs101/mid, #/exams/...)
+   so sharing a link or refreshing reopens the SAME screen, and the phone
+   back button still walks screen-by-screen inside the app. */
+function applyScreen(id){
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active"); window.scrollTo({top:0,behavior:"smooth"});
+  const el=document.getElementById(id); if(el) el.classList.add("active");
+  window.scrollTo({top:0,behavior:"smooth"});
   /* VUtes screens get the authentic VU grey backdrop instead of the game gradient */
   document.body.classList.toggle("vu-mode", id==="screen-mock"||id==="screen-mockterms");
-  try{
-    /* result screens replace history so Back from results lands on the map,
-       not on a frozen quiz screen */
-    const replace = fromPop || id==="screen-complete" || id==="screen-gameover";
-    if(replace) history.replaceState({ahw:id},"","#"+id);
-    else history.pushState({ahw:id},"","#"+id);
-  }catch(e){}
 }
-window.addEventListener("popstate", function(e){
-  if(MK && !MK.done){ MK.done=true; clearInterval(MK.timer); }   // leaving the exam room abandons it
-  const id=(e.state && e.state.ahw) || "screen-home";
-  if(document.getElementById(id)) show(id, true);
-});
-try{ history.replaceState({ahw:"screen-home"},"","#screen-home"); }catch(e){}
+function routeFor(id){
+  if(id==="screen-home") return "#/";
+  if(id==="screen-subjects") return "#/subjects";
+  if(id==="screen-exams") return "#/exams/"+(G.backSid||"");
+  if(id==="screen-map") return "#/map/"+(G.backSid||"")+"/"+(G.backEx||"mid");
+  if(id==="screen-mocksub") return "#/mock";
+  if(id==="screen-cpp") return "#/cpp";
+  return null; /* transient screens (quiz/results/mock exam) keep parent URL */
+}
+function show(id, fromPop){
+  applyScreen(id);
+  const r=routeFor(id);
+  if(r!==null && !fromPop && location.hash!==r){ window.__lastRoute=r; location.hash=r; }
+}
+function routeApply(){
+  const h0=location.hash||"#/";
+  if(h0===window.__lastRoute){ window.__lastRoute=null; return; }   // show() already applied it
+  if(typeof MK!=="undefined" && MK && MK.started && !MK.done){ MK.done=true; clearInterval(MK.timer); }
+  const h=location.hash||"#/";
+  let m=h.match(/^#\/map\/([\w-]+)\/(mid|final)/);
+  if(m){ if(SUBJECTS.find(x=>x.id===m[1])) showMap(m[1],m[2],true); return; }
+  m=h.match(/^#\/exams\/([\w-]+)/);
+  if(m){ if(SUBJECTS.find(x=>x.id===m[1])) showExams(m[1],true); return; }
+  if(h.indexOf("#/subjects")===0){ showSubjects(); return; }
+  if(h.indexOf("#/cpp")===0){ if(typeof showCppLab==="function") showCppLab(); return; }
+  if(h.indexOf("#/mock")===0){ if(typeof showMockSubjects==="function") showMockSubjects(); return; }
+  fillHome(); applyScreen("screen-home");
+}
+window.addEventListener("hashchange", routeApply);
+window.addEventListener("DOMContentLoaded", routeApply);   // shared/refreshed URL par wahi screen khole
+
 function openModal(id){ sfx.click(); document.getElementById(id).classList.add("open"); }
 
 /* ===================== CONTACT & SUGGESTIONS ===================== */

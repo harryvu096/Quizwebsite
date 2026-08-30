@@ -837,7 +837,8 @@ section#screen-mock{padding-bottom:80px}
         <button class="icon-btn" onclick="goHome()" title="Home" aria-label="Home">🏠</button>
         <button class="icon-btn" onclick="cppNewFile()" title="New file" aria-label="New file">📄</button>
         <button class="icon-btn" onclick="cppOpenFiles()" title="Open files (multiple allowed)" aria-label="Open files">📂</button>
-        <button class="icon-btn" onclick="cppDownload()" title="Download current file (.cpp)" aria-label="Download">💾</button>
+        <button class="icon-btn" onclick="cppDownload()" title="Download / Save .cpp" aria-label="Download">💾</button>
+        <button class="icon-btn" onclick="cppCopyCode()" title="Copy code" aria-label="Copy code">📋</button>
         <button class="icon-btn" onclick="cppSnippets()" title="VU snippets" aria-label="Snippets">🧩</button>
         <button class="icon-btn" onclick="cppSettings()" title="Compiler settings" aria-label="Settings">⚙️</button>
       </div>
@@ -1281,29 +1282,48 @@ function levelInfo(xp){
   return {idx, title:cur[1], pct};
 }
 
-/* ===================== NAV ===================== */
-/* Screens are pushed into browser history so the PHONE BACK button walks
-   screen-by-screen inside the app (subjects -> home etc.) instead of
-   leaving the website. */
-function show(id, fromPop){
+/* ===================== NAV + HASH ROUTING =====================
+   Every main screen owns a URL hash (#/cpp, #/map/cs101/mid, #/exams/...)
+   so sharing a link or refreshing reopens the SAME screen, and the phone
+   back button still walks screen-by-screen inside the app. */
+function applyScreen(id){
   document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active"); window.scrollTo({top:0,behavior:"smooth"});
+  const el=document.getElementById(id); if(el) el.classList.add("active");
+  window.scrollTo({top:0,behavior:"smooth"});
   /* VUtes screens get the authentic VU grey backdrop instead of the game gradient */
   document.body.classList.toggle("vu-mode", id==="screen-mock"||id==="screen-mockterms");
-  try{
-    /* result screens replace history so Back from results lands on the map,
-       not on a frozen quiz screen */
-    const replace = fromPop || id==="screen-complete" || id==="screen-gameover";
-    if(replace) history.replaceState({ahw:id},"","#"+id);
-    else history.pushState({ahw:id},"","#"+id);
-  }catch(e){}
 }
-window.addEventListener("popstate", function(e){
-  if(MK && !MK.done){ MK.done=true; clearInterval(MK.timer); }   // leaving the exam room abandons it
-  const id=(e.state && e.state.ahw) || "screen-home";
-  if(document.getElementById(id)) show(id, true);
-});
-try{ history.replaceState({ahw:"screen-home"},"","#screen-home"); }catch(e){}
+function routeFor(id){
+  if(id==="screen-home") return "#/";
+  if(id==="screen-subjects") return "#/subjects";
+  if(id==="screen-exams") return "#/exams/"+(G.backSid||"");
+  if(id==="screen-map") return "#/map/"+(G.backSid||"")+"/"+(G.backEx||"mid");
+  if(id==="screen-mocksub") return "#/mock";
+  if(id==="screen-cpp") return "#/cpp";
+  return null; /* transient screens (quiz/results/mock exam) keep parent URL */
+}
+function show(id, fromPop){
+  applyScreen(id);
+  const r=routeFor(id);
+  if(r!==null && !fromPop && location.hash!==r){ window.__lastRoute=r; location.hash=r; }
+}
+function routeApply(){
+  const h0=location.hash||"#/";
+  if(h0===window.__lastRoute){ window.__lastRoute=null; return; }   // show() already applied it
+  if(typeof MK!=="undefined" && MK && MK.started && !MK.done){ MK.done=true; clearInterval(MK.timer); }
+  const h=location.hash||"#/";
+  let m=h.match(/^#\/map\/([\w-]+)\/(mid|final)/);
+  if(m){ if(SUBJECTS.find(x=>x.id===m[1])) showMap(m[1],m[2],true); return; }
+  m=h.match(/^#\/exams\/([\w-]+)/);
+  if(m){ if(SUBJECTS.find(x=>x.id===m[1])) showExams(m[1],true); return; }
+  if(h.indexOf("#/subjects")===0){ showSubjects(); return; }
+  if(h.indexOf("#/cpp")===0){ if(typeof showCppLab==="function") showCppLab(); return; }
+  if(h.indexOf("#/mock")===0){ if(typeof showMockSubjects==="function") showMockSubjects(); return; }
+  fillHome(); applyScreen("screen-home");
+}
+window.addEventListener("hashchange", routeApply);
+window.addEventListener("DOMContentLoaded", routeApply);   // shared/refreshed URL par wahi screen khole
+
 function openModal(id){ sfx.click(); document.getElementById(id).classList.add("open"); }
 
 /* ===================== CONTACT & SUGGESTIONS ===================== */
@@ -2551,26 +2571,49 @@ function cppDownload(){
   const f=CPP_FILES[CPP_CUR];
   let name=f.name.replace(/[^\w.\-]+/g,"_");
   if(!/\.(cpp|cc|c|h|hpp)$/i.test(name)) name+=".cpp";
-  const doBlob=()=>{ const blob=new Blob([f.code],{type:"text/x-c++src"});
+  /* 1) Share sheet (Android/iOS): "Save to Drive / Files" keeps the exact .cpp name */
+  try{
+    const file=new File([f.code], name, {type:"text/plain"});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      navigator.share({files:[file], title:name})
+        .then(()=>{ streakBanner("💾 "+name+" saved!"); sfx.correct(); })
+        .catch(()=>legacyDownload(f.code,name));
+      return;
+    }
+  }catch(e){}
+  legacyDownload(f.code,name);
+}
+function legacyDownload(code,name){
+  const swOk = navigator.serviceWorker && navigator.serviceWorker.controller && location.protocol.indexOf("http")===0;
+  const doBlob=()=>{ const blob=new Blob([code],{type:"text/x-c++src"});
     const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
     document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(a.href),3000); };
-  const swOk = navigator.serviceWorker && navigator.serviceWorker.controller && location.protocol.indexOf("http")===0;
+    setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+    streakBanner("💾 Downloading "+name); };
   if(swOk){
-    /* page pre-caches the file at a real .cpp URL with Content-Disposition;
-       the SW serves it back => every browser saves it as .cpp */
     const url="__save__/"+name;
-    const res=new Response(f.code,{status:200,headers:{
+    const res=new Response(code,{status:200,headers:{
       "Content-Type":"text/x-c++src",
       "Content-Disposition":"attachment; filename=\""+name+"\""}});
     caches.open("ahw-save").then(cc=>cc.put(new Request(url),res)).then(()=>{
       const a=document.createElement("a"); a.href=url; a.download=name;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(()=>caches.open("ahw-save").then(cc=>cc.delete(new Request(url))).catch(()=>{}),8000);
+      streakBanner("💾 Downloading "+name);
     }).catch(doBlob);
   } else doBlob();
-  streakBanner("💾 Downloading "+name);
   sfx.click();
+}
+function cppCopyCode(){
+  const f=CPP_FILES[CPP_CUR];
+  const done=()=>streakBanner("📋 Code copied — paste in any editor & save as .cpp");
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(f.code).then(done).catch(()=>{ fallbackCopy(f.code); done(); });
+      return;
+    }
+  }catch(e){}
+  fallbackCopy(f.code); done();
 }
 function cppToggleStdin(){
   const w=document.getElementById("cppStdinWrap");

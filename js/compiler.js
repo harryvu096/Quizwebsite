@@ -146,26 +146,49 @@ function cppDownload(){
   const f=CPP_FILES[CPP_CUR];
   let name=f.name.replace(/[^\w.\-]+/g,"_");
   if(!/\.(cpp|cc|c|h|hpp)$/i.test(name)) name+=".cpp";
-  const doBlob=()=>{ const blob=new Blob([f.code],{type:"text/x-c++src"});
+  /* 1) Share sheet (Android/iOS): "Save to Drive / Files" keeps the exact .cpp name */
+  try{
+    const file=new File([f.code], name, {type:"text/plain"});
+    if(navigator.canShare && navigator.canShare({files:[file]})){
+      navigator.share({files:[file], title:name})
+        .then(()=>{ streakBanner("💾 "+name+" saved!"); sfx.correct(); })
+        .catch(()=>legacyDownload(f.code,name));
+      return;
+    }
+  }catch(e){}
+  legacyDownload(f.code,name);
+}
+function legacyDownload(code,name){
+  const swOk = navigator.serviceWorker && navigator.serviceWorker.controller && location.protocol.indexOf("http")===0;
+  const doBlob=()=>{ const blob=new Blob([code],{type:"text/x-c++src"});
     const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download=name;
     document.body.appendChild(a); a.click(); a.remove();
-    setTimeout(()=>URL.revokeObjectURL(a.href),3000); };
-  const swOk = navigator.serviceWorker && navigator.serviceWorker.controller && location.protocol.indexOf("http")===0;
+    setTimeout(()=>URL.revokeObjectURL(a.href),3000);
+    streakBanner("💾 Downloading "+name); };
   if(swOk){
-    /* page pre-caches the file at a real .cpp URL with Content-Disposition;
-       the SW serves it back => every browser saves it as .cpp */
     const url="__save__/"+name;
-    const res=new Response(f.code,{status:200,headers:{
+    const res=new Response(code,{status:200,headers:{
       "Content-Type":"text/x-c++src",
       "Content-Disposition":"attachment; filename=\""+name+"\""}});
     caches.open("ahw-save").then(cc=>cc.put(new Request(url),res)).then(()=>{
       const a=document.createElement("a"); a.href=url; a.download=name;
       document.body.appendChild(a); a.click(); a.remove();
       setTimeout(()=>caches.open("ahw-save").then(cc=>cc.delete(new Request(url))).catch(()=>{}),8000);
+      streakBanner("💾 Downloading "+name);
     }).catch(doBlob);
   } else doBlob();
-  streakBanner("💾 Downloading "+name);
   sfx.click();
+}
+function cppCopyCode(){
+  const f=CPP_FILES[CPP_CUR];
+  const done=()=>streakBanner("📋 Code copied — paste in any editor & save as .cpp");
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(f.code).then(done).catch(()=>{ fallbackCopy(f.code); done(); });
+      return;
+    }
+  }catch(e){}
+  fallbackCopy(f.code); done();
 }
 function cppToggleStdin(){
   const w=document.getElementById("cppStdinWrap");
