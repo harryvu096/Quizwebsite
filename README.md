@@ -30,11 +30,14 @@ Quizwebsite/
 │   └── mcqs.js         ← auto-generated mirror (see below)
 ├── tools/build.js      ← data builder/validator (Node)
 ├── tools/build-standalone.js ← standalone.html generator (Node)
+├── tools/import-mcqs.js ← 📥 past-paper/Drive MCQs importer (JSON/CSV/TXT)
+├── tools/pdf-to-text.py ← PDF/DOCX ➜ TXT converter (no install needed)
 ├── standalone.html     ← poori site EK file mein (share/offline)
 ├── sw.js + manifest.webmanifest ← PWA (install + offline)
 ├── ahw-quizverse-netlify.zip    ← ready-to-deploy bundle
 ├── og-banner.jpg       ← WhatsApp/social share image
-└── ANALYSIS.md         ← full website audit & roadmap
+├── ROADMAP.md          ← feature plan (kya banana chahiye, priority ke sath)
+└── ANALYSIS.md         ← full website audit
 ```
 
 > ⚠️ **Clone/paste karne se pehle ye parhein (important):** poora multi-file project **default branch `main`** par aata hai
@@ -84,6 +87,36 @@ GitHub Pages par bhi seedha deploy ho sakta hai (Settings → Pages → branch s
 
 > **`mcqs.js` kyun hai?** Browser `fetch()` se JSON **file:// par nahi** padh sakta. Is liye app JSON ko `<script>` tag se load karta hai — yehi trick site ko double-click-open banati hai. HTTP server par bhi wahi file chalti hai.
 
+## 📥 Drive / PDF / past papers se MCQs import karna (naya)
+
+Poori tafseel `ROADMAP.md` me hai — short version:
+
+```bash
+# 1) Drive/WhatsApp ki PDF/DOCX/TXT/CSV/JSON files ko incoming/ me rakhein
+
+# 2) PDF/DOCX -> TXT (agar zaroorat ho; koi install lazmi nahi)
+python3 tools/pdf-to-text.py incoming --out=incoming
+
+# 3) Dry-run: sirf report (kuch save nahi hota)
+node tools/import-mcqs.js incoming --dry
+
+# 4) Report check karne ke baad asli import (backup + validation khud hoti hai)
+node tools/import-mcqs.js incoming
+
+# 5) Single-file build update
+node tools/build-standalone.js
+```
+
+**Importer kya khud karta hai:**
+
+- **Subject + exam khud pehchanta hai** — filename ya text se (`CS301_Final.txt` → `Q_CS301_FINAL`, `Data Structures Mid MCQs.docx` → `Q_CS301_MID`). Manual override: `--subject=Q_CS201_FINAL`.
+- **Duplicate skip** — pehle se mojood sawal (82%+ similarity) dobara add nahi hota.
+- **Answer key dhoondta hai** — `Answer: B`, `Correct: option text`, correct option par `*` ya `✓`, CSV column, JSON index (0-based ya 1-based — `--ans-base=1`).
+- **Safety** — har import se pehle `data/.backups/mcqs-<timestamp>.json`, har MCQ ki validation (answer index range, 2+ options, duplicate options, missing explanation), aur `reports/import-<timestamp>.md` me poora hisaab (kitne add, kitne dup, kya skip hua aur kyun).
+- **Levels me barabar baantta hai** (`--distribute=even`, default) — ya sab ek level me (`--distribute=level2`).
+
+> Explanation na ho to `--why=placeholder` (default) ya `--why=answer`. Naya bank banana ho (subject app me nahi) to `--new-bank`.
+
 ## 🎨 Tailwind CSS — use karein ya nahi? (Faisla)
 
 **Mera mashwara: is project ke liye CSS3 hi behtar hai — Tailwind NAI.** Wajuhat:
@@ -100,13 +133,17 @@ GitHub Pages par bhi seedha deploy ho sakta hai (Settings → Pages → branch s
 
 **Abhi ke liye:** current CSS3 ko section-wise organized rakhein (already hai), `prefers-reduced-motion` jaise modern CSS features add karte jayen. Hybrid bhi possible hai: custom CSS base + sirf spacing utilities ke liye kuch classes — lekin build-step ke bina full Tailwind faida nahi deta.
 
-## 🗺️ Roadmap (ANALYSIS.md se)
+## 🗺️ Roadmap
 
-- ✅ P0: Enter bug fix, Coming-Soon system, meta/OG tags, 9 missing subjects filled
-- ✅ P2: File split (HTML/CSS/JS/JSON)
-- ⏳ P1: wall-clock timer + tab-hide pause; modal Esc/backdrop close
-- ⏳ P2: PWA (manifest + service worker) for offline install
-- ⏳ P3: accessibility sweep (h1, aria-labels), progress export/import
+Poora feature plan **`ROADMAP.md`** me hai. Top 5 (mera mashwara):
+
+1. **Content**: import tool se har subject ka bank **100+ MCQs** karein (abhi har bank 30–36).
+2. **🎯 Weakness Trainer** (spaced repetition) — Mistake Vault ko learning system banaye.
+3. **🔥 Daily Challenge + streak** — rozana wapsi (retention).
+4. **📤 WhatsApp score card** — free viral growth.
+5. **🔍 Global MCQ search** — revision ka best tool.
+
+Purana status: ✅ Enter bug fix · ✅ Coming-soon system · ✅ meta/OG tags · ✅ file split · ✅ PWA + offline · ✅ export/import · ⏳ accessibility sweep (h1, aria-labels, reduced-motion).
 
 ## 📞 Support
 

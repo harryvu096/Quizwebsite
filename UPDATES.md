@@ -10,3 +10,5 @@
 8. **Categories & search** — CS, Math & Stats, Pak Studies & Physics, Psychology, Mass Comm, English, Management & Economics, Social Sciences; quick search (e.g. "cs301").
 9. **Footer** — Developed by **All VU Students** ❤️
 10. **standalone.html** — poori site EK file mein; WhatsApp par share karo, bina internet khulo.
+11. **📥 MCQ Importer (naya)** — `tools/import-mcqs.js` + `tools/pdf-to-text.py`: Drive/WhatsApp past papers (PDF/DOCX/TXT/CSV/JSON) se MCQs khud sahi subject aur sahi exam (Mid/Final) me import ho jate hain — duplicate detection, answer-key auto-detect, backup + report ke sath.
+12. **ROADMAP.md** — next features ka plan (Weakness Trainer, Daily Challenge, WhatsApp score card, real leaderboard, exam planner).
