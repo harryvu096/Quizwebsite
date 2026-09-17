@@ -21,26 +21,40 @@ Gamified MCQ practice arena for Virtual University students: **50 subjects · 3,
 
 ```
 Quizwebsite/
-├── index.html          ← HTML shell (21 KB) — structure & screens
+├── index.html          ← HTML shell (~39 KB) — structure & screens
 ├── css/style.css       ← poori styling (CSS3, custom animations)
 ├── js/app.js           ← game engine (quiz logic, XP, vault, certs)
+├── js/compiler.js      ← 💻 C++ Lab (online compiler)
 ├── data/
 │   ├── mcqs.json       ← ✅ SAB subjects ke MCQs (single source of truth)
 │   └── mcqs.js         ← auto-generated mirror (see below)
 ├── tools/build.js      ← data builder/validator (Node)
+├── tools/build-standalone.js ← standalone.html generator (Node)
+├── standalone.html     ← poori site EK file mein (share/offline)
+├── sw.js + manifest.webmanifest ← PWA (install + offline)
+├── ahw-quizverse-netlify.zip    ← ready-to-deploy bundle
 ├── og-banner.jpg       ← WhatsApp/social share image
 └── ANALYSIS.md         ← full website audit & roadmap
 ```
+
+> ⚠️ **Clone/paste karne se pehle ye parhein (important):** poora multi-file project **default branch `main`** par aata hai
+> (PR #1 merge hone ke baad). Us se pehle clone karen to purani *single-file* `index.html` mil sakti hai — is liye
+> branch specify karein:
+> ```bash
+> git clone -b arena/01a0adf1-quizwebsite https://github.com/harryvu096/Quizwebsite.git
+> ```
+> Kisi AI ko repo dena ho to yehi bolein: *"repo ka complete version branch `main` (ya `arena/01a0adf1-quizwebsite`) se padho"* —
+> warna AI sirf ek HTML file dekh kar adhoora jawab deta hai.
 
 ## 📲 Mobile / Online Preview
 
 - **standalone.html** — poori site EK file mein (CSS+JS+data inline). Download kar ke phone par kholo, ya WhatsApp par share karo.
   Regenerate: `node tools/build-standalone.js`
 - **Online links (mobile-friendly), order mein try karein:**
-  1. `https://cdn.jsdelivr.net/gh/harryvu096/Quizwebsite@arena/01a034d6-quizwebsite/standalone.html`
-  2. `https://rawcdn.githack.com/harryvu096/Quizwebsite/arena/01a034d6-quizwebsite/standalone.html`
-  3. `https://htmlpreview.github.io/?https://github.com/harryvu096/Quizwebsite/blob/arena/01a034d6-quizwebsite/standalone.html`
-- **GitHub Pages (recommended, permanent):** repo Settings → Pages → Source: *Deploy from a branch* → branch `arena/01a034d6-quizwebsite` / root → Save. Phir site `https://harryvu096.github.io/Quizwebsite/` par live ho jayegi. (Sandbox token ko Pages API ka access nahi, is liye ye 30-second step repo owner karega.)
+  1. `https://cdn.jsdelivr.net/gh/harryvu096/Quizwebsite@arena/01a0adf1-quizwebsite/standalone.html`
+  2. `https://rawcdn.githack.com/harryvu096/Quizwebsite/arena/01a0adf1-quizwebsite/standalone.html`
+  3. `https://htmlpreview.github.io/?https://github.com/harryvu096/Quizwebsite/blob/arena/01a0adf1-quizwebsite/standalone.html`
+- **GitHub Pages (recommended, permanent):** repo Settings → Pages → Source: *Deploy from a branch* → branch `arena/01a0adf1-quizwebsite` / root → Save. Phir site `https://harryvu096.github.io/Quizwebsite/` par live ho jayegi. (Sandbox token ko Pages API ka access nahi, is liye ye 30-second step repo owner karega.)
 
 ## ▶️ Chalane ka tareeqa
 
