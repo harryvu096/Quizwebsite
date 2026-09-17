@@ -313,9 +313,11 @@ function findDup(text) {
 }
 
 /* ---------------- inputs ---------------- */
+const SKIP_FILES = /^(readme|notes|instructions|license)\.(md|txt)$/i;
 function walk(p) {
   const st = fs.statSync(p);
   if (st.isDirectory()) return fs.readdirSync(p).filter(f => !f.startsWith(".")).flatMap(f => walk(path.join(p, f)));
+  if (SKIP_FILES.test(path.basename(p))) return [];          // README/hidayat files ko MCQ na samjho
   return /\.(json|csv|txt|md)$/i.test(p) ? [p] : [];
 }
 const inputs = files.flatMap(f => walk(f));
