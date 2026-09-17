@@ -1,0 +1,59 @@
+name: Fetch Drive past papers
+
+# Drive folder link dein -> files download + text extract -> artifact (out/)
+on:
+  workflow_dispatch:
+    inputs:
+      spec:
+        description: 'JSON: [{"url":"https://drive.google.com/drive/folders/XXXX","exam":"MID","label":"Premium Mid"}]'
+        required: true
+        type: string
+      limit:
+        description: 'Max files per folder'
+        required: false
+        default: '400'
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install tools (poppler = pdf text extractor)
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq poppler-utils
+          pip install -q requests pdfminer.six
+
+      - name: Crawl Drive + extract text
+        env:
+          SPEC: ${{ inputs.spec }}
+          LIMIT: ${{ inputs.limit }}
+          MAX_TOTAL: '3000'
+        run: python3 tools/ci-fetch-drive.py "$SPEC" "$LIMIT" out
+
+      - name: Summary
+        if: always()
+        run: |
+          echo "### Drive fetch summary" >> $GITHUB_STEP_SUMMARY
+          [ -f out/_manifest.txt ] && head -20 out/_manifest.txt >> $GITHUB_STEP_SUMMARY || echo "koi file nahi mili" >> $GITHUB_STEP_SUMMARY
+
+      - name: Upload text files (artifact)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: drive-txt
+          path: |
+            out/*.txt
+            out/_manifest.txt
+          retention-days: 14
+          if-no-files-found: warn
