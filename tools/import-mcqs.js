@@ -133,7 +133,8 @@ function parseText(txt, srcName) {
     const drop = reason => { skipped.push({ reason, q: (q || "").slice(0, 80) }); cur = null; };
     if (!q || q.length < 8) return drop("question-too-short");
     if (opts.length < 2) return drop("less-than-2-options");
-    if (new Set(opts.map(norm)).size !== opts.length) return drop("duplicate-options");
+    const optKey = o => o.toLowerCase().replace(/\s+/g, " ").trim();
+    if (new Set(opts.map(optKey)).size !== opts.length) return drop("duplicate-options");
     const ans = cur.ans != null ? cur.ans : cur.starred;
     if (ans == null) return drop("no-answer-key");
     if (ans < 0 || ans >= opts.length) return drop("answer-out-of-range");
@@ -206,6 +207,144 @@ function parseText(txt, srcName) {
   }
   finish();
   return { found, skipped };
+}
+
+/* ---------------- solved-paper parser (Moaaz / VU past-paper style) ----
+   Format:
+     Question No: 5   ( Marks: 1 ) - Please choose one
+     The tree data structure is a
+     ► Linear data structure
+     ► Non-linear data structure (Page 112)      <-- correct (bold/heading/underline)
+     ► Graphical data structure
+   Correct option ka nishan: TEXT par bold/heading/underline. "**►**" (sirf marker par
+   bold) sirf font ka artifact hai — usse correct na samjho. */
+const RE_SOLVED_Q = /Question\s*No\s*[:.\-]?\s*(\d{1,3})/i;
+const MARK = /[►▶➢→»]/;
+
+function optScore(raw) {
+  const line = String(raw).trim();
+  let s = 0;
+  const mi = line.search(/[\u25ba\u25b6\u27a2\u2192\u00bb]/);   // ► ▶ ➢ → »
+  if (mi < 0) return 0;
+
+  // underline marker (Moaaz files me pakka nishan)
+  if (/<u>/.test(line) && /<\/u>/.test(line) &&
+      !/<u>\s*(?:[\u25ba\u25b6\u27a2\u2192\u00bb]|<strong>)?\s*<\/u>/.test(line)) s += 4;
+
+  const before = line.slice(0, mi);
+  const after = line.slice(mi + 1);
+  const wrapsStart = /(?:<strong>|\*\*)\s*$/.test(before);
+  const closesRightAfter = /^\s*(?:<\/strong>|\*\*)/.test(after);
+  const hasClose = /(?:\*\*|<\/strong>)/.test(after);
+
+  if (wrapsStart) {
+    if (closesRightAfter) s -= 2;                       // **►** text  = sirf marker bold (shor)
+    else if (hasClose) s += 3;                          // **► text**  = option text bold = correct
+  } else {
+    const mBold = after.match(/^\s*(?:<strong>|\*\*)\s*([\s\S]*?)\s*(?:<\/strong>|\*\*)/);
+    if (mBold && mBold[1].trim().length > 1) s += 4;    // ► **text**  = correct
+    else if (mBold && mBold[1].trim().length <= 1) s -= 2;
+    if (/^\s*#{1,6}\s*/.test(line) && !mBold) s += 2;   // ## ► text  (heading = bold + bara font)
+  }
+  return s;
+}
+function optText(line) {
+  return clean(
+    line
+      .replace(/<strong>|<\/strong>|<u>|<\/u>|<em>|<\/em>/gi, "")
+      .replace(/\*\*/g, "")
+      .replace(/^\s*#{1,6}\s*/, "")
+      .replace(/^[\s►▶➢→»]+/, "")
+      .replace(/[\s►▶➢→»]+$/, "")
+      .replace(/\(Page\s*\d+\)/i, "")
+      .replace(/click here for detail/gi, "")
+      .replace(/[\s,;:.]+$/, "")
+  );
+}
+function isNoise(line) {
+  const t = line.trim();
+  if (!t) return true;
+  if (/^\|/.test(t)) return true;                       // footer tables
+  if (/^-{3,}$/.test(t)) return true;
+  if (/@gmail\.com|mailto:|virtualustaad|^\*\*MC\d/i.test(t)) return true;
+  if (/^(page\s*\d+|vu\b|virtual university)/i.test(t)) return true;
+  return false;
+}
+
+function parseSolved(txt, srcName) {
+  const rawLines = txt.split(/\r?\n/);
+  const found = [], skipped = [];
+  let cur = null;
+
+  const finish = () => {
+    if (!cur) return;
+    const q = clean(cur.q);
+    const opts = cur.opts.map(o => o.text);
+    const drop = r => { skipped.push({ reason: r, q: q.slice(0, 80) }); cur = null; };
+    if (!q || q.length < 12) return drop("question-too-short");
+    if (opts.length < 2) return drop("less-than-2-options");
+    const optKey = o => o.toLowerCase().replace(/\s+/g, " ").trim();
+    if (new Set(opts.map(optKey)).size !== opts.length) return drop("duplicate-options");
+    const scored = cur.opts.map((o, i) => ({ i, s: o.score }));
+    const max = Math.max(...scored.map(s => s.s));
+    const winners = scored.filter(s => s.s === max && s.s > 0);
+    if (!winners.length) return drop("no-correct-marker");
+    if (winners.length > 1) return drop("multiple-correct-markers");
+    const why = clean(cur.why).slice(0, 400);
+    const ref = (cur.ref || []).join(" · ");
+    found.push({
+      q, opts, ans: winners[0].i,
+      why: [why, ref].filter(Boolean).join(" — ") ||
+           `Sahi jawab: ${opts[winners[0].i]}. (VU past paper se — tafseel update honi hai.)`,
+      conf: "solved-marker",
+      meta: { src: srcName, ...(cur.marks ? { marks: cur.marks } : {}) }
+    });
+    cur = null;
+  };
+
+  for (const raw of rawLines) {
+    const line = raw.replace(/\t/g, "  ").trimEnd();
+    if (isNoise(line) && !MARK.test(line)) continue;
+
+    const mQ = line.match(RE_SOLVED_Q);
+    if (mQ) {                       // naya question shuru
+      finish();
+      const m = line.match(/Marks\s*[:.]?\s*(\d+)/i);
+      cur = { num: parseInt(mQ[1], 10), q: "", opts: [], why: "", ref: [], marks: m ? parseInt(m[1], 10) : null };
+      continue;
+    }
+    if (!cur) continue;
+
+    if (MARK.test(line) && line.replace(/<[^>]+>/g, "").replace(/\*/g, "").replace(/#/g, "").trim().length > 2) {
+      const text = optText(line);
+      if (text && text.length > 0 && !/^please choose one/i.test(text)) {
+        cur.opts.push({ text, score: optScore(line) });
+        const pr = line.match(/\(Page\s*(\d+)\)/i);
+        if (pr) cur.ref.push(`Page ${pr[1]}`);
+        continue;
+      }
+    }
+    // question text (jab tak options shuru na hon) ya explanation
+    const t = clean(line.replace(/^\s*#{1,6}\s*/, ""));
+    if (!t || isNoise(line)) continue;
+    if (!cur.opts.length) {
+      if (/^please choose one/i.test(t)) continue;
+      cur.q = cur.q ? cur.q + " " + t : t;
+    } else {
+      const pr = line.match(/\(Page\s*(\d+)\)/i);
+      if (pr) cur.ref.push(`Page ${pr[1]}`);
+      cur.why = cur.why ? cur.why + " " + t : t;
+    }
+  }
+  finish();
+  return { found, skipped };
+}
+
+function looksSolved(txt) {
+  const qCount = (txt.match(/Question\s*No\s*[:.\-]?\s*\d+/gi) || []).length;
+  const marks = (txt.match(/[►▶➢→»]/g) || []).length;   // g flag zaroori hai (count ke liye)
+  const answers = (txt.match(/^\s*(?:ans|answer)\s*[:.\-]/gim) || []).length;
+  return qCount >= 4 && marks >= 8 && answers < qCount / 2;
 }
 
 /* ---------------- structured parsers ---------------- */
@@ -332,7 +471,10 @@ for (const f of inputs) {
   const src = path.basename(f);
   let parsed;
   try {
-    parsed = /\.json$/i.test(f) ? parseJSON(txt, src) : /\.csv$/i.test(f) ? parseCSV(txt, src) : parseText(txt, src);
+    parsed = /\.json$/i.test(f) ? parseJSON(txt, src)
+      : /\.csv$/i.test(f) ? parseCSV(txt, src)
+      : looksSolved(txt) ? parseSolved(txt, src)
+      : parseText(txt, src);
   } catch (e) {
     report.files.push({ file: src, parsed: 0, added: 0, dups: 0, skipped: 0, note: "parse fail: " + e.message.slice(0, 60) });
     continue;
