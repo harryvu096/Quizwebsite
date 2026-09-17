@@ -283,6 +283,9 @@ function parseSolved(txt, srcName) {
     const drop = r => { skipped.push({ reason: r, q: q.slice(0, 80) }); cur = null; };
     if (!q || q.length < 12) return drop("question-too-short");
     if (opts.length < 2) return drop("less-than-2-options");
+    if (opts.length > 6) return drop("too-many-options");
+    if (opts.some(o => o.length > 300)) return drop("option-too-long");
+    if (/Question\s*No|Marks\s*:|Please choose one/i.test(q)) return drop("question-has-meta");
     const optKey = o => o.toLowerCase().replace(/\s+/g, " ").trim();
     if (new Set(opts.map(optKey)).size !== opts.length) return drop("duplicate-options");
     const scored = cur.opts.map((o, i) => ({ i, s: o.score }));

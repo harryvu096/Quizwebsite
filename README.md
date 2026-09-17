@@ -1,6 +1,6 @@
 # ⚡ AHW Quizverse — VU Exam Arena
 
-Gamified MCQ practice arena for Virtual University students: **50 subjects · 3,322 past-paper style MCQs · Mid + Finalterm arenas**, with hearts, streaks, boss battles, XP levels, certificates and a Mistake Vault.
+Gamified MCQ practice arena for Virtual University students: **68 subjects · 7,587 past-paper MCQs · Mid + Finalterm arenas**, with hearts, streaks, boss battles, XP levels, certificates and a Mistake Vault.
 
 ## 🆕 Latest Feature Updates (English)
 
@@ -30,8 +30,10 @@ Quizwebsite/
 │   └── mcqs.js         ← auto-generated mirror (see below)
 ├── tools/build.js      ← data builder/validator (Node)
 ├── tools/build-standalone.js ← standalone.html generator (Node)
-├── tools/import-mcqs.js ← 📥 past-paper/Drive MCQs importer (JSON/CSV/TXT)
-├── tools/pdf-to-text.py ← PDF/DOCX ➜ TXT converter (no install needed)
+├── tools/import-mcqs.js ← 📥 MCQ importer (JSON/CSV/TXT + Moaaz solved-paper mode)
+├── tools/pdf-mcq-extract.py ← ⭐ PDF ➜ text WITH answer key (bold/glyph detection)
+├── tools/pdf-to-text.py ← simple PDF/DOCX ➜ TXT converter
+├── tools/clean-mcqs.py ← data cleaner (page-refs, glued-text junk)
 ├── standalone.html     ← poori site EK file mein (share/offline)
 ├── sw.js + manifest.webmanifest ← PWA (install + offline)
 ├── ahw-quizverse-netlify.zip    ← ready-to-deploy bundle
@@ -94,8 +96,10 @@ Poori tafseel `ROADMAP.md` me hai — short version:
 ```bash
 # 1) Drive/WhatsApp ki PDF/DOCX/TXT/CSV/JSON files ko incoming/ me rakhein
 
-# 2) PDF/DOCX -> TXT (agar zaroorat ho; koi install lazmi nahi)
-python3 tools/pdf-to-text.py incoming --out=incoming
+# 2) PDF -> text (ANSWER KEY ke sath) — Moaaz/Waqar past papers ke liye
+python3 tools/pdf-mcq-extract.py incoming --out=incoming
+
+#    (simple PDF/DOCX ke liye: python3 tools/pdf-to-text.py incoming)
 
 # 3) Dry-run: sirf report (kuch save nahi hota)
 node tools/import-mcqs.js incoming --dry
@@ -115,7 +119,11 @@ node tools/build-standalone.js
 - **Safety** — har import se pehle `data/.backups/mcqs-<timestamp>.json`, har MCQ ki validation (answer index range, 2+ options, duplicate options, missing explanation), aur `reports/import-<timestamp>.md` me poora hisaab (kitne add, kitne dup, kya skip hua aur kyun).
 - **Levels me barabar baantta hai** (`--distribute=even`, default) — ya sab ek level me (`--distribute=level2`).
 
+**Solved-paper mode (Moaaz/Waqar collections):** `Question No: 5 ( Marks: 1 )` wale papers khud detect ho jate hain — sahi option **bold font** ya ✔ glyph se pakra jata hai (`tools/pdf-mcq-extract.py` usay `► **correct**` bana deta hai), baqi options se answer key nikal aati hai.
+
 > Explanation na ho to `--why=placeholder` (default) ya `--why=answer`. Naya bank banana ho (subject app me nahi) to `--new-bank`.
+
+> **Data size:** 7,587 MCQs = `data/mcqs.json` ~1.7 MB (standalone.html ~1.9 MB). Pehli visit par ye load hota hai, phir PWA cache se **offline** chalta hai. Agla optimization: per-subject lazy loading (ROADMAP.md).
 
 ## 🎨 Tailwind CSS — use karein ya nahi? (Faisla)
 

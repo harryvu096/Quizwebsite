@@ -8,8 +8,9 @@
 
 | # | Kaam | Kyun zaroori | Effort |
 |---|---|---|---|
-| 1 | **Drive/past papers se MCQs import** (`tools/import-mcqs.js`) — har subject me kam az kam **100+ MCQs / bank** | Abhi 68 subjects hain magar har bank me sirf 30–36 MCQs. VU ke actual paper me 40 MCQ aate hain; 30 wale bank 1 din me khatam → student wapas nahi aata. **Content hi asli product hai.** | Medium (data) |
-| 2 | **13 thin subjects** (ECO404, ECO501, ENG401/501/502, PSY405/406/504/505, SOC201/301/302/401) ko 40 → 100+ MCQs | Ye subjects baqi se half hain; students ko weak feel hota hai | Medium |
+| 1 | ✅ **Past papers import ho gaye** — 4,167 → **7,587 MCQs** (38 banks barhe, 5 banks 200+, 15 banks 100+). Baqi FINAL banks + missing subjects ke liye aur papers chahiye | Content hi asli product hai | ✅ Done (mid-term) |
+| 2 | **Baqi banks 200+ tak le jana** — khaas kar FINAL banks (abhi zyada tar 36 MCQs) aur thin subjects (ECO404, ECO501, ENG401/501/502, PSY405/406/504/505, SOC201/301/302/401) | Final term me bhi wohi depth chahiye | Medium (data) |
+| 3 | **Performance: per-subject lazy loading** — 1.7 MB data har visit par load hota hai; subject kholne par hi uska bank load ho | Mobile par first load tez, data unlimited barh sakta hai | 3–4 hr |
 | 3 | **Solved past papers** (2020–2025) har subject ka "Past Papers" level | VU me past paper practice = sab se zyada maangi jane wali cheez (YouTube pe log videos banate hain kyunki official papers nahi milte) | Medium |
 | 4 | Har MCQ me **Lecture number** tag (importer already `meta.lec` save karta hai) → "Lecture-wise practice" | Handout ke lecture 12 tak paper aata hai; student ko exactly wohi lecture practice karni hoti hai | Low (data already aa rha hai) |
 
