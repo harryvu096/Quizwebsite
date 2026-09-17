@@ -1,0 +1,9 @@
+CS301 Data Structures — Final Term (TEST upload)
+
+1. Which sorting algorithm is fastest on average for random data?
+A) Bubble sort
+B) Quick sort
+C) Insertion sort
+D) Selection sort
+Answer: B
+Explanation: Quick sort has O(n log n) average complexity.
