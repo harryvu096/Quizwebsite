@@ -1,0 +1,124 @@
+CS301- Data Structures
+LATEST SOLVED MCQS FROM MIDTERM PAPERS
+MIDTERM EXAMINATION Spring 2010 CS301- Data Structures
+
+Question No: 1 ( Marks: 1 ) - Please choose one
+A queue where the de-queue operation depends not on FIFO, is called a priority queue
+**►** False
+► **True (Page 101)**
+
+Question No: 2 ( Marks: 1 ) - Please choose one
+The data of the problem is of 2GB and the hard disk is of 1GB capacity, to solve this problem we should
+**►** Use better data structures
+► **Increase the hard disk space  (Page 5)**
+**►** Use the better algorithm
+**►** Use as much data as we can store on the hard disk
+
+Question No: 3 ( Marks: 1 ) - Please choose one
+In the call by value methodology, a copy of the object is passed to the called function.
+**►** False
+**► True (Page 202)**
+
+Question No: 5 ( Marks: 1 ) - Please choose one
+The tree data structure is a
+**►** Linear data structure
+## ► Non-linear data structure (Page 112)
+**►** Graphical data structure
+## <strong>►</strong> Data structure like queue
+
+Question No: 6 ( Marks: 1 ) - Please choose one
+When should you use a const reference parameter?
+**►** Whenever the parameter has huge size.
+**► Whenever the parameter has huge size, the function changes the parameter within its body, and you do NOT want these changes to alter the actual argument.**
+**►** Whenever the parameter has huge size, the function changes the parameter within its body, and you DO want these changes to alter the actual argument.
+**►** Whenever the parameter has huge size, and the function does not change the parameter within its body.
+Declaring a parameter as a const simply means that the function can't change the value of its parameters.
+
+Question No: 8 ( Marks: 1 ) - Please choose one
+What is the maximum depth of recursive calls a function may make?
+**►** 1
+**►** 2
+**►** n (where n is the argument)
+**► There is no fixed maximum**
+
+| Muhammad Moaaz Siddiq MCS(2nd) mc100401285@gmail.com Campus:- Institute of E-Learning &amp; Modern Studies(IEMS)Samundar (PSMD01) | Muhammad Irfan Farid MCS(2nd) virtualcheater@gmail.com Virtual University Campus.D.G.Khan (VDGK01) |
+
+---
+
+Question No: 9 ( Marks: 1 ) - Please choose one
+Suppose n is the number of nodes in a complete Binary Tree then maximum steps required for a search operation are,
+**► Log₂ (n+1) -1 (Page 139)
+►** Log₂ (n+1)
+**►** Log₂ (n) - 1
+<u>► Log₂ (n)</u>
+
+Question No: 10 ( Marks: 1 ) - Please choose one
+In the linked list implementation of the stack class, where does the push member function places the new entry on the linked list?
+## ► At the head (Page 53)
+**►** At the tail
+**►** After all other entries that are greater than the new entry.
+**►** After all other entries that are smaller than the new entry.
+
+Question No: 11 ( Marks: 1 ) - Please choose one
+Suppose we have a *circular* array implementation of the queue class, with ten items in the queue stored at data[2] through data[11]. The CAPACITY is 42, i.e., the array has been declared to be of size 42. Where does the push member function place the new entry in the array?
+**►** data[1]
+**►** data[2]
+**►** data[11]
+**► data[12**]
+
+Question No: 12 ( Marks: 1 ) - Please choose one
+The expression AB+C* is called?
+**►** Prefix expression
+► **Postfix expression (Page 70)**
+**►** Infix expression
+**►** None of these
+
+Question No: 13 ( Marks: 1 ) - Please choose one
+_________ is a binary tree where every node has a value, every node's left subtree contains only values less than or equal to the node's value, and every node's right subtree contains only values that are greater then or equal?
+**►** Strictly Binary Tree
+► **Binary Search tree**
+## Click here for detail
+**►** AVL tree
+**►** All of these
+
+| Muhammad Moaaz Siddiq MCS(2nd) mc100401285@gmail.com Campus:-Institute of E-Learning &amp; Modern Studies(IEMS)Samundar (PSMD01) | Muhammad Irfan Farid MCS(2nd) virtualcheater@gmail.com Virtual University Campus.D.G.Khan (VDGK01) |
+
+---
+
+Question No: 16 ( Marks: 1 ) - Please choose one
+We access elements in AVL Tree in,
+**►** Linear way only
+## ► Non Linear way only
+**►** Both linear and non linear ways
+**►** None of the given options.
+
+Question No: 17 ( Marks: 2 )
+AVL Tree is,
+## ► Non Linear data structure
+**►** Linear data structure
+## Click here for detail
+**►** Hybrid data structure (Mixture of Linear and Non Linear)
+
+Question No: 18 ( Marks: 1 ) - Please choose one
+In doubly linked list we can traverse in,
+**►** One direction only
+► **Both directions**
+**►** Random order
+**►** None of these
+Doubly linked list me har node ke paas next aur previous dono pointers hote hain, is liye aage aur peeche dono taraf traverse ho sakta hai.
+
+Question No: 19 ( Marks: 1 ) - Please choose one
+Hashing is a technique used to,
+**►** Sort the data
+► **Map keys to array indices using a hash function**
+**►** Compress the data
+**►** Encrypt the data
+
+| Muhammad Moaaz Siddiq MCS(2nd) mc100401285@gmail.com Campus:- Institute of E-Learning &amp; Modern Studies(IEMS)Samundar (PSMD01) |
+
+Question No: 20 ( Marks: 1 ) - Please choose one
+The postfix form of the expression (A + B) * (C - D) is,
+**►** AB+CD-*
+**►** AB+CD*-
+**►** A+B*C-D
+**►** None of these
