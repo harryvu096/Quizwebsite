@@ -381,7 +381,7 @@
           <textarea id="cppStdin" class="cpp-stdin" rows="3" spellcheck="false"></textarea>
         </div>
         <div class="cpp-lab" style="margin-top:12px">Output Console</div>
-        <pre id="cppOut" class="cpp-out">▶ Press Run — the GCC-14 chain (Judge0 → Wandbox → proxies → Piston) compiles your code. Internet required.</pre>
+        <pre id="cppOut" class="cpp-out">▶ Press Run to compile and execute your program. An active internet connection is required.</pre>
       </div>
       <aside>
         <div class="cpp-lab">🎯 VU Challenges <span style="opacity:.7">— solve them, earn XP!</span></div>
@@ -440,8 +440,8 @@
       <option value="-O0" selected>-O0 (fast compile, debug)</option><option value="-O2">-O2 (optimized)</option>
     </select>
     <label class="vu-check" style="margin:2px 0 10px"><input type="checkbox" id="setWarn"> -Wall warnings</label>
-    <label style="font-size:12px;font-weight:800;color:#6b6490">Custom Compiler API (Piston-compatible URL — optional)</label>
-    <input id="setCustom" style="width:100%;box-sizing:border-box;margin:4px 0 10px;padding:10px;border-radius:10px;border:2px solid #ddd6fe;font-weight:700" placeholder="https://your-piston-server.com">
+    <label style="font-size:12px;font-weight:800;color:#6b6490">Custom Compile Server URL (advanced — optional)</label>
+    <input id="setCustom" style="width:100%;box-sizing:border-box;margin:4px 0 10px;padding:10px;border-radius:10px;border:2px solid #ddd6fe;font-weight:700" placeholder="https://your-compile-server.com">
     <label style="font-size:12px;font-weight:800;color:#6b6490">Editor font size: <span id="setFsVal">13.5</span>px</label>
     <input type="range" id="setFs" min="12" max="18" step="0.5" value="13.5" style="width:100%;margin:4px 0 10px" oninput="document.getElementById('setFsVal').textContent=this.value">
     <label class="vu-check" style="margin:2px 0 12px"><input type="checkbox" id="setLight"> Light editor theme</label>
