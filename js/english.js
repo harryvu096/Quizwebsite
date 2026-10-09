@@ -806,18 +806,24 @@ function elCellDown(r, c) {
 }
 function elCellEnter(r, c) {
   if (!EL_STATE.ws.dragging) return;
+  if (!EL_STATE.ws.selStart) {
+    EL_STATE.ws.selStart = [r, c];
+  }
   EL_STATE.ws.selEnd = [r, c];
   elRenderGrid();
 }
 function elCellUp() {
   if (!EL_STATE.ws.dragging) return;
   EL_STATE.ws.dragging = false;
+  // Run the check BEFORE clearing selection so getSelectedWord sees both endpoints
   elWsCheck();
+  // Clear the visual selection after a short delay so the user sees the
+  // "found" feedback flash, but quick enough that a follow-up tap works.
   setTimeout(() => {
     EL_STATE.ws.selStart = null;
     EL_STATE.ws.selEnd = null;
     elRenderGrid();
-  }, 700);
+  }, 350);
 }
 
 function elWsCheck() {
@@ -1182,59 +1188,161 @@ function escapeAttr(s) { return escapeHtml(s).replace(/'/g, "&#39;"); }
 
 /* ============================================================
    INIT — wire drag handlers on the word-search grid
+   Uses Pointer Events on document for unified mouse/touch/pen.
+   Survives innerHTML rebuilds because it's delegated on document.
    ============================================================ */
 
+let _elGridWired = false;
+
 function elInitScreen() {
-  const grid = document.getElementById("wsGrid");
-  if (grid && !grid._wired) {
-    grid._wired = true;
-    let pressed = false;
-    // mouse
-    grid.addEventListener("mousedown", e => {
-      const cell = e.target.closest(".ws-cell");
-      if (!cell) return;
-      e.preventDefault();
-      pressed = true;
-      elCellDown(parseInt(cell.dataset.r, 10), parseInt(cell.dataset.c, 10));
-    });
-    grid.addEventListener("mouseover", e => {
-      if (!pressed) return;
-      const cell = e.target.closest(".ws-cell");
-      if (!cell) return;
-      elCellEnter(parseInt(cell.dataset.r, 10), parseInt(cell.dataset.c, 10));
-    });
-    document.addEventListener("mouseup", () => {
-      if (pressed) { pressed = false; elCellUp(); }
-    });
-    // touch
-    grid.addEventListener("touchstart", e => {
-      const cell = e.target.closest(".ws-cell");
-      if (!cell) return;
-      e.preventDefault();
-      pressed = true;
-      elCellDown(parseInt(cell.dataset.r, 10), parseInt(cell.dataset.c, 10));
-    }, { passive: false });
-    grid.addEventListener("touchmove", e => {
-      if (!pressed) return;
-      const t = e.touches[0];
-      if (!t) return;
-      const el = document.elementFromPoint(t.clientX, t.clientY);
-      if (!el) return;
-      const cell = el.closest(".ws-cell");
-      if (!cell) return;
-      e.preventDefault();
-      elCellEnter(parseInt(cell.dataset.r, 10), parseInt(cell.dataset.c, 10));
-    }, { passive: false });
-    grid.addEventListener("touchend", () => {
-      if (pressed) { pressed = false; elCellUp(); }
-    });
-    grid.addEventListener("touchcancel", () => {
-      if (pressed) { pressed = false; elCellUp(); }
-    });
-  }
-  // initial paint
+  // Always paint the grid if needed
   if (EL_STATE.section === "ws") {
-    if (!EL_STATE.ws.grid || EL_STATE.ws.grid.length === 0) elWsNewGrid();
-    else elRenderGrid();
+    if (!EL_STATE.ws.grid || EL_STATE.ws.grid.length === 0) {
+      elWsNewGrid();
+      return; // elWsNewGrid calls renderEnglishLab which will re-enter here
+    } else {
+      elRenderGrid();
+    }
   }
+
+  // Wire once on document. Delegation works even after innerHTML rebuilds.
+  if (_elGridWired) return;
+  _elGridWired = true;
+
+  let pointerId = null;
+  let downRC = null;       // [r,c] where pointer started
+  let lastRC = null;       // [r,c] last entered
+  let movedFar = false;    // true once drag exceeds threshold (so tap = no move)
+  const TAP_THRESHOLD = 8; // px
+
+  function cellFromPoint(x, y) {
+    if (x == null || y == null) return null;
+    const tgt = document.elementFromPoint(x, y);
+    if (!tgt) return null;
+    const cell = tgt.closest(".ws-cell");
+    if (!cell) return null;
+    return [parseInt(cell.dataset.r, 10), parseInt(cell.dataset.c, 10)];
+  }
+
+  function onDown(e, x, y, id) {
+    if (EL_STATE.section !== "ws") return;
+    const cell = e.target && e.target.closest && e.target.closest(".ws-cell");
+    if (!cell) return;
+    // Don't preventDefault on regular mouse — it can swallow click for buttons.
+    // Only preventDefault on touch to suppress scroll/zoom.
+    if (e.pointerType === "touch") e.preventDefault();
+    const r = parseInt(cell.dataset.r, 10);
+    const c = parseInt(cell.dataset.c, 10);
+    pointerId = id;
+    downRC = [r, c];
+    lastRC = [r, c];
+    movedFar = false;
+    elCellDown(r, c);
+    // Capture pointer so we keep getting events even if finger leaves the cell
+    try { if (e.target.setPointerCapture) e.target.setPointerCapture(id); } catch (_) {}
+  }
+
+  function onMove(e, x, y) {
+    if (pointerId === null) return;
+    if (e && pointerId !== -1 && e.pointerId !== undefined && e.pointerId !== pointerId) return;
+    if (EL_STATE.section !== "ws") { reset(); return; }
+    // Tap-vs-drag: if user barely moved, treat as tap (no line drawn yet).
+    if (downRC) {
+      const dx = x - downRC._x, dy = y - downRC._y;
+      if (dx * dx + dy * dy > TAP_THRESHOLD * TAP_THRESHOLD) movedFar = true;
+    }
+    if (!movedFar) return; // don't extend selection for a tap
+    const rc = cellFromPoint(x, y);
+    if (!rc) return;
+    if (lastRC && lastRC[0] === rc[0] && lastRC[1] === rc[1]) return;
+    lastRC = rc;
+    elCellEnter(rc[0], rc[1]);
+  }
+
+  function onUp(e) {
+    if (pointerId === null) return;
+    if (e && pointerId !== -1 && e.pointerId !== undefined && e.pointerId !== pointerId) return;
+    elCellUp();
+    reset();
+  }
+
+  function reset() {
+    pointerId = null;
+    downRC = null;
+    lastRC = null;
+    movedFar = false;
+  }
+
+  // Track down coords for tap detection
+  function onDownRecord(e, x, y, id) {
+    if (EL_STATE.section !== "ws") return;
+    const cell = e.target && e.target.closest && e.target.closest(".ws-cell");
+    if (!cell) return;
+    if (e.pointerType === "touch") e.preventDefault();
+    // stash coords for the move handler
+    cell._downX = x; cell._downY = y;
+    onDown(e, x, y, id);
+    // patch downRC to also carry x,y
+    if (downRC) { downRC._x = x; downRC._y = y; }
+  }
+
+  // Pointer Events — works for mouse, touch, pen in modern browsers
+  document.addEventListener("pointerdown", e => onDownRecord(e, e.clientX, e.clientY, e.pointerId));
+  document.addEventListener("pointermove", e => onMove(e, e.clientX, e.clientY));
+  document.addEventListener("pointerup",   e => onUp(e));
+  document.addEventListener("pointercancel", e => onUp(e));
+  document.addEventListener("pointerleave", e => { /* ignore — release handled by pointerup */ });
+
+  // Touch fallback (some older mobile browsers lack reliable PointerEvents)
+  document.addEventListener("touchstart", e => {
+    if (EL_STATE.section !== "ws") return;
+    const t = e.touches[0]; if (!t) return;
+    const rc = cellFromPoint(t.clientX, t.clientY);
+    if (!rc) return;
+    e.preventDefault();
+    elCellDown(rc[0], rc[1]);
+    pointerId = -1; downRC = rc; lastRC = rc; movedFar = false;
+  }, { passive: false });
+
+  document.addEventListener("touchmove", e => {
+    if (EL_STATE.section !== "ws") return;
+    if (pointerId !== -1) return; // pointer events handling it
+    const t = e.touches[0]; if (!t) return;
+    const rc = cellFromPoint(t.clientX, t.clientY);
+    if (!rc) return;
+    e.preventDefault();
+    movedFar = true;
+    if (lastRC && lastRC[0] === rc[0] && lastRC[1] === rc[1]) return;
+    lastRC = rc;
+    elCellEnter(rc[0], rc[1]);
+  }, { passive: false });
+
+  document.addEventListener("touchend", e => {
+    if (pointerId !== -1) return;
+    elCellUp();
+    pointerId = null; downRC = null; lastRC = null; movedFar = false;
+  });
+  document.addEventListener("touchcancel", e => {
+    if (pointerId !== -1) return;
+    elCellUp();
+    pointerId = null; downRC = null; lastRC = null; movedFar = false;
+  });
+
+  // Click as a final tap-fallback (in case pointer events fail entirely)
+  document.addEventListener("click", e => {
+    if (EL_STATE.section !== "ws") return;
+    const cell = e.target.closest && e.target.closest(".ws-cell");
+    if (!cell) return;
+    // Only use click for tap (no movement) — pointer events already handled drag.
+    if (movedFar) return;
+    // If selection is still set (didn't get cleared by pointerup), trigger a check.
+    if (EL_STATE.ws.selStart && EL_STATE.ws.selEnd) {
+      elWsCheck();
+      setTimeout(() => {
+        EL_STATE.ws.selStart = null;
+        EL_STATE.ws.selEnd = null;
+        elRenderGrid();
+      }, 300);
+    }
+  });
 }

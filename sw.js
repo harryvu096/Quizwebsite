@@ -3,7 +3,7 @@
    - /__save__/name.cpp route: serves editor code with Content-Disposition
      attachment so EVERY browser saves the file with the .cpp name
    Bump CACHE name to force-invalidate old clients. */
-const CACHE = "ahw-quizverse-v10";
+const CACHE = "ahw-quizverse-v11";
 const CORE = [
   "./",
   "index.html",
