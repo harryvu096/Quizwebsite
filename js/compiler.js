@@ -344,7 +344,7 @@ async function cppRun(){
   const { main, extras } = mainAndExtras();
   const filesArr=[main, ...extras];
   if(!main.code.trim()) return;
-  out.className="cpp-out run"; out.textContent="⏳ Racing compilers — the fastest one wins...";
+  out.className="cpp-out run"; out.textContent="⏳ Compiling and running your code... please wait.";
   const S=profile.cppSettings;
   const jobs=[];
   if(S.customUrl) jobs.push(()=>runPistonAt(S.customUrl, filesArr, stdin));
@@ -359,25 +359,34 @@ async function cppRun(){
   try{
     result = await Promise.any(jobs.map(async fn=>{
       const r=await fn();
-      r.via += "  ⚡ " + ((Date.now()-t0)/1000).toFixed(1) + "s";
+      // PRIVATE: provider name + timing tracked internally, NOT shown to user
+      r._privateMeta = r.via + "  ⚡ " + ((Date.now()-t0)/1000).toFixed(1) + "s";
+      r.via = ""; // strip public-facing provider label
       return r;
     }));
   }catch(e){
     errs = (e && e.errors) ? e.errors.map(x=>"• "+x.message) : [String(e)];
+    // strip API/provider names from error messages too
+    errs = errs.map(m => m
+      .replace(/judge0/gi, "remote service")
+      .replace(/wandbox/gi, "remote service")
+      .replace(/piston/gi, "remote service")
+      .replace(/godbolt/gi, "remote service")
+      .replace(/emkc\.org/gi, "remote service")
+      .replace(/corsproxy/gi, "proxy")
+      .replace(/https?:\/\/\S+/gi, "[hidden]"));
   }
   if(!result){
     out.className="cpp-out err";
-    out.textContent="❌ Sab compilers fail (internet/CORS/rate-limit):\n"+errs.slice(0,7).join("\n")+
-      "\n\n💡 Tip: set your own free Piston server URL in Settings for fast, reliable compiles.";
+    out.textContent="❌ Could not reach the compile service right now. Please check your internet connection and try again.\n\nIf this keeps happening, ask the admin to verify the compile service status.";
     return;
   }
-  CPP_LAST_VIA=result.via;
-  let txt="🔧 "+result.via+"  ·  "+S.std.toUpperCase()+" "+S.opt+(S.warn?" -Wall":"")+"\n──────────────────────────────\n";
+  // Hide all internal provider info from the user-facing output
+  let txt="✅ Compiled with "+S.std.toUpperCase()+" "+S.opt+(S.warn?" -Wall":"")+"\n──────────────────────────────\n";
   if(result.compileErr) txt+="❌ COMPILE ERROR:\n"+result.compileErr+"\n";
   if(result.stdout) txt+="✅ OUTPUT:\n"+result.stdout;
   if(result.stderr) txt+=(result.stdout?"\n":"")+"⚠️ STDERR:\n"+result.stderr+"\n";
   if(!result.stdout && !result.stderr && !result.compileErr) txt+="(no output — the program printed nothing)";
-  if(result.statusDesc) txt+="\n\n[status: "+result.statusDesc+"]";
   out.className="cpp-out "+(result.compileErr?"err":"ok");
   out.textContent=txt;
   cppStatus();

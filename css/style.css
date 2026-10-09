@@ -534,3 +534,56 @@ section#screen-mock{padding-bottom:80px}
   .spoken-card,.tense-card{padding:10px 12px}
   .spoken-en,.tense-name{font-size:14px}
 }
+
+/* ===== ENGLISH LAB — Master Edition additions ===== */
+
+.el-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:8px;margin:14px 0 18px}
+.el-stat{background:linear-gradient(180deg,#fff,#faf5ff);border:2px solid #ddd6fe;border-radius:14px;padding:10px 8px;text-align:center;box-shadow:0 3px 0 rgba(43,33,64,.08)}
+.el-stat-num{font:900 20px "Segoe UI",system-ui;color:#5b21b6;line-height:1}
+.el-stat-lbl{font-size:11px;color:#6b6480;font-weight:700;margin-top:2px}
+
+.ws-sub{font-size:13px;line-height:1.4}
+.ws-diff{display:inline-block;color:#fff;font:900 10.5px "Segoe UI",system-ui;padding:2px 7px;border-radius:8px;vertical-align:middle;letter-spacing:.4px}
+.ws-cell{user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;touch-action:none}
+
+.ws-chip-ex{font-size:10.5px;color:#4c1d95;font-style:italic;margin-top:2px;max-width:170px;line-height:1.25;text-align:center}
+
+.spoken-cat-head{color:#5b21b6;font:900 16px "Segoe UI",system-ui;margin:14px 0 6px;padding-left:6px;border-left:5px solid #7c3aed;display:flex;align-items:center;gap:6px}
+.spoken-cat-head::after{content:"";flex:1;height:2px;background:linear-gradient(90deg,#ddd6fe,transparent)}
+.spoken-card{cursor:pointer;transition:transform .15s,box-shadow .15s}
+.spoken-card:hover{transform:translateY(-2px);box-shadow:0 6px 0 rgba(43,33,64,.15)}
+.spoken-card.done{background:linear-gradient(180deg,#dcfce7,#bbf7d0);border-color:#34d15f}
+
+.tense-tabs{display:flex;gap:6px;justify-content:center;flex-wrap:wrap;margin:6px 0 8px}
+.tense-tab{font:inherit;font-weight:800;font-size:13px;padding:8px 14px;border-radius:12px;border:2px solid #ddd6fe;background:#fff;color:#5b21b6;cursor:pointer;transition:.15s}
+.tense-tab.on{background:linear-gradient(180deg,#8b5cf6,#6d28d9);color:#fff;border-color:#7c3aed;box-shadow:0 3px 0 rgba(0,0,0,.2)}
+
+.tense-pager{display:flex;align-items:center;justify-content:center;gap:12px;margin:8px 0}
+.tense-nav{font:inherit;font-weight:800;font-size:14px;padding:8px 16px;border-radius:10px;border:2px solid #ddd6fe;background:#fff;color:#5b21b6;cursor:pointer}
+.tense-nav:disabled{opacity:.4;cursor:not-allowed}
+.tense-pager-num{font:900 15px "Segoe UI",system-ui;color:#5b21b6;min-width:80px;text-align:center}
+
+.tense-pills{display:flex;gap:4px;justify-content:center;flex-wrap:wrap;margin:6px 0 14px}
+.tense-pill{font:inherit;font-weight:800;font-size:11.5px;padding:6px 10px;border-radius:9px;border:2px solid #ddd6fe;background:#fff;color:#5b21b6;cursor:pointer}
+.tense-pill.on{background:linear-gradient(180deg,#ec4899,#be185d);color:#fff;border-color:#be185d}
+.tense-pill.done{background:linear-gradient(180deg,#34d15f,#1faf45);color:#fff;border-color:#16a34a}
+
+.tense-card.big{padding:14px 16px;margin-top:4px}
+.tense-when{font:700 13px "Segoe UI",system-ui;color:#5b21b6;background:#fef3c7;padding:8px 10px;border-radius:10px;margin:8px 0;border-left:4px solid #f59e0b}
+.tense-mistakes{font:600 12.5px "Segoe UI",system-ui;color:#5b21b6;background:#fee2e2;padding:8px 10px;border-radius:10px;margin-top:8px;border-left:4px solid #ef4444}
+.tense-mistakes ul{margin:4px 0 0 18px;padding:0}
+.tense-mistakes li{margin:2px 0}
+.tense-card.center{text-align:center}
+
+.mcq-opts{display:grid;gap:6px;margin:10px 0}
+.mcq-opt{font:inherit;font-weight:700;font-size:14px;padding:10px 12px;border-radius:10px;border:2px solid #ddd6fe;background:#fff;color:#2b2140;cursor:pointer;text-align:left;transition:.12s}
+.mcq-opt:hover{background:#faf5ff}
+.mcq-opt.correct{background:linear-gradient(180deg,#34d15f,#1faf45);color:#fff;border-color:#16a34a}
+.mcq-opt.wrong{background:linear-gradient(180deg,#ef4444,#b91c1c);color:#fff;border-color:#991b1b}
+.mcq-opt:disabled{cursor:default}
+.mcq-fb{padding:10px 12px;border-radius:10px;margin-top:8px;font:600 13.5px "Segoe UI",system-ui;line-height:1.45}
+.mcq-fb.ok{background:#dcfce7;color:#14532d;border-left:4px solid #16a34a}
+.mcq-fb.no{background:#fee2e2;color:#7f1d1d;border-left:4px solid #dc2626}
+
+.fill-input{width:100%;box-sizing:border-box;font:700 16px "Segoe UI",Consolas,monospace;padding:12px 14px;border:3px solid #ddd6fe;border-radius:12px;margin:10px 0;outline:none;background:#faf8ff;color:#5b21b6;text-align:center;letter-spacing:.5px}
+.fill-input:focus{border-color:#7c3aed;box-shadow:0 0 0 4px rgba(124,58,237,.15)}
