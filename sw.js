@@ -1,15 +1,16 @@
-/* AHW Quizverse service worker v7 - (c) 2026 AHW Quizverse / All VU Students.
+/* AHW Quizverse service worker v10 - (c) 2026 AHW Quizverse / All VU Students.
    - NETWORK-FIRST (fresh code, offline fallback)
    - /__save__/name.cpp route: serves editor code with Content-Disposition
      attachment so EVERY browser saves the file with the .cpp name
    Bump CACHE name to force-invalidate old clients. */
-const CACHE = "ahw-quizverse-v7";
+const CACHE = "ahw-quizverse-v10";
 const CORE = [
   "./",
   "index.html",
   "css/style.css",
   "js/app.js",
   "js/compiler.js",
+  "js/english.js",
   "data/mcqs.js",
   "manifest.webmanifest",
   "icon-192.png",

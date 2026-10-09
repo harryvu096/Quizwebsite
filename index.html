@@ -67,7 +67,7 @@
       <div class="btn-row">
         <button class="btn btn-purple" onclick="openModal('modal-how')">📖 How to Play</button>
         <button class="btn btn-pink" onclick="showCppLab()">💻 C++ Compiler</button>
-        <button class="btn btn-orange" onclick="showGames()">🧠 Brain Games</button>
+        <button class="btn btn-purple" onclick="showEnglishLab()">📚 English Lab</button>
         <!-- Mock Exam temporarily hidden (will be re-enabled later)
         <button class="btn btn-blue" onclick="showMockSubjects()">🎓 Mock Exam (VU Style)</button>
         -->
@@ -396,26 +396,17 @@
     </div>
     <div class="cpp-status" id="cppStatus">🔧 —</div>
   </section>
-  <!-- ============ BRAIN GAMES HUB ============ -->
-  <section id="screen-games" class="screen">
-    <div class="topbar">
-      <div class="mini-logo" onclick="goHome()" style="cursor:pointer" title="Home">🧠 Brain Games <span style="opacity:.8;font-size:13px">· entertain + prep, dono!</span></div>
-      <div style="display:flex;gap:8px"><button class="icon-btn" onclick="goHome()" title="Home" aria-label="Home">🏠</button></div>
-    </div>
-    <div class="picks" id="gamesHub"></div>
-  </section>
 
-  <!-- ============ GAMEPLAY ============ -->
-  <section id="screen-gameplay" class="screen">
+  <!-- ============ ENGLISH LAB ============ -->
+  <section id="screen-english" class="screen">
     <div class="topbar">
-      <div class="mini-logo" id="gpTitle" style="font-size:16px">Game</div>
+      <div class="mini-logo" onclick="goHome()" style="cursor:pointer" title="Home">📚 English Lab <span style="opacity:.8;font-size:13px">· words · speaking · tenses</span></div>
       <div style="display:flex;gap:8px">
-        <span class="pill" id="gpHud" style="align-self:center"></span>
-        <button class="icon-btn" onclick="showGames()" title="Games hub" aria-label="Games hub">🧠</button>
+        <button class="icon-btn" id="elBackBtn" onclick="elHome()" title="Lab home" aria-label="Lab home" style="display:none">↩️</button>
         <button class="icon-btn" onclick="goHome()" title="Home" aria-label="Home">🏠</button>
       </div>
     </div>
-    <div id="gpArea"></div>
+    <div class="card" id="englishBody"></div>
   </section>
 
 </div>
@@ -631,6 +622,6 @@
 <script src="data/mcqs.js?v=ahw9"></script>
 <script src="js/app.js?v=ahw9"></script>
 <script src="js/compiler.js?v=ahw9"></script>
-<script src="js/games.js?v=ahw9"></script>
+<script src="js/english.js?v=ahw10"></script>
 </body>
 </html>

@@ -14,9 +14,9 @@ const css = R("css/style.css");
 const data = R("data/mcqs.js");
 const app = R("js/app.js");
 const comp = R("js/compiler.js");
-const games = R("js/games.js");
+const english = R("js/english.js");
 
-for (const [n, c] of [["css", css], ["data", data], ["app", app], ["compiler", comp], ["games", games]]) {
+for (const [n, c] of [["css", css], ["data", data], ["app", app], ["compiler", comp], ["english", english]]) {
   if (c.includes("</script")) throw new Error(n + " contains </script — cannot inline");
 }
 
@@ -26,7 +26,7 @@ const si = html.indexOf('<script src="data/mcqs.js');
 if(si>=0){
   const cs = html.indexOf('<script src="js/compiler.js', si);
   const se = html.indexOf('</script>', cs) + 9;
-  html = html.slice(0,si) + "<script>\n" + data + "\n</script>\n<script>\n" + app + "\n</script>\n<script>\n" + comp + "\n</script>\n<script>\n" + games + "\n</script>" + html.slice(se);
+  html = html.slice(0,si) + "<script>\n" + data + "\n</script>\n<script>\n" + app + "\n</script>\n<script>\n" + comp + "\n</script>\n<script>\n" + english + "\n</script>" + html.slice(se);
 }
 fs.writeFileSync(path.join(__dirname, "..", "standalone.html"), html);
 console.log("standalone.html built:", (html.length / 1024).toFixed(0), "KB");
