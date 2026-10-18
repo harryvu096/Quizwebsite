@@ -20,27 +20,17 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Set up Node 20
-        uses: actions/setup-node@v4
-        with:
-          node-version: "20"
-
-      - name: Install dependencies
-        working-directory: boltys-puzzle-park
-        run: npm install
-
-      - name: Add Android platform
-        working-directory: boltys-puzzle-park
+      - name: Copy web assets to Android
         run: |
-          npx cap add android || true
-          ls -la
-          cat capacitor.config.json
-
-      - name: Sync Capacitor
-        working-directory: boltys-puzzle-park
-        run: |
-          npx cap sync --verbose || npx cap sync
-          ls -la android/app/src/main/assets/ 2>&1 | head -n 20
+          mkdir -p boltys-puzzle-park/android/app/src/main/assets/public
+          cp boltys-puzzle-park/index.html boltys-puzzle-park/android/app/src/main/assets/public/
+          cp -r boltys-puzzle-park/css boltys-puzzle-park/android/app/src/main/assets/public/ || true
+          cp -r boltys-puzzle-park/js boltys-puzzle-park/android/app/src/main/assets/public/ || true
+          cp -r boltys-puzzle-park/data boltys-puzzle-park/android/app/src/main/assets/public/ || true
+          cp -r boltys-puzzle-park/assets boltys-puzzle-park/android/app/src/main/assets/public/ || true
+          cp boltys-puzzle-park/manifest.webmanifest boltys-puzzle-park/android/app/src/main/assets/public/ || true
+          ls -lh boltys-puzzle-park/android/app/src/main/assets/public/ | head -n 40
+          echo "assets copied"
 
       - name: Build Debug APK
         working-directory: boltys-puzzle-park/android
@@ -67,8 +57,3 @@ jobs:
           name: BoltysPuzzlePark-release-AAB
           path: boltys-puzzle-park/android/app/build/outputs/bundle/release/app-release.aab
           retention-days: 30
-
-      - name: Build Standalone HTML
-        run: |
-          ls -lh boltys-puzzle-park/index.html
-          echo "Standalone ready at boltys-puzzle-park/index.html"
