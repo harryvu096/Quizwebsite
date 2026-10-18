@@ -23,6 +23,9 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
+      - name: Setup Android SDK path
+        run: echo "sdk.dir=$ANDROID_HOME" > boltys-puzzle-park/android/local.properties && cat boltys-puzzle-park/android/local.properties
+
       - name: Copy web assets to Android
         run: |
           mkdir -p boltys-puzzle-park/android/app/src/main/assets/public
