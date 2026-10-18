@@ -1,6 +1,10 @@
-// Bolty's Puzzle Park — Core Game Engine (110 Levels from data/levels.json)
-let LEVELS=null;
-fetch('./data/levels.json').then(r=>r.json()).then(d=>{ LEVELS=d; console.log('✅ 110 levels loaded', d.meta); }).catch(()=> console.warn('Levels.json not found, using procedural fallback'));
+// Bolty's Puzzle Park — Core Game Engine (110 Levels from data/levels.js or data/levels.json)
+let LEVELS = (typeof window !== "undefined" && window.BOLTY_LEVELS) ? window.BOLTY_LEVELS : null;
+if (LEVELS) {
+  console.log("✅ 110 levels embedded", LEVELS.meta);
+} else {
+  fetch("./data/levels.json").then(r=>r.json()).then(d=>{ LEVELS=d; console.log("✅ 110 levels loaded", d.meta); }).catch(()=> console.warn("Levels.json not found, using procedural fallback"));
+}
 // Shared Save
 const SAVE_KEY = 'bolty_park_v1';
 let S = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null') || {

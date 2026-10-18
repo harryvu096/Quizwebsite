@@ -10,7 +10,8 @@ on:
 
 jobs:
   build-apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
     steps:
       - uses: actions/checkout@v4
 
@@ -20,44 +21,106 @@ jobs:
           distribution: temurin
           java-version: "17"
 
-      - name: Setup Gradle
-        uses: gradle/actions/setup-gradle@v3
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
 
-      - name: Setup Android SDK path
-        run: echo "sdk.dir=$ANDROID_HOME" > boltys-puzzle-park/android/local.properties && cat boltys-puzzle-park/android/local.properties
-
-      - name: Copy web assets to Android
+      - name: Prepare www + Android project
         run: |
-          mkdir -p boltys-puzzle-park/android/app/src/main/assets/public
-          cp boltys-puzzle-park/index.html boltys-puzzle-park/android/app/src/main/assets/public/
-          cp -r boltys-puzzle-park/css boltys-puzzle-park/android/app/src/main/assets/public/ || true
-          cp -r boltys-puzzle-park/js boltys-puzzle-park/android/app/src/main/assets/public/ || true
-          cp -r boltys-puzzle-park/data boltys-puzzle-park/android/app/src/main/assets/public/ || true
-          cp -r boltys-puzzle-park/assets boltys-puzzle-park/android/app/src/main/assets/public/ || true
-          cp boltys-puzzle-park/manifest.webmanifest boltys-puzzle-park/android/app/src/main/assets/public/ || true
-          ls -lh boltys-puzzle-park/android/app/src/main/assets/public/ | head -n 40
-          echo "assets copied"
+          set -o pipefail
+          set -e
+          cd boltys-puzzle-park
+          rm -rf www android ios node_modules
+          mkdir -p www
+          cp index.html www/
+          cp -r css js data assets www/
+          cp manifest.webmanifest www/ || true
+          cp privacy.html www/ || true
+          node -e 'const fs=require("fs"); const c=JSON.parse(fs.readFileSync("capacitor.config.json","utf8")); c.webDir="www"; c.appName="Boltys Puzzle Park"; fs.writeFileSync("capacitor.config.json", JSON.stringify(c,null,2));'
+          if [ -z "$ANDROID_HOME" ] && [ -d /usr/local/lib/android/sdk ]; then
+            echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+            export ANDROID_HOME=/usr/local/lib/android/sdk
+          fi
+          echo "ANDROID_HOME=$ANDROID_HOME" | tee /tmp/build.log
+          ls -lh www | tee -a /tmp/build.log
+          npm install --no-audit --no-fund 2>&1 | tee -a /tmp/build.log
+          npx cap --version 2>&1 | tee -a /tmp/build.log
+          npx cap add android 2>&1 | tee -a /tmp/build.log
+          npx cap sync android 2>&1 | tee -a /tmp/build.log
+          # Sign a normal (non-debug) APK so phones install it without a debug warning
+          keytool -genkeypair -v \
+            -keystore android/app/bolty-release.keystore \
+            -alias bolty -keyalg RSA -keysize 2048 -validity 10000 \
+            -storepass boltyspark -keypass boltyspark \
+            -dname "CN=Bolty Games, OU=Games, O=Bolty, L=Hafizabad, ST=Punjab, C=PK"
+          python3 - << 'PY'
+          import re
+          from pathlib import Path
+          p = Path("android/app/build.gradle")
+          text = p.read_text()
+          if "signingConfigs" not in text:
+              text = text.replace(
+                  "buildTypes {",
+                  """signingConfigs {
+              release {
+                  storeFile file("bolty-release.keystore")
+                  storePassword "boltyspark"
+                  keyAlias "bolty"
+                  keyPassword "boltyspark"
+              }
+          }
+          buildTypes {""",
+                  1,
+              )
+          if "signingConfig signingConfigs.release" not in text:
+              text2, n = re.subn(
+                  r"(release\s*\{)",
+                  r"\1\n            signingConfig signingConfigs.release",
+                  text,
+                  count=1,
+              )
+              if n:
+                  text = text2
+          p.write_text(text)
+          print("--- app/build.gradle (signing section) ---")
+          print(text)
+          PY
+          chmod +x android/gradlew
+          cd android
+          # Debug APK is always signed and installable. Release is nicer if signing injected.
+          ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee -a /tmp/build.log
+          ./gradlew assembleRelease --stacktrace --no-daemon 2>&1 | tee -a /tmp/build.log || true
 
-      - name: Build Debug APK with Gradle
-        working-directory: boltys-puzzle-park/android
-        run: gradle assembleDebug --stacktrace
+      - name: Collect APK
+        if: always()
+        run: |
+          mkdir -p /tmp/apkout
+          find boltys-puzzle-park/android/app/build/outputs -name "*.apk" -print -exec cp {} /tmp/apkout/ \; || true
+          ls -lh /tmp/apkout || true
+          # Prefer a signed release APK. Never ship an unsigned one.
+          if ls /tmp/apkout/*release*.apk >/dev/null 2>&1 && ! ls /tmp/apkout/*unsigned* >/dev/null 2>&1; then
+            cp /tmp/apkout/*release*.apk /tmp/apkout/BoltysPuzzlePark.apk
+          elif ls /tmp/apkout/*debug*.apk >/dev/null 2>&1; then
+            cp /tmp/apkout/*debug*.apk /tmp/apkout/BoltysPuzzlePark.apk
+          elif ls /tmp/apkout/*.apk >/dev/null 2>&1; then
+            cp "$(ls -1 /tmp/apkout/*.apk | grep -v unsigned | head -n 1)" /tmp/apkout/BoltysPuzzlePark.apk || true
+          fi
+          ls -lh /tmp/apkout || true
+
+      - name: Upload build log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-log
+          path: /tmp/build.log
+          retention-days: 7
 
       - name: Upload APK
+        if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: BoltysPuzzlePark-debug-APK
-          path: boltys-puzzle-park/android/app/build/outputs/apk/debug/app-debug.apk
+          name: BoltysPuzzlePark-APK
+          path: /tmp/apkout/BoltysPuzzlePark.apk
           retention-days: 30
-
-      - name: Build Release AAB (Play Store)
-        working-directory: boltys-puzzle-park/android
-        run: gradle bundleRelease --stacktrace
-        continue-on-error: true
-
-      - name: Upload AAB
-        if: success()
-        uses: actions/upload-artifact@v4
-        with:
-          name: BoltysPuzzlePark-release-AAB
-          path: boltys-puzzle-park/android/app/build/outputs/bundle/release/app-release.aab
-          retention-days: 30
+          if-no-files-found: warn
