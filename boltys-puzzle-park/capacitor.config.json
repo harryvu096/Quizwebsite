@@ -1,0 +1,11 @@
+{
+  "appId": "com.bolty.puzzlepark",
+  "appName": "Bolty's Puzzle Park",
+  "webDir": ".",
+  "server": {
+    "androidScheme": "https"
+  },
+  "plugins": {
+    "CapacitorHttp": { "enabled": true }
+  }
+}
