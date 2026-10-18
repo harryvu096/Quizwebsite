@@ -3,135 +3,117 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-<meta name="theme-color" content="#6d4aff">
-<title>Bolty's Puzzle Park</title>
-<link rel="icon" href="assets/app_icon_512.png">
+<meta name="theme-color" content="#140e22">
+<title>Bolty's Lantern Park</title>
+<link rel="icon" href="assets/ui/ic_launcher.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;700&family=Nunito:wght@600;800;900&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div class="app" id="app" data-screen="screen-splash">
-  <div class="orb orb-a"></div>
-  <div class="orb orb-b"></div>
 
-  <section id="screen-splash" class="screen active">
+  <section id="screen-splash" class="screen active scene">
+    <img class="scene-bg" src="assets/ui/bg-hub.jpg" alt="">
+    <div class="veil"></div>
     <div class="splash-inner">
-      <div class="mascot" aria-hidden="true">
-        <div class="bolt-body"><span></span><span></span></div>
-      </div>
-      <h1>Bolty's<br><em>Puzzle Park</em></h1>
-      <p class="tag">Screw · Sort · Arrow</p>
+      <img class="bolty-splash" src="assets/ui/bolty.png" alt="Bolty">
+      <div class="eyebrow">Lantern Park</div>
+      <h1 class="gold-title">Bolty</h1>
+      <p class="tag">Screw · Lanterns · Arrows</p>
       <div class="loading-bar"><div id="loadFill"></div></div>
-      <div class="loading-text" id="loadText">Opening the gates…</div>
+      <div class="loading-text" id="loadText">Lighting the park…</div>
     </div>
   </section>
 
-  <section id="screen-hub" class="screen">
-    <header class="topbar">
-      <div class="stat gold">🪙 <b id="hubCoins">0</b></div>
-      <div class="stat gem">💎 <b id="hubGems">0</b></div>
-      <div class="stat heart">❤️ <b id="hubHearts">0</b></div>
+  <section id="screen-hub" class="screen scene">
+    <img class="scene-bg" src="assets/ui/bg-hub.jpg" alt="">
+    <div class="veil soft"></div>
+    <header class="glass-bar">
+      <div class="stat"><i class="coin"></i><b id="hubCoins">0</b></div>
+      <div class="stat"><i class="gem"></i><b id="hubGems">0</b></div>
+      <div class="stat"><i class="heart"></i><b id="hubHearts">0</b></div>
       <button class="icon-btn" id="btnSettings" aria-label="Settings">⚙</button>
     </header>
-    <div class="hub-scroll">
-      <div class="hero">
-        <div class="mascot sm" aria-hidden="true"><div class="bolt-body"><span></span><span></span></div></div>
-        <div>
-          <div class="kicker">Welcome back</div>
-          <h2>Three parks.<br>One champion.</h2>
-        </div>
-      </div>
-
-      <button class="daily" id="btnDaily">
-        <span class="daily-ico">🎁</span>
-        <span>
-          <b>Daily gift</b>
-          <small id="dailyInfo">Tap to claim today's coins</small>
-        </span>
-        <span class="go-chev">›</span>
+    <img class="bolty-stand" src="assets/ui/bolty.png" alt="">
+    <div class="title-block">
+      <div class="eyebrow">Tonight's park</div>
+      <h2 class="gold-title">Three gates.<br>One keeper.</h2>
+    </div>
+    <div class="hub-sheet">
+      <button class="ticket" id="btnDaily">
+        <span class="ticket-mark"></span>
+        <span><b>Night gift</b><small id="dailyInfo">Claim today's coins</small></span>
       </button>
       <div class="streak" id="streakRow"></div>
-
-      <div class="worlds">
-        <button class="world screw" id="cardScrew">
-          <div class="world-ico">🔩</div>
-          <div class="world-copy">
-            <div class="kicker">World 1 · always open</div>
-            <h3>Screw Rescue</h3>
-            <p>Seal every color lock before the tray jams.</p>
-            <div class="bar"><span id="progScrew"></span></div>
-            <small id="progScrewText">0/50</small>
-          </div>
-          <span class="pill-go">PLAY</span>
-        </button>
-        <button class="world sort" id="cardSort">
-          <div class="world-ico">🍕</div>
-          <div class="world-copy">
-            <div class="kicker">World 2</div>
-            <h3>Sort & Serve</h3>
-            <p>Match each plate to its table. Keep the combo.</p>
-            <div class="bar"><span id="progSort"></span></div>
-            <small id="progSortText">0/30</small>
-            <em class="lock-note" id="badgeSort"></em>
-          </div>
-          <span class="pill-go" id="pillSort">PLAY</span>
-        </button>
-        <button class="world arrow" id="cardArrow">
-          <div class="world-ico">➤</div>
-          <div class="world-copy">
-            <div class="kicker">World 3</div>
-            <h3>Arrow Escape</h3>
-            <p>Turn the arrows. Walk Bolty to the flag.</p>
-            <div class="bar"><span id="progArrow"></span></div>
-            <small id="progArrowText">0/30</small>
-            <em class="lock-note" id="badgeArrow"></em>
-          </div>
-          <span class="pill-go" id="pillArrow">PLAY</span>
-        </button>
+      <button class="portal" id="cardScrew">
+        <img src="assets/ui/screw-red.png" alt="">
+        <span>
+          <small>Gate 1 · open</small>
+          <b>Screw Rescue</b>
+          <em id="progScrewText">0/50</em>
+          <i class="bar"><i id="progScrew"></i></i>
+        </span>
+        <strong>Play</strong>
+      </button>
+      <button class="portal" id="cardSort">
+        <span class="mini-lantern"></span>
+        <span>
+          <small>Gate 2</small>
+          <b>Lantern Sort</b>
+          <em id="progSortText">0/30</em>
+          <i class="bar"><i id="progSort"></i></i>
+          <em class="lock-note" id="badgeSort"></em>
+        </span>
+        <strong id="pillSort">Play</strong>
+      </button>
+      <button class="portal" id="cardArrow">
+        <span class="mini-arrow"></span>
+        <span>
+          <small>Gate 3</small>
+          <b>Arrow Garden</b>
+          <em id="progArrowText">0/30</em>
+          <i class="bar"><i id="progArrow"></i></i>
+          <em class="lock-note" id="badgeArrow"></em>
+        </span>
+        <strong id="pillArrow">Play</strong>
+      </button>
+      <div class="hub-links">
+        <button id="btnShop">Atelier</button>
+        <button id="btnHelp">Rules</button>
       </div>
-
-      <div class="hub-row">
-        <button class="soft" id="btnShop">Shop</button>
-        <button class="soft" id="btnHelp">How to play</button>
-      </div>
-      <p class="legal">110 handcrafted levels · works offline · v1.1</p>
     </div>
   </section>
 
-  <section id="screen-map" class="screen">
-    <header class="topbar">
+  <section id="screen-map" class="screen scene">
+    <img class="scene-bg" src="assets/ui/bg-hub.jpg" alt="">
+    <div class="veil strong"></div>
+    <header class="glass-bar">
       <button class="icon-btn" id="mapBack" aria-label="Back">←</button>
       <h3 id="mapTitle">Levels</h3>
-      <div class="stat gold sm">🪙 <b id="mapCoins">0</b></div>
+      <div class="stat"><i class="coin"></i><b id="mapCoins">0</b></div>
     </header>
     <div class="map-scroll" id="mapGrid"></div>
     <footer class="dock">
-      <button class="btn primary wide" id="btnContinue">Continue</button>
+      <button class="btn gold wide" id="btnContinue">Continue</button>
     </footer>
   </section>
 
-  <section id="screen-screw" class="screen play">
-    <header class="hud">
+  <section id="screen-screw" class="screen scene play">
+    <img class="scene-bg" src="assets/ui/bg-screw.jpg" alt="">
+    <header class="glass-bar hud">
       <button class="icon-btn" id="screwPause" aria-label="Pause">II</button>
-      <div class="hud-mid">
-        <b id="screwLevel">Level 1</b>
-        <small id="screwGoal">Seal every lock</small>
-      </div>
+      <div class="hud-mid"><b id="screwLevel">Level 1</b><small id="screwGoal">Seal the locks</small></div>
       <div class="timer" id="screwTimer">1:30</div>
-      <div class="hud-side">
-        <span id="screwHearts">❤❤❤</span>
-        <span class="mini-coin">🪙 <b id="screwCoins">0</b></span>
-      </div>
+      <div class="hud-side"><span id="screwHearts"></span><span class="stat tiny"><i class="coin"></i><b id="screwCoins">0</b></span></div>
     </header>
-    <div class="coach" id="screwCoach"></div>
+    <p class="coach" id="screwCoach"></p>
     <div class="stage">
       <div class="locks" id="screwLocks"></div>
-      <div class="pile-label">Loose screws — tap one to drop it in the tray</div>
       <div class="pile" id="screwPile"></div>
     </div>
     <div class="tray-wrap">
-      <div class="tray-label">Tray <span id="screwHint"></span></div>
+      <div class="tray-label">Brass tray <span id="screwHint"></span></div>
       <div class="tray" id="screwSlots"></div>
     </div>
     <footer class="dock">
@@ -140,142 +122,125 @@
     </footer>
   </section>
 
-  <section id="screen-sort" class="screen play">
-    <header class="hud">
+  <section id="screen-sort" class="screen scene play">
+    <img class="scene-bg" src="assets/ui/bg-sort.jpg" alt="">
+    <header class="glass-bar hud">
       <button class="icon-btn" id="sortPause" aria-label="Pause">II</button>
-      <div class="hud-mid">
-        <b id="sortLevel">Level 1</b>
-        <small id="sortGoal">Serve the order</small>
-      </div>
+      <div class="hud-mid"><b id="sortLevel">Level 1</b><small id="sortGoal">Hang the lanterns</small></div>
       <div class="timer" id="sortTimer">1:00</div>
-      <div class="hud-side">
-        <span class="combo" id="sortCombo">Combo 0</span>
-        <span class="mini-coin" id="sortScore">0/8</span>
-      </div>
+      <div class="hud-side"><span class="combo" id="sortCombo">Combo</span><span class="stat tiny" id="sortScore">0/8</span></div>
     </header>
-    <div class="coach" id="sortCoach"></div>
-    <div class="stage sort-stage">
+    <p class="coach" id="sortCoach"></p>
+    <div class="stage">
       <div class="orders" id="sortOrders"></div>
-      <div class="tray-label">Tap a plate, then its table</div>
       <div class="plate-tray" id="sortTray"></div>
     </div>
     <div class="table-dock" id="sortTables"></div>
   </section>
 
-  <section id="screen-arrow" class="screen play">
-    <header class="hud">
+  <section id="screen-arrow" class="screen scene play">
+    <img class="scene-bg" src="assets/ui/bg-arrow.jpg" alt="">
+    <header class="glass-bar hud">
       <button class="icon-btn" id="arrowPause" aria-label="Pause">II</button>
-      <div class="hud-mid">
-        <b id="arrowLevel">Level 1</b>
-        <small id="arrowGoal">Reach the flag</small>
-      </div>
+      <div class="hud-mid"><b id="arrowLevel">Level 1</b><small id="arrowGoal">Walk to the arch</small></div>
       <div class="timer" id="arrowTimer">1:00</div>
-      <div class="hud-side">
-        <span id="arrowHearts">❤❤❤</span>
-        <span class="mini-coin" id="arrowWrong">0 off</span>
-      </div>
+      <div class="hud-side"><span id="arrowHearts"></span><span class="stat tiny" id="arrowWrong">0 off</span></div>
     </header>
-    <div class="coach" id="arrowCoach"></div>
+    <p class="coach" id="arrowCoach"></p>
     <div class="stage">
-      <div class="maze" id="arrowMaze"></div>
+      <div class="board-frame">
+        <div class="maze" id="arrowMaze"></div>
+      </div>
     </div>
     <footer class="dock">
       <button class="btn ghost" id="arrowReset">Reset</button>
-      <button class="btn gold" id="arrowHintBtn">Hint</button>
-      <button class="btn primary" id="btnGo">GO</button>
+      <button class="btn ghost" id="arrowHintBtn">Hint</button>
+      <button class="btn gold" id="btnGo">Walk</button>
     </footer>
   </section>
 
-  <section id="screen-win" class="screen">
-    <div class="result-card">
-      <div class="result-kicker" id="winKicker">Cleared</div>
-      <h2 id="winTitle">Level complete</h2>
+  <section id="screen-win" class="screen scene">
+    <img class="scene-bg" src="assets/ui/bg-hub.jpg" alt="">
+    <div class="veil strong"></div>
+    <div class="result">
+      <img id="winArt" src="assets/ui/bolty-win.png" alt="">
+      <div class="eyebrow" id="winKicker">Cleared</div>
+      <h2 class="gold-title" id="winTitle">Level complete</h2>
       <div class="stars" id="winStars"></div>
       <div class="reward" id="winCoins">+20</div>
-      <p class="result-sub" id="winSub">Clean run.</p>
+      <p class="result-sub" id="winSub"></p>
       <div class="xp"><span id="xpFill"></span></div>
-      <small id="xpText">Level 1</small>
-      <div class="result-actions">
-        <button class="btn primary wide" id="btnNext">Next level</button>
-        <button class="btn ghost" id="btnWinMap">Level map</button>
-      </div>
+      <small id="xpText"></small>
+      <button class="btn gold wide" id="btnNext">Next</button>
+      <button class="btn ghost wide" id="btnWinMap">Map</button>
     </div>
   </section>
 
-  <section id="screen-lose" class="screen">
-    <div class="result-card">
-      <div class="result-kicker bad">Not this time</div>
-      <h2 id="loseTitle">Time's up</h2>
-      <p class="result-sub" id="loseMsg">The park is still open. Try the same board again.</p>
-      <div class="result-actions">
-        <button class="btn primary wide" id="btnRetry">Retry level</button>
-        <button class="btn gold" id="btnRevive">Revive · 80🪙</button>
-        <button class="btn ghost" id="btnLoseMap">Back to map</button>
-      </div>
+  <section id="screen-lose" class="screen scene">
+    <img class="scene-bg" src="assets/ui/bg-hub.jpg" alt="">
+    <div class="veil strong"></div>
+    <div class="result">
+      <img src="assets/ui/bolty-lose.png" alt="">
+      <div class="eyebrow bad">Still night</div>
+      <h2 class="gold-title" id="loseTitle">Try again</h2>
+      <p class="result-sub" id="loseMsg"></p>
+      <button class="btn gold wide" id="btnRetry">Same board</button>
+      <button class="btn ghost wide" id="btnRevive">Stay · 80 coins</button>
+      <button class="btn ghost wide" id="btnLoseMap">Map</button>
     </div>
   </section>
 
-  <section id="screen-shop" class="screen">
-    <header class="topbar">
+  <section id="screen-shop" class="screen scene">
+    <img class="scene-bg" src="assets/ui/bg-hub.jpg" alt="">
+    <div class="veil strong"></div>
+    <header class="glass-bar">
       <button class="icon-btn" id="shopBack" aria-label="Back">←</button>
-      <h3>Shop</h3>
-      <div class="stat gold sm">🪙 <b id="shopCoins">0</b></div>
+      <h3>Atelier</h3>
+      <div class="stat"><i class="coin"></i><b id="shopCoins">0</b></div>
     </header>
     <div class="hub-scroll" id="shopGrid"></div>
   </section>
 
   <div class="modal-bg" id="modal-pause">
-    <div class="modal">
+    <div class="sheet">
       <h2>Paused</h2>
-      <p class="modal-copy">The clock is stopped.</p>
-      <button class="btn primary wide" id="btnResume">Resume</button>
-      <button class="btn ghost wide" id="btnRestart">Restart level</button>
-      <button class="btn ghost wide" id="btnQuit">Quit to map</button>
+      <p>The night is holding still.</p>
+      <button class="btn gold wide" id="btnResume">Resume</button>
+      <button class="btn ghost wide" id="btnRestart">Restart</button>
+      <button class="btn ghost wide" id="btnQuit">Leave</button>
     </div>
   </div>
-
   <div class="modal-bg" id="modal-help">
-    <div class="modal">
-      <h2>How to play</h2>
-      <div class="help-block">
-        <b>Screw Rescue</b>
-        <p>Tap loose screws into the tray. A lock snaps shut when the tray holds a full set of that color. If the tray fills with a mix you cannot finish, undo.</p>
-      </div>
-      <div class="help-block">
-        <b>Sort & Serve</b>
-        <p>Tap a plate, then the table of the same color. Wrong tables break your combo and shave time. Clear the order before the clock ends.</p>
-      </div>
-      <div class="help-block">
-        <b>Arrow Escape</b>
-        <p>Tap a tile to turn its arrow. Bolty walks whichever way the tile he stands on is pointing. Build one road to the flag, then press GO.</p>
-      </div>
-      <button class="btn primary wide" id="helpClose">Got it</button>
+    <div class="sheet">
+      <h2>How the park works</h2>
+      <div class="help-block"><b>Screw Rescue</b><p>Tap an enamel screw into the brass tray. A lock shuts when the tray holds a full set of that color. Undo if the tray jams.</p></div>
+      <div class="help-block"><b>Lantern Sort</b><p>Tap a glass lantern, then the stall of the same color. A wrong stall breaks the combo and costs time.</p></div>
+      <div class="help-block"><b>Arrow Garden</b><p>Tap a stone to turn its arrow. Bolty walks the way the tile under him points. Build one road, then Walk.</p></div>
+      <button class="btn gold wide" id="helpClose">Play</button>
     </div>
   </div>
-
   <div class="modal-bg" id="modal-settings">
-    <div class="modal">
+    <div class="sheet">
       <h2>Settings</h2>
       <label class="check"><input type="checkbox" id="setMusic"> Music</label>
-      <label class="check"><input type="checkbox" id="setSfx"> Sound effects</label>
+      <label class="check"><input type="checkbox" id="setSfx"> Sound</label>
       <label class="check"><input type="checkbox" id="setVib"> Vibration</label>
-      <p class="modal-copy">Bolty's Puzzle Park v1.1<br>Original puzzle. No account required.</p>
+      <p>Bolty's Lantern Park · v1.2<br>Original character. Offline.</p>
       <button class="btn ghost wide" id="setClose">Close</button>
     </div>
   </div>
-
   <div class="modal-bg" id="modal-lock">
-    <div class="modal">
+    <div class="sheet">
       <h2 id="lockTitle">Locked</h2>
-      <p class="modal-copy" id="lockMsg"></p>
-      <button class="btn primary wide" id="lockPay">Unlock</button>
+      <p id="lockMsg"></p>
+      <button class="btn gold wide" id="lockPay">Unlock</button>
       <button class="btn ghost wide" id="lockClose">Not now</button>
     </div>
   </div>
 
   <div class="toast" id="toast"></div>
   <canvas id="fx"></canvas>
-  <div class="boss-flash" id="bossFlash"><b>BOSS</b><small>Don't rush the tray</small></div>
+  <div class="boss-flash" id="bossFlash"><b>BOSS NIGHT</b><small>Take the tray slowly</small></div>
 </div>
 <script src="data/levels.js"></script>
 <script src="js/logic.js"></script>

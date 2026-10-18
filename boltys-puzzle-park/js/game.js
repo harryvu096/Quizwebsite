@@ -1,13 +1,13 @@
-/* Bolty's Puzzle Park — UI. One screen is active at a time. */
+/* Bolty's Lantern Park — one scene at a time, pieces are real sprites. */
 (function () {
   const L = window.BoltyLogic;
   const LEVELS = window.BOLTY_LEVELS;
   const SAVE_KEY = "bolty_park_v2";
   const TOTAL = { screw: 50, sort: 30, arrow: 30 };
   const THEMES = [
-    { id: "park", name: "Park Day", price: 0, colors: ["#efe7ff", "#6d4aff", "#f5b301"] },
-    { id: "night", name: "Night Fair", price: 180, colors: ["#17142e", "#8b5cf6", "#ffd15c"] },
-    { id: "sunset", name: "Sunset Mile", price: 260, colors: ["#ffe7d6", "#e85d4c", "#ffb703"] }
+    { id: "park", name: "Lantern Night", price: 0, colors: ["#140e22", "#f5c15a", "#7ee0c8"] },
+    { id: "night", name: "Deep Indigo", price: 180, colors: ["#07060d", "#7c5cff", "#f5c15a"] },
+    { id: "sunset", name: "Marigold Dusk", price: 260, colors: ["#3a1d12", "#e85d4c", "#ffb703"] }
   ];
 
   function freshSave() {
@@ -30,32 +30,24 @@
   let selectedPlate = null;
   let audioCtx = null;
   let musicTimer = null;
-  let svgN = 0;
 
-  function save() {
-    localStorage.setItem(SAVE_KEY, JSON.stringify(S));
-    paintCurrencies();
-  }
+  function save() { localStorage.setItem(SAVE_KEY, JSON.stringify(S)); paintCurrencies(); }
+  function $(id) { return document.getElementById(id); }
   function cfg(world, lv) {
     const list = LEVELS && LEVELS[world];
-    if (list) {
-      const found = list.find((x) => x.lv === lv);
-      if (found) return found;
-    }
-    if (world === "screw") return { lv: lv, colors: 2 + Math.min(3, Math.floor((lv - 1) / 8)), boxes: 2 + Math.min(4, Math.floor(lv / 6)), screwsPerBox: lv < 12 ? 2 : 3, slots: 3, time: 80, boss: lv % 10 === 0 };
-    if (world === "sort") return { lv: lv, colors: Math.min(5, 3 + Math.floor(lv / 10)), speed: lv < 8 ? "slow" : lv < 18 ? "medium" : "fast", time: 60, boss: lv % 10 === 0 };
-    return { lv: lv, size: Math.min(9, 5 + Math.floor(lv / 6)), time: 60, boss: lv % 10 === 0 };
+    const found = list && list.find((x) => x.lv === lv);
+    if (found) return found;
+    if (world === "screw") return { lv: lv, colors: 2, boxes: 2, screwsPerBox: 2, slots: 3, time: 80, boss: lv % 10 === 0 };
+    if (world === "sort") return { lv: lv, colors: 3, speed: "slow", time: 60, boss: lv % 10 === 0 };
+    return { lv: lv, size: 5, time: 60, boss: lv % 10 === 0 };
   }
-  function cleared(world) {
-    return Object.keys(S[world].stars || {}).length;
-  }
+  function cleared(world) { return Object.keys((S[world] && S[world].stars) || {}).length; }
   function worldOpen(world) {
     if (world === "screw") return true;
     if (S[world].paid) return true;
-    const screwDone = cleared("screw");
-    return world === "sort" ? screwDone >= 10 : screwDone >= 20;
+    const n = cleared("screw");
+    return world === "sort" ? n >= 10 : n >= 20;
   }
-  function $(id) { return document.getElementById(id); }
 
   function showScreen(id) {
     document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
@@ -71,11 +63,9 @@
     t.textContent = msg;
     t.classList.add("show");
     clearTimeout(toast._t);
-    toast._t = setTimeout(() => t.classList.remove("show"), 1800);
+    toast._t = setTimeout(() => t.classList.remove("show"), 1700);
   }
-  function buzz(ms) {
-    if (S.vib && navigator.vibrate) navigator.vibrate(ms || 18);
-  }
+  function buzz(ms) { if (S.vib && navigator.vibrate) navigator.vibrate(ms || 16); }
   function ac() {
     if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
     if (audioCtx.state === "suspended") audioCtx.resume();
@@ -89,83 +79,65 @@
       const g = ctx.createGain();
       o.type = type || "sine";
       o.frequency.value = freq;
-      o.connect(g);
-      g.connect(ctx.destination);
+      o.connect(g); g.connect(ctx.destination);
       const t0 = ctx.currentTime + (delay || 0);
-      g.gain.setValueAtTime(vol || 0.08, t0);
+      g.gain.setValueAtTime(vol || 0.07, t0);
       g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
-      o.start(t0);
-      o.stop(t0 + dur + 0.02);
+      o.start(t0); o.stop(t0 + dur + 0.02);
     } catch (e) {}
   }
   function sfx(name) {
-    if (name === "tap") tone(540, 0.05, "triangle", 0.06);
+    if (name === "tap") tone(220, 0.04, "triangle", 0.05);
     else if (name === "lock") {
-      tone(523, 0.09, "sine", 0.1);
-      tone(659, 0.1, "sine", 0.09, 0.07);
-      tone(784, 0.16, "sine", 0.08, 0.14);
-    } else if (name === "bad") tone(160, 0.16, "square", 0.05);
-    else if (name === "win") {
-      [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.14, "triangle", 0.08, i * 0.09));
-    } else if (name === "lose") {
-      tone(320, 0.16, "sawtooth", 0.04);
-      tone(180, 0.28, "triangle", 0.05, 0.12);
-    } else if (name === "go") tone(660, 0.07, "square", 0.04);
+      tone(196, 0.08, "sine", 0.08);
+      tone(392, 0.12, "triangle", 0.07, 0.05);
+      tone(588, 0.16, "sine", 0.06, 0.1);
+    } else if (name === "bad") tone(110, 0.16, "square", 0.04);
+    else if (name === "win") [392, 494, 587, 784].forEach((f, i) => tone(f, 0.14, "triangle", 0.07, i * 0.08));
+    else if (name === "lose") { tone(247, 0.16, "triangle", 0.05); tone(165, 0.28, "sine", 0.05, 0.1); }
+    else if (name === "go") tone(330, 0.07, "triangle", 0.05);
   }
   function startMusic() {
     if (!S.music || musicTimer) return;
-    const notes = [262, 311, 392, 466, 392, 311];
+    const notes = [196, 247, 294, 370, 294, 247];
     let i = 0;
     musicTimer = setInterval(() => {
       if (!S.music) return;
-      tone(notes[i % notes.length], 0.22, "sine", 0.025, 0, true);
+      tone(notes[i % notes.length], 0.28, "sine", 0.02, 0, true);
       i++;
-    }, 680);
+    }, 760);
   }
-  function stopMusic() {
-    clearInterval(musicTimer);
-    musicTimer = null;
-  }
+  function stopMusic() { clearInterval(musicTimer); musicTimer = null; }
 
   function burst(x, y, n) {
     const canvas = $("fx");
     const ctx = canvas.getContext("2d");
-    canvas.width = canvas.offsetWidth;
-    canvas.height = canvas.offsetHeight;
-    const rect = canvas.getBoundingClientRect();
+    const app = $("app").getBoundingClientRect();
+    canvas.width = app.width; canvas.height = app.height;
     const pieces = [];
-    const colors = ["#f5b301", "#ff4d6d", "#6d4aff", "#12b981", "#fff"];
-    for (let i = 0; i < (n || 28); i++) {
+    const colors = ["#f5c15a", "#fff6d2", "#7ee0c8", "#ffb4a2", "#fff"];
+    for (let i = 0; i < (n || 26); i++) {
       pieces.push({
-        x: (x || rect.width / 2) - rect.left,
-        y: (y || rect.height / 3) - rect.top,
-        vx: (Math.random() - 0.5) * 8,
-        vy: Math.random() * -7 - 2,
-        r: Math.random() * 4 + 2,
+        x: (x != null ? x - app.left : app.width / 2),
+        y: (y != null ? y - app.top : app.height * 0.35),
+        vx: (Math.random() - 0.5) * 7,
+        vy: Math.random() * -6 - 1,
+        r: Math.random() * 3.5 + 1.5,
         c: colors[i % colors.length],
-        life: 40 + Math.random() * 16
+        life: 36 + Math.random() * 14
       });
     }
     let f = 0;
     const id = setInterval(() => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       pieces.forEach((p) => {
-        p.x += p.vx;
-        p.y += p.vy;
-        p.vy += 0.28;
-        p.life--;
-        ctx.globalAlpha = Math.max(0, p.life / 50);
+        p.x += p.vx; p.y += p.vy; p.vy += 0.22; p.life--;
+        ctx.globalAlpha = Math.max(0, p.life / 46);
         ctx.fillStyle = p.c;
-        ctx.beginPath();
-        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-        ctx.fill();
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill();
       });
       ctx.globalAlpha = 1;
-      f++;
-      if (f > 56) {
-        clearInterval(id);
-        ctx.clearRect(0, 0, canvas.width, canvas.height);
-      }
+      if (++f > 48) { clearInterval(id); ctx.clearRect(0, 0, canvas.width, canvas.height); }
     }, 16);
   }
   function floatAt(el, text) {
@@ -175,8 +147,8 @@
     const d = document.createElement("div");
     d.className = "float";
     d.textContent = text;
-    d.style.left = r.left - app.left + r.width / 2 + "px";
-    d.style.top = r.top - app.top + "px";
+    d.style.left = (r.left - app.left + r.width / 2) + "px";
+    d.style.top = (r.top - app.top) + "px";
     $("app").appendChild(d);
     setTimeout(() => d.remove(), 700);
   }
@@ -186,51 +158,39 @@
     void el.offsetWidth;
     el.classList.add("shake");
   }
-  function uid() { return "g" + (++svgN); }
-  function shade(hex, percent) {
-    const n = parseInt(hex.slice(1), 16);
-    let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
-    const t = percent < 0 ? 0 : 255;
-    const p = Math.abs(percent) / 100;
-    r = Math.round((t - r) * p + r);
-    g = Math.round((t - g) * p + g);
-    b = Math.round((t - b) * p + b);
-    return "#" + (0x1000000 + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  function fly(fromEl, toEl, src) {
+    if (!fromEl || !toEl) return;
+    const a = fromEl.getBoundingClientRect();
+    const b = toEl.getBoundingClientRect();
+    const app = $("app").getBoundingClientRect();
+    const img = document.createElement("img");
+    img.className = "flyer";
+    img.src = src;
+    img.style.width = a.width + "px";
+    img.style.height = a.height + "px";
+    img.style.left = (a.left - app.left) + "px";
+    img.style.top = (a.top - app.top) + "px";
+    $("app").appendChild(img);
+    requestAnimationFrame(() => {
+      img.style.left = (b.left - app.left) + "px";
+      img.style.top = (b.top - app.top) + "px";
+      img.style.transform = "rotate(160deg) scale(.72)";
+    });
+    setTimeout(() => img.remove(), 380);
   }
-  function screwSVG(colorId, size) {
-    const c = L.colorById(colorId);
-    const id = uid();
-    const px = size || 46;
-    return `<svg viewBox="0 0 64 64" width="${px}" height="${px}" aria-hidden="true"><defs><radialGradient id="${id}" cx="32%" cy="28%" r="75%"><stop offset="0%" stop-color="#fff" stop-opacity=".9"/><stop offset="42%" stop-color="${c.hex}"/><stop offset="100%" stop-color="${shade(c.hex, -28)}"/></radialGradient></defs><circle cx="32" cy="32" r="28" fill="url(#${id})"/><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2"/><path d="M32 16v32M18 32h28" stroke="rgba(20,10,30,.45)" stroke-width="3.2" stroke-linecap="round"/></svg>`;
-  }
-  function plateSVG(colorId) {
-    const c = L.colorById(colorId);
-    return `<svg viewBox="0 0 80 80" width="52" height="52" aria-hidden="true"><circle cx="40" cy="40" r="34" fill="#fff" stroke="${c.hex}" stroke-width="7"/><path d="M40 18 L54 48 H26 Z" fill="${c.hex}"/><circle cx="40" cy="42" r="4" fill="#fff6d8"/></svg>`;
-  }
-  function chevron(dir) {
-    return `<svg class="arrow-chev ${dir}" viewBox="0 0 64 64" aria-hidden="true"><path d="M18 40 L32 22 L46 40"/></svg>`;
-  }
-  function flagSVG() {
-    return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 8v48" stroke="#24183a" stroke-width="4" stroke-linecap="round"/><path d="M22 12h28l-7 10 7 10H22z" fill="#12b981"/></svg>`;
-  }
-  function kingSVG() {
-    return `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="36" r="16" fill="#ffd15c" stroke="#c88700" stroke-width="3"/><path d="M14 30 l8-12 10 10 10-14 10 16" fill="none" stroke="#c88700" stroke-width="3" stroke-linejoin="round"/></svg>`;
-  }
-  function hearts(n) {
-    return "❤".repeat(Math.max(0, n)) + "♡".repeat(Math.max(0, 3 - n));
-  }
+  function screwSrc(color) { return "assets/ui/screw-" + color + ".png"; }
+  function hearts(n) { return "●".repeat(Math.max(0, n)) + "○".repeat(Math.max(0, 3 - n)); }
   function fmt(sec) {
     sec = Math.max(0, sec | 0);
-    const m = Math.floor(sec / 60);
-    const s = sec % 60;
-    return m + ":" + String(s).padStart(2, "0");
+    return Math.floor(sec / 60) + ":" + String(sec % 60).padStart(2, "0");
+  }
+  function lanternHTML(color, selected) {
+    const hex = L.colorById(color).hex;
+    return `<span class="lantern ${color}${selected ? " selected" : ""}" style="--c:${hex}"><i class="ring"></i><i class="cap"></i><i class="glass"></i></span>`;
   }
 
   function paintCurrencies() {
-    ["hubCoins", "mapCoins", "screwCoins", "shopCoins"].forEach((id) => {
-      const el = $(id);
-      if (el) el.textContent = S.coins;
-    });
+    ["hubCoins", "mapCoins", "screwCoins", "shopCoins"].forEach((id) => { if ($(id)) $(id).textContent = S.coins; });
     if ($("hubGems")) $("hubGems").textContent = S.gems;
     if ($("hubHearts")) $("hubHearts").textContent = S.hearts;
     document.documentElement.dataset.theme = S.theme || "park";
@@ -238,67 +198,68 @@
   function renderHub() {
     paintCurrencies();
     const today = new Date().toDateString();
-    $("dailyInfo").textContent = S.lastDaily === today ? "Claimed today. Come back tomorrow." : "Tap to claim today's coins";
+    $("dailyInfo").textContent = S.lastDaily === today ? "Claimed. The park sleeps until tomorrow." : "A coin purse is waiting.";
     $("streakRow").innerHTML = "";
     for (let i = 1; i <= 7; i++) {
       const d = document.createElement("div");
-      d.className = "dot" + (i <= S.streak ? " on" : "");
-      d.textContent = i <= S.streak ? "✓" : i;
+      d.className = "lvl";
+      d.style.width = "28px"; d.style.height = "28px"; d.style.boxShadow = "none";
+      d.style.transform = "none";
+      d.textContent = i <= S.streak ? "✓" : "";
+      if (i > S.streak) d.style.opacity = ".35";
       $("streakRow").appendChild(d);
     }
+    $("streakRow").style.display = "flex";
+    $("streakRow").style.gap = "6px";
+    $("streakRow").style.margin = "0 0 8px";
     [["screw", "progScrew", "progScrewText"], ["sort", "progSort", "progSortText"], ["arrow", "progArrow", "progArrowText"]].forEach(([w, bar, label]) => {
       const n = cleared(w);
       $(bar).style.width = (n / TOTAL[w]) * 100 + "%";
-      $(label).textContent = n + "/" + TOTAL[w];
+      $(label).textContent = n + " / " + TOTAL[w];
     });
     const sortOpen = worldOpen("sort");
     const arrowOpen = worldOpen("arrow");
     $("cardSort").classList.toggle("locked", !sortOpen);
     $("cardArrow").classList.toggle("locked", !arrowOpen);
-    $("pillSort").textContent = sortOpen ? "PLAY" : "LOCK";
-    $("pillArrow").textContent = arrowOpen ? "PLAY" : "LOCK";
-    $("badgeSort").textContent = sortOpen ? "" : "Clear 10 Screw levels, or 200 coins";
-    $("badgeArrow").textContent = arrowOpen ? "" : "Clear 20 Screw levels, or 400 coins";
+    $("pillSort").textContent = sortOpen ? "Play" : "Lock";
+    $("pillArrow").textContent = arrowOpen ? "Play" : "Lock";
+    $("badgeSort").textContent = sortOpen ? "" : "Clear 10 screw nights, or 200 coins";
+    $("badgeArrow").textContent = arrowOpen ? "" : "Clear 20 screw nights, or 400 coins";
   }
 
   function openMap(world) {
     if (!worldOpen(world)) {
       const price = world === "sort" ? 200 : 400;
       const need = world === "sort" ? 10 : 20;
-      $("lockTitle").textContent = world === "sort" ? "Sort & Serve is locked" : "Arrow Escape is locked";
-      $("lockMsg").textContent = "Finish Screw level " + need + ", or unlock now for " + price + " coins.";
-      $("lockPay").textContent = "Unlock · " + price + " coins";
+      $("lockTitle").textContent = world === "sort" ? "Lantern Sort is dark" : "The garden gate is shut";
+      $("lockMsg").textContent = "Finish Screw night " + need + ", or open it now for " + price + " coins.";
+      $("lockPay").textContent = "Open · " + price;
       $("lockPay").onclick = () => {
-        if (S.coins < price) return toast("Not enough coins yet");
+        if (S.coins < price) return toast("Not enough coins");
         S.coins -= price;
         S[world].paid = true;
-        S[world].unlocked = TOTAL[world];
         save();
         closeModal("modal-lock");
-        toast("World unlocked");
         openMap(world);
       };
       openModal("modal-lock");
       return;
     }
-    S.curWorld = world;
     showScreen("screen-map");
-    const names = { screw: "Screw Rescue", sort: "Sort & Serve", arrow: "Arrow Escape" };
-    $("mapTitle").textContent = names[world];
+    $("mapTitle").textContent = { screw: "Screw Rescue", sort: "Lantern Sort", arrow: "Arrow Garden" }[world];
     paintCurrencies();
     const grid = $("mapGrid");
     grid.innerHTML = "";
-    const total = TOTAL[world];
-    for (let i = 1; i <= total; i++) {
+    for (let i = 1; i <= TOTAL[world]; i++) {
       const btn = document.createElement("button");
       const locked = i > S[world].unlocked;
       const stars = S[world].stars[i] || 0;
       btn.className = "lvl" + (locked ? " locked" : "") + (i % 10 === 0 ? " boss" : "") + (i === S[world].cur ? " current" : "") + (stars ? " done" : "");
-      btn.innerHTML = locked ? "<b>🔒</b>" : "<b>" + i + "</b><small>" + (i % 10 === 0 ? "BOSS" : "★".repeat(stars)) + "</small>";
+      btn.innerHTML = locked ? "<b>·</b>" : "<b>" + i + "</b><small>" + (i % 10 === 0 ? "BOSS" : "★".repeat(stars)) + "</small>";
       if (!locked) btn.onclick = () => startGame(world, i);
       grid.appendChild(btn);
     }
-    $("btnContinue").onclick = () => startGame(world, Math.min(S[world].cur, S[world].unlocked));
+    $("btnContinue").onclick = () => startGame(world, Math.min(S[world].cur || 1, S[world].unlocked));
   }
 
   function stopSession() {
@@ -310,40 +271,24 @@
   function beginSession(world, level, state) {
     stopSession();
     session = {
-      world: world,
-      level: level,
-      state: state,
-      timeLeft: state.time,
-      hearts: 3,
-      hints: 0,
-      freeHint: true,
-      ended: false,
-      paused: false,
-      clock: null,
-      walkToken: 0,
+      world: world, level: level, state: state,
+      timeLeft: state.time, hearts: 3, hints: 0, freeHint: true,
+      ended: false, paused: false, clock: null, walkToken: 0, walking: false,
       timerId: world === "screw" ? "screwTimer" : world === "sort" ? "sortTimer" : "arrowTimer"
     };
-    S.curWorld = world;
     S[world].cur = level;
     save();
   }
   function startClock() {
     clearInterval(session.clock);
     const el = $(session.timerId);
-    const tick = () => {
-      if (!el) return;
-      el.textContent = fmt(session.timeLeft);
-      el.classList.toggle("warn", session.timeLeft <= 10);
-    };
+    const tick = () => { if (el) { el.textContent = fmt(session.timeLeft); el.classList.toggle("warn", session.timeLeft <= 10); } };
     tick();
     session.clock = setInterval(() => {
       if (!session || session.paused || session.ended) return;
       session.timeLeft--;
       tick();
-      if (session.timeLeft <= 0) {
-        clearInterval(session.clock);
-        lose("Time's up", "The clock ran out. The board will be the same if you retry.");
-      }
+      if (session.timeLeft <= 0) { clearInterval(session.clock); lose("The lamp went out", "Same board. The night will wait."); }
     }, 1000);
   }
   function bossFlash(level) {
@@ -352,7 +297,6 @@
     el.classList.add("show");
     setTimeout(() => el.classList.remove("show"), 900);
   }
-
   function startGame(world, level) {
     selectedPlate = null;
     if (world === "screw") startScrew(level);
@@ -366,36 +310,37 @@
     const state = L.makeScrew(cfg("screw", level), "screw", level);
     beginSession("screw", level, state);
     showScreen("screen-screw");
-    $("screwLevel").textContent = (level % 10 === 0 ? "Boss " : "Level ") + level;
-    $("screwGoal").textContent = "Seal " + state.boxes.length + " locks";
+    $("screwLevel").textContent = (level % 10 === 0 ? "Boss " : "Night ") + level;
+    $("screwGoal").textContent = state.boxes.length + " locks on the bench";
     $("screwHearts").textContent = hearts(session.hearts);
-    $("screwCoach").textContent = level === 1 ? "Tap two screws of the same color. The lock closes by itself." : "Fill one color at a time. Undo if the tray jams.";
+    $("screwCoach").textContent = level === 1 ? "Tap two screws of one color. The lock closes itself." : "Finish one color before you mix the tray.";
     renderScrew();
     startClock();
   }
   function renderScrew() {
     const st = session.state;
     $("screwCoins").textContent = S.coins;
-    $("screwHint").textContent = st.slots.filter(Boolean).length + "/" + st.slots.length;
+    $("screwHint").textContent = st.slots.filter(Boolean).length + " / " + st.slots.length;
     const locks = $("screwLocks");
     locks.innerHTML = "";
     st.boxes.forEach((box) => {
       const col = L.colorById(box.color);
       const row = document.createElement("div");
       row.className = "lock" + (box.done ? " done" : "");
-      const holes = [];
+      let holes = "";
       for (let i = 0; i < box.need; i++) {
-        holes.push(`<i class="hole${box.done || i < box.filled ? " filled" : ""}" style="background:${box.done ? col.hex : "transparent"};border-color:${col.hex}"></i>`);
+        holes += box.done ? `<img class="pip" src="${screwSrc(box.color)}" alt="">` : `<i class="hole" style="border-color:${col.hex}"></i>`;
       }
-      row.innerHTML = `<div class="lock-name" style="color:${col.hex}">${col.name}</div><div class="holes">${holes.join("")}</div>`;
+      row.innerHTML = `<div class="lock-name" style="color:${col.hex}">${col.name}</div><div class="holes">${holes}</div>`;
       locks.appendChild(row);
     });
     const pile = $("screwPile");
     pile.innerHTML = "";
     st.pile.forEach((color, index) => {
       const b = document.createElement("button");
-      b.className = "screw pop";
-      b.innerHTML = screwSVG(color);
+      b.className = "piece pop";
+      b.style.transform = "rotate(" + ((index * 17 % 13) - 6) + "deg)";
+      b.innerHTML = `<img src="${screwSrc(color)}" alt="">`;
       b.onclick = () => onScrew(index, b);
       pile.appendChild(b);
     });
@@ -403,35 +348,34 @@
     tray.innerHTML = "";
     st.slots.forEach((color) => {
       const s = document.createElement("div");
-      s.className = "slot" + (color ? " filled" : "");
-      if (color) s.innerHTML = screwSVG(color, 40);
+      s.className = "slot";
+      if (color) s.innerHTML = `<img src="${screwSrc(color)}" alt="">`;
       tray.appendChild(s);
     });
   }
   function onScrew(index, el) {
     if (!session || session.ended || session.world !== "screw") return;
-    const snap = L.screwSnap(session.state);
-    session.undo = snap;
+    const color = session.state.pile[index];
+    const empty = session.state.slots.findIndex((s) => s == null);
+    if (empty === -1) { sfx("bad"); shake($("screen-screw")); toast("Tray is full. Undo."); return; }
+    session.undo = L.screwSnap(session.state);
     const res = L.screwTapPile(session.state, index);
-    if (!res.ok) {
-      sfx("bad");
-      shake($("screen-screw"));
-      toast(res.reason === "full" ? "Tray is full. Undo, or finish a color." : "Can't move that");
-      return;
-    }
-    buzz(12);
+    if (!res.ok) { sfx("bad"); return; }
+    renderScrew();
+    const dest = $("screwSlots").children[empty];
+    fly(el, dest, screwSrc(color));
+    buzz(10);
     sfx(res.opened.length ? "lock" : "tap");
     if (res.opened.length) {
-      burst(el.getBoundingClientRect().left, el.getBoundingClientRect().top, 18);
-      floatAt(el, "Locked");
+      const r = el.getBoundingClientRect();
+      burst(r.left, r.top, 16);
+      floatAt(el, "Shut");
     }
-    renderScrew();
-    if (res.won) return win();
+    if (res.won) return setTimeout(win, 280);
     if (res.stuck) {
       shake($("screen-screw"));
       sfx("bad");
-      toast("Tray jammed. Press Undo and finish one color.");
-      $("screwCoach").textContent = "The tray is full and no lock can close. Undo, then collect one color only.";
+      toast("Tray jammed. Undo, then finish one color.");
     }
   }
 
@@ -441,9 +385,9 @@
     for (let i = 0; i < 4; i++) L.sortSpawn(state, state.rng);
     beginSession("sort", level, state);
     showScreen("screen-sort");
-    $("sortLevel").textContent = (level % 10 === 0 ? "Boss " : "Level ") + level;
-    $("sortGoal").textContent = "Serve " + state.target + " matching plates";
-    $("sortCoach").textContent = "Tap a plate, then the table with the same color.";
+    $("sortLevel").textContent = (level % 10 === 0 ? "Boss " : "Night ") + level;
+    $("sortGoal").textContent = "Hang " + state.target + " lanterns";
+    $("sortCoach").textContent = "Tap a lantern, then the stall of the same glow.";
     renderSort();
     startClock();
   }
@@ -457,20 +401,15 @@
       const c = L.colorById(id);
       const d = document.createElement("div");
       d.className = "order";
-      d.innerHTML = c.name + `<i style="background:${c.hex}"></i>`;
+      d.innerHTML = c.name + `<div style="width:14px;height:14px;border-radius:50%;margin:4px auto 0;background:${c.hex};box-shadow:0 0 8px ${c.hex}"></div>`;
       orders.appendChild(d);
     });
     const tray = $("sortTray");
     tray.innerHTML = "";
     st.tray.forEach((plate) => {
       const b = document.createElement("button");
-      b.className = "plate" + (selectedPlate === plate.id ? " selected" : "");
-      b.innerHTML = plateSVG(plate.color);
-      b.onclick = () => {
-        selectedPlate = plate.id;
-        sfx("tap");
-        renderSort();
-      };
+      b.innerHTML = lanternHTML(plate.color, selectedPlate === plate.id);
+      b.onclick = () => { selectedPlate = plate.id; sfx("tap"); renderSort(); };
       tray.appendChild(b);
     });
     const tables = $("sortTables");
@@ -479,56 +418,52 @@
       const c = L.colorById(id);
       const b = document.createElement("button");
       b.className = "table";
-      b.innerHTML = `<span class="swatch" style="background:${c.hex}"></span>${c.name}`;
+      b.innerHTML = `<i class="swatch" style="background:${c.hex};color:${c.hex}"></i>${c.name}`;
       b.onclick = () => servePlate(id, b);
       tables.appendChild(b);
     });
   }
   function servePlate(tableColor, el) {
     if (!session || session.ended || session.world !== "sort") return;
-    const st = session.state;
-    if (selectedPlate == null) {
-      toast("Tap a plate first");
-      return;
-    }
-    const res = L.sortServe(st, selectedPlate, tableColor);
+    if (selectedPlate == null) return toast("Tap a lantern first");
+    const res = L.sortServe(session.state, selectedPlate, tableColor);
     selectedPlate = null;
     if (!res.ok) {
       session.timeLeft = Math.max(0, session.timeLeft - 4);
-      sfx("bad");
-      shake(el);
-      buzz(30);
-      toast("Wrong table · −4s");
+      sfx("bad"); shake(el); buzz(28);
+      toast("Wrong stall · −4s");
       renderSort();
       return;
     }
     sfx(res.combo > 2 ? "lock" : "tap");
-    burst(el.getBoundingClientRect().left, el.getBoundingClientRect().top, 12);
-    floatAt(el, res.combo > 1 ? "x" + res.combo : "+1");
-    L.sortSpawn(st, st.rng);
+    const r = el.getBoundingClientRect();
+    burst(r.left, r.top, 12);
+    floatAt(el, res.combo > 1 ? "×" + res.combo : "+1");
+    L.sortSpawn(session.state, session.state.rng);
     renderSort();
     if (res.won) win();
   }
 
+  function chevron(dir) {
+    return `<svg class="arrow-chev ${dir}" viewBox="0 0 64 64"><path d="M18 40 L32 22 L46 40"/></svg>`;
+  }
   function startArrow(level) {
     const state = L.makeArrow(cfg("arrow", level), level);
     beginSession("arrow", level, state);
     showScreen("screen-arrow");
-    $("arrowLevel").textContent = (level % 10 === 0 ? "Boss " : "Level ") + level;
-    $("arrowGoal").textContent = "Turn arrows, then GO";
+    $("arrowLevel").textContent = (level % 10 === 0 ? "Boss " : "Night ") + level;
+    $("arrowGoal").textContent = "Turn the stones, then walk";
     $("arrowHearts").textContent = hearts(session.hearts);
-    $("arrowCoach").textContent = level === 1
-      ? "This road is already set. Press GO and watch Bolty walk."
-      : "Tap a tile to rotate it. Bolty follows the arrow under his feet.";
+    $("arrowCoach").textContent = level === 1 ? "The road is already true. Press Walk." : "Bolty follows the arrow under his feet.";
     $("btnGo").disabled = false;
-    renderArrow(null);
+    renderArrow();
     startClock();
   }
-  function renderArrow(king, bad) {
+  function renderArrow() {
     const st = session.state;
     $("arrowWrong").textContent = L.wrongArrows(st) + " off";
     const maze = $("arrowMaze");
-    maze.style.gridTemplateColumns = "repeat(" + st.n + ", 1fr)";
+    maze.style.gridTemplateColumns = "repeat(" + st.n + ",1fr)";
     maze.style.gap = st.n >= 8 ? "3px" : "5px";
     maze.innerHTML = "";
     for (let y = 0; y < st.n; y++) {
@@ -536,23 +471,41 @@
         const cell = st.grid[y][x];
         const b = document.createElement("button");
         b.className = "cell " + cell.type;
-        if (king && king.x === x && king.y === y) b.classList.add("king");
-        if (bad && bad.x === x && bad.y === y) b.classList.add("bad");
+        b.dataset.x = x; b.dataset.y = y;
         if (cell.type === "wall") b.disabled = true;
-        else if (cell.type === "exit") b.innerHTML = flagSVG();
-        else b.innerHTML = chevron(cell.dir) + (king && king.x === x && king.y === y ? kingSVG() : "");
+        else if (cell.type === "exit") b.innerHTML = `<i class="flag-dot"></i>`;
+        else b.innerHTML = chevron(cell.dir);
         if (cell.type !== "wall" && cell.type !== "exit") {
           b.onclick = () => {
             if (!session || session.ended || session.walking) return;
             L.arrowRotate(st, x, y);
-            sfx("tap");
-            buzz(8);
-            renderArrow({ x: 0, y: 0 });
+            sfx("tap"); buzz(8);
+            renderArrow();
           };
         }
         maze.appendChild(b);
       }
     }
+    const walker = document.createElement("div");
+    walker.className = "walker";
+    walker.id = "walker";
+    walker.innerHTML = `<img src="assets/ui/bolty.png" alt="">`;
+    maze.appendChild(walker);
+    requestAnimationFrame(() => moveWalker(0, 0));
+  }
+  function moveWalker(x, y) {
+    const maze = $("arrowMaze");
+    const cell = maze.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
+    const walker = $("walker");
+    if (!cell || !walker) return;
+    const mr = maze.getBoundingClientRect();
+    const cr = cell.getBoundingClientRect();
+    walker.style.width = cr.width + "px";
+    walker.style.height = cr.height + "px";
+    walker.style.left = (cr.left - mr.left) + "px";
+    walker.style.top = (cr.top - mr.top) + "px";
+    maze.querySelectorAll(".cell").forEach((c) => c.classList.remove("hot"));
+    cell.classList.add("hot");
   }
   function kingGo() {
     if (!session || session.ended || session.world !== "arrow" || session.walking) return;
@@ -565,26 +518,21 @@
     const step = () => {
       if (!session || session.walkToken !== token) return;
       const pos = result.steps[i];
-      const failed = !result.ok && i === result.steps.length - 1;
-      renderArrow(pos, failed ? pos : null);
+      moveWalker(pos.x, pos.y);
+      const cell = $("arrowMaze").querySelector(`.cell[data-x="${pos.x}"][data-y="${pos.y}"]`);
+      if (!result.ok && i === result.steps.length - 1 && cell) cell.classList.add("bad");
       i++;
-      if (i < result.steps.length) {
-        setTimeout(step, 180);
-        return;
-      }
+      if (i < result.steps.length) { setTimeout(step, 180); return; }
       session.walking = false;
       $("btnGo").disabled = false;
-      if (result.ok) {
-        burst(window.innerWidth / 2, window.innerHeight / 2, 36);
-        win();
-      } else {
+      if (result.ok) { burst(window.innerWidth / 2, window.innerHeight / 2, 32); win(); }
+      else {
         session.hearts--;
         $("arrowHearts").textContent = hearts(session.hearts);
-        sfx("bad");
-        shake($("screen-arrow"));
-        const why = { loop: "He walked in a circle", edge: "He walked off the board", wall: "He hit a wall", stuck: "That tile has no arrow" }[result.reason] || "Not yet";
+        sfx("bad"); shake($("screen-arrow"));
+        const why = { loop: "He circled back", edge: "He stepped off the court", wall: "A hedge stopped him", stuck: "That stone has no arrow" }[result.reason] || "Not yet";
         toast(why);
-        if (session.hearts <= 0) lose("Bolty is stuck", why + ". Turn the road, then try GO again.");
+        if (session.hearts <= 0) lose("Bolty stopped", why + ". Turn the road, then walk again.");
       }
     };
     step();
@@ -600,9 +548,7 @@
     if (!session || session.ended) return;
     session.ended = true;
     clearInterval(session.clock);
-    const world = session.world;
-    const level = session.level;
-    const stars = starsFor();
+    const world = session.world, level = session.level, stars = starsFor();
     const boss = level % 10 === 0;
     const coins = 15 + stars * 8 + (boss ? 25 : 0) + Math.floor(session.timeLeft / 4);
     S.coins += coins;
@@ -613,12 +559,12 @@
     S[world].cur = Math.min(TOTAL[world], level + 1);
     save();
     sfx("win");
-    burst(window.innerWidth / 2, 180, 48);
+    burst(window.innerWidth / 2, 160, 42);
     showScreen("screen-win");
-    $("winKicker").textContent = boss ? "Boss down" : "Cleared";
-    $("winTitle").textContent = "Level " + level;
+    $("winKicker").textContent = boss ? "Boss night done" : "Gate cleared";
+    $("winTitle").textContent = "Night " + level;
     $("winCoins").textContent = "+" + coins + " coins";
-    $("winSub").textContent = stars === 3 ? "Perfect. No hint, time to spare." : stars === 2 ? "Clean enough. The next board is open." : "Cleared. A faster run earns more stars.";
+    $("winSub").textContent = stars === 3 ? "Clean hands. Time left on the lamp." : "The next gate is open.";
     $("xpFill").style.width = (S.xp % 100) + "%";
     $("xpText").textContent = "Park rank " + (Math.floor(S.xp / 100) + 1);
     const box = $("winStars");
@@ -627,18 +573,12 @@
       const s = document.createElement("span");
       s.className = "star";
       s.textContent = i < stars ? "★" : "☆";
-      s.style.animationDelay = i * 0.12 + "s";
       box.appendChild(s);
-      setTimeout(() => s.classList.add("in"), 40);
+      setTimeout(() => s.classList.add("in"), 80 + i * 120);
     }
-    $("btnNext").textContent = level >= TOTAL[world] ? "World complete" : "Next level";
+    $("btnNext").textContent = level >= TOTAL[world] ? "Park complete" : "Next night";
     $("btnNext").onclick = () => {
-      if (level >= TOTAL[world]) {
-        toast("That world is finished");
-        showScreen("screen-hub");
-        renderHub();
-        return;
-      }
+      if (level >= TOTAL[world]) { showScreen("screen-hub"); renderHub(); return; }
       startGame(world, level + 1);
     };
   }
@@ -649,89 +589,67 @@
     session.walking = false;
     sfx("lose");
     showScreen("screen-lose");
-    $("loseTitle").textContent = title || "Try again";
-    $("loseMsg").textContent = msg || "Same board. New attempt.";
+    $("loseTitle").textContent = title || "Not yet";
+    $("loseMsg").textContent = msg || "Same board.";
   }
   function revive() {
     if (!session) return;
     if (S.coins < 80) return toast("Need 80 coins");
-    S.coins -= 80;
-    save();
-    session.ended = false;
-    session.paused = false;
-    session.hearts = Math.max(1, session.hearts);
+    S.coins -= 80; save();
+    session.ended = false; session.paused = false;
+    session.hearts = Math.max(session.hearts, 1);
     session.timeLeft += 25;
     showScreen("screen-" + session.world);
     if (session.world === "screw") renderScrew();
     if (session.world === "sort") renderSort();
-    if (session.world === "arrow") {
-      $("btnGo").disabled = false;
-      renderArrow({ x: 0, y: 0 });
-      $("arrowHearts").textContent = hearts(session.hearts);
-    }
+    if (session.world === "arrow") { $("btnGo").disabled = false; renderArrow(); $("arrowHearts").textContent = hearts(session.hearts); }
     startClock();
-    toast("25 seconds restored");
+    toast("The lamp is lit again");
   }
   function useHint() {
     if (!session || session.ended) return;
     if (!session.freeHint) {
-      if (S.coins < 20) return toast("Hints cost 20 coins");
-      S.coins -= 20;
-      save();
+      if (S.coins < 20) return toast("A hint costs 20 coins");
+      S.coins -= 20; save();
     }
     session.freeHint = false;
     session.hints++;
     if (session.world === "screw") {
       const box = session.state.boxes.find((b) => !b.done);
-      if (!box) return;
-      toast("Finish " + L.colorById(box.color).name + " next");
-      $("screwCoach").textContent = "Collect " + box.need + " " + box.color + " screws before mixing another color.";
+      if (box) { toast("Close " + L.colorById(box.color).name + " next"); $("screwCoach").textContent = "Collect " + box.need + " " + box.color + " screws before mixing."; }
     } else if (session.world === "sort") {
       const plate = session.state.tray[0];
-      if (!plate) return;
-      toast("The left plate wants " + L.colorById(plate.color).name);
-      selectedPlate = plate.id;
-      renderSort();
-    } else if (session.world === "arrow") {
+      if (plate) { selectedPlate = plate.id; toast(L.colorById(plate.color).name + " lantern"); renderSort(); }
+    } else {
       let flipped = false;
       for (let y = 0; y < session.state.n && !flipped; y++) {
         for (let x = 0; x < session.state.n; x++) {
           const c = session.state.grid[y][x];
-          if (c.answer && c.dir !== c.answer) {
-            c.dir = c.answer;
-            flipped = true;
-            toast("One arrow turned onto the road");
-            break;
-          }
+          if (c.answer && c.dir !== c.answer) { c.dir = c.answer; flipped = true; toast("One stone turned true"); break; }
         }
       }
-      if (!flipped) toast("The road already reaches the flag. Press GO.");
-      renderArrow({ x: 0, y: 0 });
+      if (!flipped) toast("The road already reaches the arch.");
+      renderArrow();
     }
     sfx("lock");
   }
-
   function claimDaily() {
     const today = new Date().toDateString();
-    if (S.lastDaily === today) return toast("Already claimed today");
+    if (S.lastDaily === today) return toast("Already taken tonight");
     if (S.lastDaily) {
-      const last = new Date(S.lastDaily);
-      const diff = (new Date(today) - new Date(last.toDateString())) / 86400000;
+      const diff = (new Date(today) - new Date(new Date(S.lastDaily).toDateString())) / 86400000;
       if (diff > 1) S.streak = 0;
     }
-    const rewards = [40, 60, 80, 120, 160, 200, 280];
-    const gain = rewards[Math.min(S.streak, 6)];
+    const gain = [40, 60, 80, 120, 160, 200, 280][Math.min(S.streak, 6)];
     S.coins += gain;
     if (S.streak === 6) S.gems += 1;
     S.streak = Math.min(7, (S.streak || 0) + 1);
     S.lastDaily = today;
-    save();
-    renderHub();
+    save(); renderHub();
     toast("+" + gain + " coins");
     sfx("lock");
-    burst(window.innerWidth / 2, 220, 24);
+    burst(window.innerWidth / 2, 200, 20);
   }
-
   function renderShop() {
     paintCurrencies();
     showScreen("screen-shop");
@@ -741,10 +659,10 @@
       const owned = S.owned.indexOf(theme.id) !== -1;
       const card = document.createElement("div");
       card.className = "shop-card";
-      card.innerHTML = `<h3>${theme.name}</h3><p>${owned ? (S.theme === theme.id ? "Equipped" : "Owned") : theme.price + " coins"}</p><div class="swatches">${theme.colors.map((c) => `<i style="background:${c}"></i>`).join("")}</div>`;
+      card.innerHTML = `<h3>${theme.name}</h3><p>${owned ? (S.theme === theme.id ? "On the park now" : "Owned") : theme.price + " coins"}</p><div class="swatches">${theme.colors.map((c) => `<i style="background:${c}"></i>`).join("")}</div>`;
       const btn = document.createElement("button");
-      btn.className = "btn " + (owned ? "ghost" : "primary") + " wide";
-      btn.textContent = owned ? (S.theme === theme.id ? "Equipped" : "Equip") : "Buy";
+      btn.className = "btn " + (owned ? "ghost" : "gold") + " wide";
+      btn.textContent = owned ? (S.theme === theme.id ? "Wearing" : "Wear") : "Buy";
       btn.onclick = () => {
         if (!owned) {
           if (S.coins < theme.price) return toast("Not enough coins");
@@ -752,35 +670,38 @@
           S.owned.push(theme.id);
         }
         S.theme = theme.id;
-        save();
-        renderShop();
-        toast(theme.name + " on");
+        save(); renderShop();
       };
       card.appendChild(btn);
       grid.appendChild(card);
     });
-    const note = document.createElement("p");
-    note.className = "legal";
-    note.textContent = "Themes are local. No account, no surprise charge.";
-    grid.appendChild(note);
+  }
+
+  function pause() {
+    if (!session || session.ended) return;
+    session.paused = true;
+    clearInterval(session.clock);
+    openModal("modal-pause");
+  }
+  function resume() {
+    if (!session) return;
+    closeModal("modal-pause");
+    session.paused = false;
+    if (!session.ended) startClock();
   }
 
   function boot() {
     document.documentElement.dataset.theme = S.theme || "park";
     let load = 0;
     const timer = setInterval(() => {
-      load = Math.min(100, load + 18);
+      load = Math.min(100, load + 16);
       $("loadFill").style.width = load + "%";
-      $("loadText").textContent = load < 100 ? "Setting the locks…" : "Ready";
+      $("loadText").textContent = load < 100 ? "Lighting the lanterns…" : "The gate is open";
       if (load >= 100) {
         clearInterval(timer);
-        setTimeout(() => {
-          showScreen("screen-hub");
-          renderHub();
-        }, 280);
+        setTimeout(() => { showScreen("screen-hub"); renderHub(); }, 260);
       }
-    }, 90);
-
+    }, 80);
     $("btnSettings").onclick = () => {
       $("setMusic").checked = !!S.music;
       $("setSfx").checked = S.sfx !== false;
@@ -808,10 +729,8 @@
     $("btnRestart").onclick = () => session && startGame(session.world, session.level);
     $("btnQuit").onclick = () => {
       const world = session && session.world;
-      stopSession();
-      session = null;
-      if (world) openMap(world);
-      else { showScreen("screen-hub"); renderHub(); }
+      stopSession(); session = null;
+      if (world) openMap(world); else { showScreen("screen-hub"); renderHub(); }
     };
     $("screwUndo").onclick = () => {
       if (!session || !session.undo) return toast("Nothing to undo");
@@ -830,20 +749,6 @@
     $("btnLoseMap").onclick = () => session && openMap(session.world);
     document.addEventListener("pointerdown", () => { if (S.music) startMusic(); }, { once: true });
   }
-
-  function pause() {
-    if (!session || session.ended) return;
-    session.paused = true;
-    clearInterval(session.clock);
-    openModal("modal-pause");
-  }
-  function resume() {
-    if (!session) return;
-    closeModal("modal-pause");
-    session.paused = false;
-    if (!session.ended) startClock();
-  }
-
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
   else boot();
 })();

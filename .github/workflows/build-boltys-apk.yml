@@ -35,12 +35,13 @@ jobs:
           set -e
           cd boltys-puzzle-park
           rm -rf www android ios node_modules
-          mkdir -p www/assets
+          mkdir -p www/assets/ui
           cp index.html www/
           cp -r css js data www/
-          cp assets/app_icon_512.png www/assets/
+          cp -r assets/ui www/assets/
+          cp assets/app_icon_512.png www/assets/ || true
           cp manifest.webmanifest www/ || true
-          node -e 'const fs=require("fs"); const c=JSON.parse(fs.readFileSync("capacitor.config.json","utf8")); c.webDir="www"; c.appName="Boltys Puzzle Park"; fs.writeFileSync("capacitor.config.json", JSON.stringify(c,null,2));'
+          node -e 'const fs=require("fs"); const c=JSON.parse(fs.readFileSync("capacitor.config.json","utf8")); c.webDir="www"; c.appName="Bolty"; fs.writeFileSync("capacitor.config.json", JSON.stringify(c,null,2));'
           if [ -z "$ANDROID_HOME" ]; then
             export ANDROID_HOME=/usr/local/lib/android/sdk
           fi
@@ -53,6 +54,10 @@ jobs:
           npm install --no-audit --no-fund 2>&1 | tee -a /tmp/build.log
           npx cap add android 2>&1 | tee -a /tmp/build.log
           npx cap sync android 2>&1 | tee -a /tmp/build.log
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
+          for f in android/app/src/main/res/mipmap-*/ic_launcher.png android/app/src/main/res/mipmap-*/ic_launcher_round.png android/app/src/main/res/mipmap-*/ic_launcher_foreground.png; do
+            if [ -e "$f" ]; then cp assets/ui/ic_launcher.png "$f"; fi
+          done
           echo "sdk.dir=$ANDROID_HOME" > android/local.properties
           echo "org.gradle.java.home=$JAVA_HOME" >> android/gradle.properties
           cat android/local.properties | tee -a /tmp/build.log
