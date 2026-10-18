@@ -8,6 +8,9 @@ on:
       - ".github/workflows/build-boltys-apk.yml"
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build-apk:
     runs-on: ubuntu-24.04
@@ -26,101 +29,85 @@ jobs:
         with:
           node-version: "20"
 
-      - name: Prepare www + Android project
+      - name: Build installable debug APK
         run: |
           set -o pipefail
           set -e
           cd boltys-puzzle-park
           rm -rf www android ios node_modules
-          mkdir -p www
+          mkdir -p www/assets
           cp index.html www/
-          cp -r css js data assets www/
+          cp -r css js data www/
+          cp assets/app_icon_512.png www/assets/
           cp manifest.webmanifest www/ || true
-          cp privacy.html www/ || true
           node -e 'const fs=require("fs"); const c=JSON.parse(fs.readFileSync("capacitor.config.json","utf8")); c.webDir="www"; c.appName="Boltys Puzzle Park"; fs.writeFileSync("capacitor.config.json", JSON.stringify(c,null,2));'
-          if [ -z "$ANDROID_HOME" ] && [ -d /usr/local/lib/android/sdk ]; then
-            echo "ANDROID_HOME=/usr/local/lib/android/sdk" >> "$GITHUB_ENV"
+          if [ -z "$ANDROID_HOME" ]; then
             export ANDROID_HOME=/usr/local/lib/android/sdk
           fi
-          echo "ANDROID_HOME=$ANDROID_HOME" | tee /tmp/build.log
-          ls -lh www | tee -a /tmp/build.log
+          {
+            echo "JAVA_HOME=$JAVA_HOME"
+            java -version
+            echo "ANDROID_HOME=$ANDROID_HOME"
+            ls "$ANDROID_HOME/platforms" || true
+          } | tee /tmp/build.log
           npm install --no-audit --no-fund 2>&1 | tee -a /tmp/build.log
-          npx cap --version 2>&1 | tee -a /tmp/build.log
           npx cap add android 2>&1 | tee -a /tmp/build.log
           npx cap sync android 2>&1 | tee -a /tmp/build.log
-          # Sign a normal (non-debug) APK so phones install it without a debug warning
-          keytool -genkeypair -v \
-            -keystore android/app/bolty-release.keystore \
-            -alias bolty -keyalg RSA -keysize 2048 -validity 10000 \
-            -storepass boltyspark -keypass boltyspark \
-            -dname "CN=Bolty Games, OU=Games, O=Bolty, L=Hafizabad, ST=Punjab, C=PK"
-          python3 - << 'PY'
-          import re
-          from pathlib import Path
-          p = Path("android/app/build.gradle")
-          text = p.read_text()
-          if "signingConfigs" not in text:
-              text = text.replace(
-                  "buildTypes {",
-                  """signingConfigs {
-              release {
-                  storeFile file("bolty-release.keystore")
-                  storePassword "boltyspark"
-                  keyAlias "bolty"
-                  keyPassword "boltyspark"
-              }
-          }
-          buildTypes {""",
-                  1,
-              )
-          if "signingConfig signingConfigs.release" not in text:
-              text2, n = re.subn(
-                  r"(release\s*\{)",
-                  r"\1\n            signingConfig signingConfigs.release",
-                  text,
-                  count=1,
-              )
-              if n:
-                  text = text2
-          p.write_text(text)
-          print("--- app/build.gradle (signing section) ---")
-          print(text)
-          PY
+          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+          echo "org.gradle.java.home=$JAVA_HOME" >> android/gradle.properties
+          cat android/local.properties | tee -a /tmp/build.log
           chmod +x android/gradlew
           cd android
-          # Debug APK is always signed and installable. Release is nicer if signing injected.
           ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee -a /tmp/build.log
-          ./gradlew assembleRelease --stacktrace --no-daemon 2>&1 | tee -a /tmp/build.log || true
+          find app/build/outputs -name "*.apk" -exec ls -lh {} \; | tee -a /tmp/build.log
 
-      - name: Collect APK
+      - name: Save APK for download
         if: always()
         run: |
-          mkdir -p /tmp/apkout
-          find boltys-puzzle-park/android/app/build/outputs -name "*.apk" -print -exec cp {} /tmp/apkout/ \; || true
-          ls -lh /tmp/apkout || true
-          # Prefer a signed release APK. Never ship an unsigned one.
-          if ls /tmp/apkout/*release*.apk >/dev/null 2>&1 && ! ls /tmp/apkout/*unsigned* >/dev/null 2>&1; then
-            cp /tmp/apkout/*release*.apk /tmp/apkout/BoltysPuzzlePark.apk
-          elif ls /tmp/apkout/*debug*.apk >/dev/null 2>&1; then
-            cp /tmp/apkout/*debug*.apk /tmp/apkout/BoltysPuzzlePark.apk
-          elif ls /tmp/apkout/*.apk >/dev/null 2>&1; then
-            cp "$(ls -1 /tmp/apkout/*.apk | grep -v unsigned | head -n 1)" /tmp/apkout/BoltysPuzzlePark.apk || true
+          mkdir -p "$GITHUB_WORKSPACE/apk-out"
+          find boltys-puzzle-park/android/app/build/outputs -name "*debug*.apk" -exec cp {} "$GITHUB_WORKSPACE/apk-out/BoltysPuzzlePark.apk" \; || true
+          if [ -f /tmp/build.log ]; then
+            tail -n 300 /tmp/build.log > "$GITHUB_WORKSPACE/boltys-build-log.txt"
+          else
+            echo "no build log" > "$GITHUB_WORKSPACE/boltys-build-log.txt"
           fi
-          ls -lh /tmp/apkout || true
+          ls -lh "$GITHUB_WORKSPACE/apk-out" || true
+          # Commit APK + log so they can be pulled without the Actions blob store
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f apk-out/BoltysPuzzlePark.apk ]; then
+            cp apk-out/BoltysPuzzlePark.apk BoltysPuzzlePark.apk
+            git add -f BoltysPuzzlePark.apk
+          fi
+          git add -f boltys-build-log.txt
+          if git diff --cached --quiet; then
+            echo "nothing new to commit"
+          else
+            git commit -m "ci: publish Bolty APK and build log"
+            git push origin HEAD:arena/138b2864-quizwebsite
+          fi
 
-      - name: Upload build log
+      - name: Post log as commit comment
         if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: build-log
-          path: /tmp/build.log
-          retention-days: 7
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tail -c 45000 /tmp/build.log > /tmp/tail.txt || echo "no build log" > /tmp/tail.txt
+          {
+            echo 'Bolty APK build log tail'
+            echo '```'
+            cat /tmp/tail.txt
+            echo '```'
+          } > /tmp/comment.txt
+          gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/comments" \
+            -f body="$(cat /tmp/comment.txt)" || echo "comment failed"
 
-      - name: Upload APK
+      - name: Upload APK artifact
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: BoltysPuzzlePark-APK
-          path: /tmp/apkout/BoltysPuzzlePark.apk
+          path: apk-out/BoltysPuzzlePark.apk
           retention-days: 30
           if-no-files-found: warn
