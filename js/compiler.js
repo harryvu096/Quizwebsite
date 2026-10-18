@@ -9,7 +9,7 @@
 
 /* Build self-heal: agar index.html aur compiler.js ke versions mix ho jayen
    (stale cache), ek dafa auto-reload kar ke fresh pair le lo. */
-const AHW_BUILD="ahw9";
+const AHW_BUILD="ahw12";
 (function(){
   try{
     const b=document.body ? document.body.getAttribute("data-build") : null;
@@ -118,7 +118,7 @@ function cppNewFile(){
   const n = prompt("New file name:", "file"+(CPP_FILES.length+1)+".cpp");
   if(!n) return;
   let name=n.trim(); if(!/\.(cpp|cc|c|h|hpp|txt)$/i.test(name)) name+=".cpp";
-  if(CPP_FILES.some(f=>f.name===name)){ alert("This file is already open."); return; }
+  if(CPP_FILES.some(f=>f.name===name)){ alertUser("This file is already open."); return; }
   CPP_FILES.push({name:name, code:""}); CPP_CUR=CPP_FILES.length-1;
   cppRenderTabs(); cppLoadCurrent(); sfx.click();
 }

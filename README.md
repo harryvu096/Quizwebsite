@@ -1,6 +1,18 @@
 # ⚡ AHW Quizverse — VU Exam Arena
 
-Gamified MCQ practice arena for Virtual University students: **50 subjects · 3,322 past-paper style MCQs · Mid + Finalterm arenas**, with hearts, streaks, boss battles, XP levels, certificates and a Mistake Vault.
+Gamified MCQ practice arena for Virtual University students: **68 subjects · 4,152 past-paper style MCQs · Mid + Finalterm arenas**, with hearts, streaks, boss battles, XP levels, certificates and a Mistake Vault.
+
+## 🆕 What's New — Oct 2026 Polish Round (English)
+
+- **⚡ Daily Challenge** — 5 mixed MCQs every day (same set for the whole day), 3 hearts, streak counter 🔥. Home screen button + live status under the name box.
+- **📕 Smart Review (spaced repetition)** — Mistake Vault now schedules reviews: due mistakes come **first** in Practice; a correct answer delays the next review (1 → 3 → 7 → 21 → 45 days), a wrong answer makes it due again. "Due now" badges in the vault.
+- **⚠️ Report a Question** — one tap on any quiz feedback panel saves + copies a formatted MCQ report (travels with Export backup).
+- **✅ Answer-position rebalance** — all 4,152 MCQs' options re-shuffled (deterministic) so the correct answer spreads evenly (24/26/26/25%) — no more "always option A" pattern in the data.
+- **🎓 Mock Exam is BACK** on the home screen (VUtes-style, was temporarily hidden).
+- **🗑️ Reset ALL progress now really resets everything** (vault, score, C++ Lab, English Lab) via a friendly in-app dialog — native `alert()`/`confirm()` are gone from the whole app.
+- **♿ Accessibility** — `prefers-reduced-motion` support, minimum 12px labels, `role="dialog"` + `aria-modal` on modals, HTML-escape hardening.
+- **🔎 SEO** — robots.txt, sitemap.xml, canonical + consistent numbers in meta/OG/Twitter tags.
+- **🛠️ Engineering** — `tools/check.js` data validator (CI-ready), answer-balance checks in `tools/build.js`, standalone build fix (English Lab no longer loads twice).
 
 ## 🆕 Latest Feature Updates (English)
 

@@ -1,0 +1,12 @@
+# OS / editor
+.DS_Store
+Thumbs.db
+*.swp
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Scratch / unmerged content packs (build.js merges data-new/ when present)
+# data-new/ is optional — uncomment the next line if you don't want parts in git
+# data-new/

@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://harryvu096.github.io/Quizwebsite/sitemap.xml
