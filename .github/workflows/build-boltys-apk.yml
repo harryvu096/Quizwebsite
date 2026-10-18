@@ -20,6 +20,9 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+
       - name: Copy web assets to Android
         run: |
           mkdir -p boltys-puzzle-park/android/app/src/main/assets/public
@@ -32,11 +35,9 @@ jobs:
           ls -lh boltys-puzzle-park/android/app/src/main/assets/public/ | head -n 40
           echo "assets copied"
 
-      - name: Build Debug APK
+      - name: Build Debug APK with Gradle
         working-directory: boltys-puzzle-park/android
-        run: |
-          chmod +x gradlew
-          ./gradlew assembleDebug
+        run: gradle assembleDebug --stacktrace
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
@@ -47,7 +48,7 @@ jobs:
 
       - name: Build Release AAB (Play Store)
         working-directory: boltys-puzzle-park/android
-        run: ./gradlew bundleRelease
+        run: gradle bundleRelease --stacktrace
         continue-on-error: true
 
       - name: Upload AAB
