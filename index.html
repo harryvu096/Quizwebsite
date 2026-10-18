@@ -313,26 +313,50 @@
         <div class="vt-qpanel"><div class="mock-q" id="mockQText"></div></div>
         <div class="vt-pbar">Answer</div>
         <div class="vt-apanel" id="mockOpts"></div>
+        <div class="vt-modhint" id="mkModHint" hidden>⚠️ <b>Answer changed after Save</b> — press <b>Save Answer</b> again to record it (VU rule).</div>
+        <!-- VU-exact action buttons (VUTES: Save / Save & Next / Mark for Review / Clear) -->
+        <div class="vt-actions">
+          <button class="vt-act green js-save" onclick="mockSave()">💾 Save Answer</button>
+          <button class="vt-act blue" onclick="mockSaveNext()">Save &amp; Move to Next ➜</button>
+          <button class="vt-act purple" onclick="mockMarkNext()">🚩 Mark for Review &amp; Next</button>
+          <button class="vt-act gray" onclick="mockClear()">✖ Clear Response</button>
+        </div>
       </div>
       <div class="vt-right" id="vtRight">
-        <div class="vt-pbar">Summary</div>
+        <div class="vt-pbar">Question Palette</div>
         <div class="mock-pal" id="mockPal"></div>
+        <div class="mock-legend">
+          <span><i class="lg lg-ns"></i>Not Attempted</span>
+          <span><i class="lg lg-vi"></i>Visited</span>
+          <span><i class="lg lg-sv"></i>Saved</span>
+          <span><i class="lg lg-mk"></i>Marked</span>
+          <span><i class="lg lg-sm"></i>Saved+Marked</span>
+        </div>
         <div class="vt-sum">
           <div class="vt-pct"><b id="mkPct">0%</b><div class="vt-prog"><div id="mkBarFill" style="width:0%"></div></div></div>
           <div class="vt-sumrow"><span>Attempted</span><b class="g" id="mkAtt">0</b></div>
-          <div class="vt-sumrow"><span>Flagged</span><b class="p" id="mkFlagged">0</b></div>
+          <div class="vt-sumrow"><span>Marked</span><b class="p" id="mkFlagged">0</b></div>
+          <div class="vt-sumrow"><span>Not Attempted</span><b class="r" id="mkUnatt">0</b></div>
           <div class="vt-sumrow"><span>Total</span><b id="mkTotal">0</b></div>
         </div>
       </div>
-      <button class="vt-collapse" onclick="mockToggleSide()" title="Show/hide summary">»</button>
+      <button class="vt-collapse" onclick="mockToggleSide()" title="Show/hide question palette">»</button>
     </div>
+    <!-- Bottom bar: VU order — First / Previous / Next / Last + Instructions / Save / Finish -->
     <div class="vt-bottom">
-      <button class="vt-b pink" onclick="mockFinishPrompt()">🚩 Finish Exam</button>
-      <button class="vt-b purple" onclick="mockFlag()">🚩 Flag</button>
-      <button class="vt-b orange wide"><span onclick="mockFirst()">◀&nbsp;First</span><span onclick="mockLast()">Last&nbsp;▶</span></button>
-      <button class="vt-b orange wide"><span onclick="mockPrev()">◀&nbsp;Previous</span><span onclick="mockNext()">Next&nbsp;▶</span></button>
-      <button class="vt-b teal" id="mockSaveBtn" disabled onclick="mockSave()">💾 Save</button>
+      <div class="vt-navrow">
+        <button class="vt-b orange" onclick="mockFirst()">⏮ First</button>
+        <button class="vt-b orange" onclick="mockPrev()">◀ Previous</button>
+        <button class="vt-b orange" onclick="mockNext()">Next ▶</button>
+        <button class="vt-b orange" onclick="mockLast()">Last ⏭</button>
+      </div>
+      <div class="vt-botrow">
+        <button class="vt-b dark" onclick="openModal('modal-mockinstr')">📖 Instructions</button>
+        <button class="vt-b teal js-save" onclick="mockSave()">💾 Save Answer</button>
+        <button class="vt-b pink" onclick="mockFinishPrompt()">🚩 Finish Exam</button>
+      </div>
     </div>
+    <div class="vt-kbdhint">💡 Keyboard: <b>←</b> Previous · <b>→</b> Next · <b>S</b> Save · <b>F</b> Flag</div>
   </section>
 
 <!-- ============ MOCK EXAM: RESULT ============ -->
