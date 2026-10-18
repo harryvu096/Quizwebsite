@@ -1197,6 +1197,14 @@ document.addEventListener("keydown",e=>{
     const btns=document.querySelectorAll("#optsBox .opt"); const i=+e.key-1; if(btns[i]) btns[i].click();
   }
   if(e.key==="Enter" && G.answered && quizActive && !activates) nextQuestion();
+  /* Mock exam room shortcuts (VUTES style): arrows navigate, S saves, F flags */
+  const mockActive=document.getElementById("screen-mock") && document.getElementById("screen-mock").classList.contains("active");
+  if(mockActive && MK && !MK.done && !(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"))){
+    if(e.key==="ArrowLeft"){ e.preventDefault(); mockPrev(); }
+    else if(e.key==="ArrowRight"){ e.preventDefault(); mockNext(); }
+    else if(e.key==="s"||e.key==="S"){ e.preventDefault(); mockSave(); }
+    else if(e.key==="f"||e.key==="F"){ e.preventDefault(); mockFlag(); }
+  }
 });
 /* ===================== MOCK EXAM (VUtes-style midterm) =====================
    Mirrors the VU qb.vu.edu.pk exam room: question on the left, palette +
@@ -1250,7 +1258,9 @@ function prepMock(sid){
   if(!items.length){ alertUser("No questions available for this subject yet."); return; }
   if(MK && MK.timer) clearInterval(MK.timer);
   MK={sid,obj,S,items,idx:0,picks:items.map(()=>null),texts:items.map(()=>""),saved:items.map(()=>false),
-      flagged:items.map(()=>false),award:items.map(()=>null),total:items.reduce((a,b)=>a+b.marks,0),
+      flagged:items.map(()=>false),visited:items.map(()=>false),modified:items.map(()=>false),
+      subjOpen:items.map(()=>false),
+      award:items.map(()=>null),total:items.reduce((a,b)=>a+b.marks,0),
       mcqGot:0,mcqMax:0,started:false,done:false,t0:null,tEnd:0,timer:null};
   document.getElementById("mtStartTime").textContent=fmtClock(new Date());
   document.getElementById("mtTimer").textContent=MOCK_MINUTES+":00";
@@ -1266,6 +1276,9 @@ function beginMock(){
   document.getElementById("mkLogin").textContent=fmtClock(MK.t0);
   document.getElementById("mkUser").textContent=(profile.name||"GUEST").toUpperCase();
   document.getElementById("mkTotal").textContent=MK.items.length;
+  /* phones: palette hidden by default (slide-over via » button); desktop: visible */
+  const vm=document.getElementById("vtMain");
+  if(vm && innerWidth<=820){ vm.classList.add("noside"); const cb=vm.querySelector(".vt-collapse"); if(cb) cb.textContent="«"; }
   sfx.fanfare(); mockTick(); mockPaint(); show("screen-mock");
 }
 function fmtClock(d){ let h=d.getHours(), m=d.getMinutes(); const ap=h>=12?"PM":"AM"; h=h%12||12; return h+":"+(m<10?"0":"")+m+" "+ap; }
@@ -1283,6 +1296,7 @@ function mockAttemptedCount(){ return MK.saved.filter(Boolean).length; }
 function mockFlaggedCount(){ return MK.flagged.filter(Boolean).length; }
 function mockPaint(){
   const it=MK.items[MK.idx];
+  MK.visited[MK.idx]=true;
   document.getElementById("mkQNo").textContent="Question No . "+(MK.idx+1)+" of "+MK.items.length;
   document.getElementById("mkMarks").textContent="Marks: "+it.marks+" (Time 1 Min)";
   document.getElementById("mkFlagBtn").classList.toggle("on", MK.flagged[MK.idx]);
@@ -1294,38 +1308,75 @@ function mockPaint(){
       row.className="vt-orow"+(MK.picks[MK.idx]===i?" on":"");
       row.innerHTML='<span class="vt-osq"><i></i></span><span class="vt-otxt"></span>';
       row.querySelector(".vt-otxt").textContent=o;
-      row.onclick=()=>{ MK.picks[MK.idx]=i; sfx.click(); mockPaint(); };
+      row.onclick=()=>{
+        if(MK.picks[MK.idx]===i) return;
+        MK.picks[MK.idx]=i;
+        if(MK.saved[MK.idx]) MK.modified[MK.idx]=true;   // VU rule: edit after Save needs re-save
+        sfx.click(); mockPaint();
+      };
       box.appendChild(row);
     });
   }else{
-    const ta=document.createElement("textarea");
-    ta.rows=it.type==="long"?8:5;
-    ta.placeholder="Write your answer here, then press Save...";
-    ta.value=MK.texts[MK.idx]||"";
-    ta.oninput=()=>{ MK.texts[MK.idx]=ta.value; mockSaveState(); };
-    box.appendChild(ta);
+    /* VU quirk: subjective answer panel stays locked until "Click Here" */
+    if(!MK.subjOpen[MK.idx]){
+      const gate=document.createElement("button");
+      gate.className="vt-clickhere";
+      gate.textContent="📝 Click Here to enable the answer panel";
+      gate.onclick=()=>{ MK.subjOpen[MK.idx]=true; sfx.click(); mockPaint(); };
+      box.appendChild(gate);
+    }else{
+      const ta=document.createElement("textarea");
+      ta.rows=it.type==="long"?8:5;
+      ta.placeholder="Write your answer here, then press Save Answer...";
+      ta.value=MK.texts[MK.idx]||"";
+      ta.oninput=()=>{
+        MK.texts[MK.idx]=ta.value;
+        if(MK.saved[MK.idx]) MK.modified[MK.idx]=true;
+        mockSaveState();
+      };
+      box.appendChild(ta);
+    }
   }
+  const hint=document.getElementById("mkModHint");
+  if(hint) hint.hidden=!MK.modified[MK.idx];
   mockSaveState(); mockPal();
 }
+function mockHasResponse(i){
+  const it=MK.items[i];
+  return it.type==="mcq" ? MK.picks[i]!=null : (MK.texts[i]||"").trim().length>0;
+}
 function mockSaveState(){
-  const sb=document.getElementById("mockSaveBtn"); if(!sb||!MK) return;
-  const it=MK.items[MK.idx];
-  const savable = it.type==="mcq" ? MK.picks[MK.idx]!=null : (MK.texts[MK.idx]||"").trim().length>0;
-  sb.disabled=!(savable && !MK.saved[MK.idx]);
+  /* VU rule: Save records the answer; it re-enables when you edit a saved answer */
+  const canSave = MK && !MK.done && mockHasResponse(MK.idx) && (!MK.saved[MK.idx] || MK.modified[MK.idx]);
+  document.querySelectorAll(".js-save").forEach(b=>{
+    b.disabled=!canSave;
+    b.classList.toggle("unsaved", !!MK && (MK.modified[MK.idx]||(!MK.saved[MK.idx]&&mockHasResponse(MK.idx))));
+    b.title = canSave ? "Save this answer (VU: only saved answers count)" : (MK&&MK.saved[MK.idx]&&!MK.modified[MK.idx] ? "Already saved ✓" : "Select an option first");
+  });
 }
 function mockSave(){
-  if(!MK) return;
-  MK.saved[MK.idx]=true; sfx.correct();
-  streakBanner("💾 Saved — Question "+(MK.idx+1));
+  if(!MK||MK.done) return;
+  if(!mockHasResponse(MK.idx)){ streakBanner("⚠️ Nothing to save — select an option first."); return; }
+  MK.saved[MK.idx]=true; MK.modified[MK.idx]=false;
+  sfx.correct();
+  streakBanner("💾 Saved — Question "+(MK.idx+1)+" ✓");
+  mockPaint();
+}
+function mockSaveNext(){ mockSave(); if(MK && MK.idx<MK.items.length-1) setTimeout(mockNext,80); }
+function mockMarkNext(){ mockFlag(); if(MK && MK.idx<MK.items.length-1) setTimeout(mockNext,80); }
+function mockClear(){
+  if(!MK||MK.done) return;
+  MK.picks[MK.idx]=null; MK.texts[MK.idx]=""; MK.saved[MK.idx]=false; MK.modified[MK.idx]=false;
+  sfx.click(); streakBanner("✖ Response cleared — Question "+(MK.idx+1));
   mockPaint();
 }
 function mockPal(){
   const pal=document.getElementById("mockPal"); pal.innerHTML="";
   MK.items.forEach((it,i)=>{
-    const b=document.createElement("button"); b.className="mp2";
-    if(MK.saved[i]) b.classList.add("done");
-    if(MK.flagged[i]) b.classList.add("flag");
-    if(i===MK.idx) b.classList.add("cur");
+    const b=document.createElement("button");
+    /* VU palette colors: white=not visited · orange=visited · green=saved ·
+       purple=marked · purple+green dot=saved+marked */
+    b.className="mp2"+(MK.visited[i]&&!MK.saved[i]?" vi":"")+(MK.saved[i]?" done":"")+(MK.flagged[i]?" flag":"")+(MK.saved[i]&&MK.flagged[i]?" sm":"")+(i===MK.idx?" cur":"");
     b.textContent=(i+1<10?"0":"")+(i+1);
     b.onclick=()=>{ MK.idx=i; sfx.click(); mockPaint(); };
     pal.appendChild(b);
@@ -1336,6 +1387,7 @@ function mockPal(){
   document.getElementById("mkBarFill").style.width=pct+"%";
   document.getElementById("mkAtt").textContent=att;
   document.getElementById("mkFlagged").textContent=mockFlaggedCount();
+  const un=document.getElementById("mkUnatt"); if(un) un.textContent=MK.items.length-att;
 }
 function mockFlag(){
   if(!MK) return;
@@ -1355,7 +1407,7 @@ function mockPrev(){ if(MK.idx>0){ MK.idx--; sfx.click(); mockPaint(); } }
 function mockFinishPrompt(){
   const un=MK.items.length-mockAttemptedCount();
   document.getElementById("mockFinInfo").textContent=
-    "Attempted questions: "+mockAttemptedCount()+" of "+MK.items.length+(un?"  ("+un+" unattempted)":"")+".";
+    "Saved (attempted) questions: "+mockAttemptedCount()+" of "+MK.items.length+(un?"  ("+un+" not saved — VU counts only saved answers)":"")+".";
   document.getElementById("mockFinChk").checked=false;
   document.getElementById("btnMockFin").disabled=true;
   openModal("modal-mockfin");
@@ -1365,7 +1417,13 @@ function mockFinish(auto){
   MK.done=true; clearInterval(MK.timer); closeModal("modal-mockfin");
   if(auto) streakBanner("⏰ Time up! Paper auto-submitted.");
   MK.mcqGot=0; MK.mcqMax=0;
-  MK.items.forEach((it,i)=>{ if(it.type==="mcq"){ MK.mcqMax+=it.marks; if(MK.picks[i]!=null && it.opts[MK.picks[i]]===it.ans) MK.mcqGot+=it.marks; } });
+  MK.items.forEach((it,i)=>{
+    if(it.type==="mcq"){
+      MK.mcqMax+=it.marks;
+      /* VU rule: ONLY saved answers are graded — a selected-but-unsaved option scores 0 */
+      if(MK.saved[i] && MK.picks[i]!=null && it.opts[MK.picks[i]]===it.ans) MK.mcqGot+=it.marks;
+    }
+  });
   buildMockResult();
   show("screen-mockres");
   if(MK.mcqMax && MK.mcqGot/MK.mcqMax>=0.5){ sfx.fanfare(); celebrate(); } else sfx.gameover();
@@ -1399,9 +1457,10 @@ function buildMockResult(){
         od.textContent=o+(o===it.ans?"  ✓":(MK.picks[i]===oi?"  ✕ (your pick)":""));
         d.appendChild(od);
       });
-      const ok=MK.picks[i]!=null&&it.opts[MK.picks[i]]===it.ans;
+      const ok=MK.saved[i]&&MK.picks[i]!=null&&it.opts[MK.picks[i]]===it.ans;
+      const pickedNotSaved=MK.picks[i]!=null&&!MK.saved[i];
       const w=document.createElement("div"); w.className="rv-why";
-      w.textContent=(ok?"✅ +"+it.marks:"❌ 0")+" · 💡 "+it.why; d.appendChild(w);
+      w.textContent=(ok?"✅ +"+it.marks:"❌ 0")+(pickedNotSaved?" · ⚠️ selected but NOT saved (VU rule: only saved answers count)":"")+" · 💡 "+it.why; d.appendChild(w);
     }else{
       const ua=document.createElement("div"); ua.className="rv-why";
       ua.textContent="✍️ Your answer: "+((MK.texts[i]||"").trim()||"(not attempted)"); d.appendChild(ua);
@@ -1520,4 +1579,4 @@ if("serviceWorker" in navigator && (location.protocol==="https:"||location.proto
 }
 
 /* Dev console access — harmless: lets you inspect app state live */
-globalThis.AHW={SUBJECTS,profile,getG:()=>G};
+globalThis.AHW={SUBJECTS,profile,getG:()=>G,getMock:()=>MK};
