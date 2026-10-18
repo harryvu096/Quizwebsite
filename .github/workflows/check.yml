@@ -1,0 +1,23 @@
+name: MCQ data check
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Validate MCQ banks
+        run: node tools/check.js
+      - name: Syntax-check app JS
+        run: |
+          node --check js/app.js
+          node --check js/compiler.js
+          node --check js/english.js
+          node --check tools/build.js
+          node --check tools/build-standalone.js
