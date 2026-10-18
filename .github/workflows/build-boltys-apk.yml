@@ -31,11 +31,16 @@ jobs:
 
       - name: Add Android platform
         working-directory: boltys-puzzle-park
-        run: npx cap add android || true
+        run: |
+          npx cap add android || true
+          ls -la
+          cat capacitor.config.json
 
       - name: Sync Capacitor
         working-directory: boltys-puzzle-park
-        run: npx cap sync
+        run: |
+          npx cap sync --verbose || npx cap sync
+          ls -la android/app/src/main/assets/ 2>&1 | head -n 20
 
       - name: Build Debug APK
         working-directory: boltys-puzzle-park/android
