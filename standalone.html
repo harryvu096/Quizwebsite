@@ -430,8 +430,6 @@ section.vuts{max-width:1080px}
 .vt-b.purple{background:#8e2de2}
 .vt-b.orange{background:#f5a623;color:#5c3c00}
 .vt-b.teal{background:#2a9d8f}
-.vt-b.wide{display:flex;justify-content:space-between;gap:14px;flex:1;min-width:150px}
-.vt-b.wide span{cursor:pointer;display:inline-block;padding:0 4px}
 
 /* ---------- VU-exact polish pass ---------- */
 body.vu-mode{background:radial-gradient(900px 420px at 85% -10%,rgba(255,255,255,.55),transparent 60%),radial-gradient(760px 380px at 8% 108%,rgba(96,90,80,.28),transparent 60%),linear-gradient(180deg,#dedbd4,#c6c2ba) !important;background-attachment:fixed !important}
@@ -447,9 +445,50 @@ body.vu-mode .blob{display:none}
 .vt-right .mock-pal{gap:5px;padding:8px}
 .vt-right .mp2{min-width:30px;height:24px;font-size:10px;padding:0 5px;border-radius:12px}
 @media(max-width:820px){.vt-main{grid-template-columns:1fr 140px}}
-.vt-bottom{position:fixed;left:0;right:0;bottom:0;z-index:70;background:#cfccc7;box-shadow:0 -3px 12px rgba(0,0,0,.3);padding:8px 10px;margin:0}
-section#screen-mock{padding-bottom:80px}
+
+/* ---------- VU-exact exam room v2: action row + palette legend ---------- */
+.vt-actions{display:flex;flex-wrap:wrap;gap:8px;padding:10px 12px;background:#e9e7e1;border-top:1px solid #d8d5cd}
+.vt-act{border:none;border-radius:6px;font:inherit;font-weight:800;font-size:12.5px;padding:11px 14px;min-height:44px;cursor:pointer;color:#fff;box-shadow:0 2px 0 rgba(0,0,0,.22);flex:1;min-width:150px}
+.vt-act.green{background:#2a9d8f}.vt-act.blue{background:#3f6fd8}.vt-act.purple{background:#8e2de2}.vt-act.gray{background:#8a8f98}
+.vt-act:disabled{opacity:.55;cursor:not-allowed}
+.vt-act.unsaved{animation:savePulse 1.2s ease-in-out infinite}
+@keyframes savePulse{0%,100%{box-shadow:0 2px 0 rgba(0,0,0,.22)}50%{box-shadow:0 0 0 4px rgba(245,166,35,.55)}}
+.vt-modhint{margin:0 12px 10px;padding:9px 12px;background:#fff3cd;border:2px solid #f5a623;border-radius:8px;font-size:12.5px;font-weight:700;color:#7a4b00}
+.vt-clickhere{display:block;width:100%;border:2px dashed #8e2de2;background:#f6efff;color:#5b21b6;font:inherit;font-weight:800;font-size:13.5px;padding:18px 12px;border-radius:10px;cursor:pointer}
+.mock-legend{display:flex;flex-wrap:wrap;gap:5px 10px;padding:8px 10px;border-top:1px solid #e2e0da;font-size:10.5px;font-weight:800;color:#555}
+.mock-legend span{display:inline-flex;align-items:center;gap:4px}
+.mock-legend .lg{width:14px;height:11px;border-radius:6px;border:1px solid #999;display:inline-block}
+.mock-legend .lg-ns{background:#fff}
+.mock-legend .lg-vi{background:#f5a623;border-color:#d98b00}
+.mock-legend .lg-sv{background:#2ec4a5;border-color:#1fa98b}
+.mock-legend .lg-mk{background:#8e2de2;border-color:#6a1fb0}
+.mock-legend .lg-sm{background:#8e2de2;border-color:#1fa98b;box-shadow:inset 0 0 0 2px #2ec4a5}
+.vt-sumrow .r{color:#d64545}
+.vt-b.dark{background:#3b4252}
+/* palette: VU statuses */
+.vt-right .mp2{background:#fff;border-color:#9aa;color:#333}
+.vt-right .mp2.vi{background:#f5a623;border-color:#d98b00;color:#fff}
+.vt-right .mp2.done{background:#2ec4a5;border-color:#1fa98b;color:#fff}
+.vt-right .mp2.flag{background:#8e2de2;border-color:#6a1fb0;color:#fff}
+.vt-right .mp2.sm{background:#8e2de2;border-color:#1fa98b;box-shadow:inset 0 0 0 2px #2ec4a5}
+.vt-right .mp2.cur{outline:3px solid #152238;outline-offset:1px}
+/* bottom bar: 2 clean rows that NEVER clip — big touch targets */
+.vt-bottom{position:fixed;left:0;right:0;bottom:0;z-index:70;background:#cfccc7;box-shadow:0 -3px 12px rgba(0,0,0,.3);padding:8px 10px;margin:0;display:flex;flex-wrap:wrap;gap:6px}
+.vt-navrow{display:flex;gap:6px;flex:1;min-width:270px}
+.vt-botrow{display:flex;gap:6px;flex:1;min-width:270px}
+.vt-navrow .vt-b,.vt-botrow .vt-b{flex:1;min-height:44px;padding:10px 8px;font-size:12.5px;white-space:nowrap}
+section#screen-mock{padding-bottom:120px}
 .vt-left{min-height:380px}
+.vt-kbdhint{padding:6px 12px 10px;font-size:11px;font-weight:700;color:#5a564c;text-align:center}
+@media(max-width:820px){
+  /* palette becomes a right slide-over drawer on phones (override the base .noside display:none) */
+  .vt-main{grid-template-columns:1fr}
+  .vt-right,.vt-main.noside .vt-right{display:flex;position:fixed;top:0;right:0;bottom:0;width:min(272px,86vw);z-index:80;transform:translateX(0);visibility:visible;transition:transform .25s,visibility .25s;overflow:auto;box-shadow:-4px 0 18px rgba(0,0,0,.35)}
+  .vt-main.noside .vt-right{transform:translateX(110%);visibility:hidden}
+  .vt-collapse{position:fixed;right:0;top:42%;z-index:85}
+  .vt-act{min-width:132px}
+  .vt-b{font-size:12px}
+}
 
 /* ---------- C++ LAB ---------- */
 .cpp-tools{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin:6px 0 12px}
@@ -926,26 +965,50 @@ section#screen-mock{padding-bottom:80px}
         <div class="vt-qpanel"><div class="mock-q" id="mockQText"></div></div>
         <div class="vt-pbar">Answer</div>
         <div class="vt-apanel" id="mockOpts"></div>
+        <div class="vt-modhint" id="mkModHint" hidden>⚠️ <b>Answer changed after Save</b> — press <b>Save Answer</b> again to record it (VU rule).</div>
+        <!-- VU-exact action buttons (VUTES: Save / Save & Next / Mark for Review / Clear) -->
+        <div class="vt-actions">
+          <button class="vt-act green js-save" onclick="mockSave()">💾 Save Answer</button>
+          <button class="vt-act blue" onclick="mockSaveNext()">Save &amp; Move to Next ➜</button>
+          <button class="vt-act purple" onclick="mockMarkNext()">🚩 Mark for Review &amp; Next</button>
+          <button class="vt-act gray" onclick="mockClear()">✖ Clear Response</button>
+        </div>
       </div>
       <div class="vt-right" id="vtRight">
-        <div class="vt-pbar">Summary</div>
+        <div class="vt-pbar">Question Palette</div>
         <div class="mock-pal" id="mockPal"></div>
+        <div class="mock-legend">
+          <span><i class="lg lg-ns"></i>Not Attempted</span>
+          <span><i class="lg lg-vi"></i>Visited</span>
+          <span><i class="lg lg-sv"></i>Saved</span>
+          <span><i class="lg lg-mk"></i>Marked</span>
+          <span><i class="lg lg-sm"></i>Saved+Marked</span>
+        </div>
         <div class="vt-sum">
           <div class="vt-pct"><b id="mkPct">0%</b><div class="vt-prog"><div id="mkBarFill" style="width:0%"></div></div></div>
           <div class="vt-sumrow"><span>Attempted</span><b class="g" id="mkAtt">0</b></div>
-          <div class="vt-sumrow"><span>Flagged</span><b class="p" id="mkFlagged">0</b></div>
+          <div class="vt-sumrow"><span>Marked</span><b class="p" id="mkFlagged">0</b></div>
+          <div class="vt-sumrow"><span>Not Attempted</span><b class="r" id="mkUnatt">0</b></div>
           <div class="vt-sumrow"><span>Total</span><b id="mkTotal">0</b></div>
         </div>
       </div>
-      <button class="vt-collapse" onclick="mockToggleSide()" title="Show/hide summary">»</button>
+      <button class="vt-collapse" onclick="mockToggleSide()" title="Show/hide question palette">»</button>
     </div>
+    <!-- Bottom bar: VU order — First / Previous / Next / Last + Instructions / Save / Finish -->
     <div class="vt-bottom">
-      <button class="vt-b pink" onclick="mockFinishPrompt()">🚩 Finish Exam</button>
-      <button class="vt-b purple" onclick="mockFlag()">🚩 Flag</button>
-      <button class="vt-b orange wide"><span onclick="mockFirst()">◀&nbsp;First</span><span onclick="mockLast()">Last&nbsp;▶</span></button>
-      <button class="vt-b orange wide"><span onclick="mockPrev()">◀&nbsp;Previous</span><span onclick="mockNext()">Next&nbsp;▶</span></button>
-      <button class="vt-b teal" id="mockSaveBtn" disabled onclick="mockSave()">💾 Save</button>
+      <div class="vt-navrow">
+        <button class="vt-b orange" onclick="mockFirst()">⏮ First</button>
+        <button class="vt-b orange" onclick="mockPrev()">◀ Previous</button>
+        <button class="vt-b orange" onclick="mockNext()">Next ▶</button>
+        <button class="vt-b orange" onclick="mockLast()">Last ⏭</button>
+      </div>
+      <div class="vt-botrow">
+        <button class="vt-b dark" onclick="openModal('modal-mockinstr')">📖 Instructions</button>
+        <button class="vt-b teal js-save" onclick="mockSave()">💾 Save Answer</button>
+        <button class="vt-b pink" onclick="mockFinishPrompt()">🚩 Finish Exam</button>
+      </div>
     </div>
+    <div class="vt-kbdhint">💡 Keyboard: <b>←</b> Previous · <b>→</b> Next · <b>S</b> Save · <b>F</b> Flag</div>
   </section>
 
 <!-- ============ MOCK EXAM: RESULT ============ -->
@@ -2451,6 +2514,14 @@ document.addEventListener("keydown",e=>{
     const btns=document.querySelectorAll("#optsBox .opt"); const i=+e.key-1; if(btns[i]) btns[i].click();
   }
   if(e.key==="Enter" && G.answered && quizActive && !activates) nextQuestion();
+  /* Mock exam room shortcuts (VUTES style): arrows navigate, S saves, F flags */
+  const mockActive=document.getElementById("screen-mock") && document.getElementById("screen-mock").classList.contains("active");
+  if(mockActive && MK && !MK.done && !(t&&(t.tagName==="INPUT"||t.tagName==="TEXTAREA"))){
+    if(e.key==="ArrowLeft"){ e.preventDefault(); mockPrev(); }
+    else if(e.key==="ArrowRight"){ e.preventDefault(); mockNext(); }
+    else if(e.key==="s"||e.key==="S"){ e.preventDefault(); mockSave(); }
+    else if(e.key==="f"||e.key==="F"){ e.preventDefault(); mockFlag(); }
+  }
 });
 /* ===================== MOCK EXAM (VUtes-style midterm) =====================
    Mirrors the VU qb.vu.edu.pk exam room: question on the left, palette +
@@ -2504,7 +2575,9 @@ function prepMock(sid){
   if(!items.length){ alertUser("No questions available for this subject yet."); return; }
   if(MK && MK.timer) clearInterval(MK.timer);
   MK={sid,obj,S,items,idx:0,picks:items.map(()=>null),texts:items.map(()=>""),saved:items.map(()=>false),
-      flagged:items.map(()=>false),award:items.map(()=>null),total:items.reduce((a,b)=>a+b.marks,0),
+      flagged:items.map(()=>false),visited:items.map(()=>false),modified:items.map(()=>false),
+      subjOpen:items.map(()=>false),
+      award:items.map(()=>null),total:items.reduce((a,b)=>a+b.marks,0),
       mcqGot:0,mcqMax:0,started:false,done:false,t0:null,tEnd:0,timer:null};
   document.getElementById("mtStartTime").textContent=fmtClock(new Date());
   document.getElementById("mtTimer").textContent=MOCK_MINUTES+":00";
@@ -2520,6 +2593,9 @@ function beginMock(){
   document.getElementById("mkLogin").textContent=fmtClock(MK.t0);
   document.getElementById("mkUser").textContent=(profile.name||"GUEST").toUpperCase();
   document.getElementById("mkTotal").textContent=MK.items.length;
+  /* phones: palette hidden by default (slide-over via » button); desktop: visible */
+  const vm=document.getElementById("vtMain");
+  if(vm && innerWidth<=820){ vm.classList.add("noside"); const cb=vm.querySelector(".vt-collapse"); if(cb) cb.textContent="«"; }
   sfx.fanfare(); mockTick(); mockPaint(); show("screen-mock");
 }
 function fmtClock(d){ let h=d.getHours(), m=d.getMinutes(); const ap=h>=12?"PM":"AM"; h=h%12||12; return h+":"+(m<10?"0":"")+m+" "+ap; }
@@ -2537,6 +2613,7 @@ function mockAttemptedCount(){ return MK.saved.filter(Boolean).length; }
 function mockFlaggedCount(){ return MK.flagged.filter(Boolean).length; }
 function mockPaint(){
   const it=MK.items[MK.idx];
+  MK.visited[MK.idx]=true;
   document.getElementById("mkQNo").textContent="Question No . "+(MK.idx+1)+" of "+MK.items.length;
   document.getElementById("mkMarks").textContent="Marks: "+it.marks+" (Time 1 Min)";
   document.getElementById("mkFlagBtn").classList.toggle("on", MK.flagged[MK.idx]);
@@ -2548,38 +2625,75 @@ function mockPaint(){
       row.className="vt-orow"+(MK.picks[MK.idx]===i?" on":"");
       row.innerHTML='<span class="vt-osq"><i></i></span><span class="vt-otxt"></span>';
       row.querySelector(".vt-otxt").textContent=o;
-      row.onclick=()=>{ MK.picks[MK.idx]=i; sfx.click(); mockPaint(); };
+      row.onclick=()=>{
+        if(MK.picks[MK.idx]===i) return;
+        MK.picks[MK.idx]=i;
+        if(MK.saved[MK.idx]) MK.modified[MK.idx]=true;   // VU rule: edit after Save needs re-save
+        sfx.click(); mockPaint();
+      };
       box.appendChild(row);
     });
   }else{
-    const ta=document.createElement("textarea");
-    ta.rows=it.type==="long"?8:5;
-    ta.placeholder="Write your answer here, then press Save...";
-    ta.value=MK.texts[MK.idx]||"";
-    ta.oninput=()=>{ MK.texts[MK.idx]=ta.value; mockSaveState(); };
-    box.appendChild(ta);
+    /* VU quirk: subjective answer panel stays locked until "Click Here" */
+    if(!MK.subjOpen[MK.idx]){
+      const gate=document.createElement("button");
+      gate.className="vt-clickhere";
+      gate.textContent="📝 Click Here to enable the answer panel";
+      gate.onclick=()=>{ MK.subjOpen[MK.idx]=true; sfx.click(); mockPaint(); };
+      box.appendChild(gate);
+    }else{
+      const ta=document.createElement("textarea");
+      ta.rows=it.type==="long"?8:5;
+      ta.placeholder="Write your answer here, then press Save Answer...";
+      ta.value=MK.texts[MK.idx]||"";
+      ta.oninput=()=>{
+        MK.texts[MK.idx]=ta.value;
+        if(MK.saved[MK.idx]) MK.modified[MK.idx]=true;
+        mockSaveState();
+      };
+      box.appendChild(ta);
+    }
   }
+  const hint=document.getElementById("mkModHint");
+  if(hint) hint.hidden=!MK.modified[MK.idx];
   mockSaveState(); mockPal();
 }
+function mockHasResponse(i){
+  const it=MK.items[i];
+  return it.type==="mcq" ? MK.picks[i]!=null : (MK.texts[i]||"").trim().length>0;
+}
 function mockSaveState(){
-  const sb=document.getElementById("mockSaveBtn"); if(!sb||!MK) return;
-  const it=MK.items[MK.idx];
-  const savable = it.type==="mcq" ? MK.picks[MK.idx]!=null : (MK.texts[MK.idx]||"").trim().length>0;
-  sb.disabled=!(savable && !MK.saved[MK.idx]);
+  /* VU rule: Save records the answer; it re-enables when you edit a saved answer */
+  const canSave = MK && !MK.done && mockHasResponse(MK.idx) && (!MK.saved[MK.idx] || MK.modified[MK.idx]);
+  document.querySelectorAll(".js-save").forEach(b=>{
+    b.disabled=!canSave;
+    b.classList.toggle("unsaved", !!MK && (MK.modified[MK.idx]||(!MK.saved[MK.idx]&&mockHasResponse(MK.idx))));
+    b.title = canSave ? "Save this answer (VU: only saved answers count)" : (MK&&MK.saved[MK.idx]&&!MK.modified[MK.idx] ? "Already saved ✓" : "Select an option first");
+  });
 }
 function mockSave(){
-  if(!MK) return;
-  MK.saved[MK.idx]=true; sfx.correct();
-  streakBanner("💾 Saved — Question "+(MK.idx+1));
+  if(!MK||MK.done) return;
+  if(!mockHasResponse(MK.idx)){ streakBanner("⚠️ Nothing to save — select an option first."); return; }
+  MK.saved[MK.idx]=true; MK.modified[MK.idx]=false;
+  sfx.correct();
+  streakBanner("💾 Saved — Question "+(MK.idx+1)+" ✓");
+  mockPaint();
+}
+function mockSaveNext(){ mockSave(); if(MK && MK.idx<MK.items.length-1) setTimeout(mockNext,80); }
+function mockMarkNext(){ mockFlag(); if(MK && MK.idx<MK.items.length-1) setTimeout(mockNext,80); }
+function mockClear(){
+  if(!MK||MK.done) return;
+  MK.picks[MK.idx]=null; MK.texts[MK.idx]=""; MK.saved[MK.idx]=false; MK.modified[MK.idx]=false;
+  sfx.click(); streakBanner("✖ Response cleared — Question "+(MK.idx+1));
   mockPaint();
 }
 function mockPal(){
   const pal=document.getElementById("mockPal"); pal.innerHTML="";
   MK.items.forEach((it,i)=>{
-    const b=document.createElement("button"); b.className="mp2";
-    if(MK.saved[i]) b.classList.add("done");
-    if(MK.flagged[i]) b.classList.add("flag");
-    if(i===MK.idx) b.classList.add("cur");
+    const b=document.createElement("button");
+    /* VU palette colors: white=not visited · orange=visited · green=saved ·
+       purple=marked · purple+green dot=saved+marked */
+    b.className="mp2"+(MK.visited[i]&&!MK.saved[i]?" vi":"")+(MK.saved[i]?" done":"")+(MK.flagged[i]?" flag":"")+(MK.saved[i]&&MK.flagged[i]?" sm":"")+(i===MK.idx?" cur":"");
     b.textContent=(i+1<10?"0":"")+(i+1);
     b.onclick=()=>{ MK.idx=i; sfx.click(); mockPaint(); };
     pal.appendChild(b);
@@ -2590,6 +2704,7 @@ function mockPal(){
   document.getElementById("mkBarFill").style.width=pct+"%";
   document.getElementById("mkAtt").textContent=att;
   document.getElementById("mkFlagged").textContent=mockFlaggedCount();
+  const un=document.getElementById("mkUnatt"); if(un) un.textContent=MK.items.length-att;
 }
 function mockFlag(){
   if(!MK) return;
@@ -2609,7 +2724,7 @@ function mockPrev(){ if(MK.idx>0){ MK.idx--; sfx.click(); mockPaint(); } }
 function mockFinishPrompt(){
   const un=MK.items.length-mockAttemptedCount();
   document.getElementById("mockFinInfo").textContent=
-    "Attempted questions: "+mockAttemptedCount()+" of "+MK.items.length+(un?"  ("+un+" unattempted)":"")+".";
+    "Saved (attempted) questions: "+mockAttemptedCount()+" of "+MK.items.length+(un?"  ("+un+" not saved — VU counts only saved answers)":"")+".";
   document.getElementById("mockFinChk").checked=false;
   document.getElementById("btnMockFin").disabled=true;
   openModal("modal-mockfin");
@@ -2619,7 +2734,13 @@ function mockFinish(auto){
   MK.done=true; clearInterval(MK.timer); closeModal("modal-mockfin");
   if(auto) streakBanner("⏰ Time up! Paper auto-submitted.");
   MK.mcqGot=0; MK.mcqMax=0;
-  MK.items.forEach((it,i)=>{ if(it.type==="mcq"){ MK.mcqMax+=it.marks; if(MK.picks[i]!=null && it.opts[MK.picks[i]]===it.ans) MK.mcqGot+=it.marks; } });
+  MK.items.forEach((it,i)=>{
+    if(it.type==="mcq"){
+      MK.mcqMax+=it.marks;
+      /* VU rule: ONLY saved answers are graded — a selected-but-unsaved option scores 0 */
+      if(MK.saved[i] && MK.picks[i]!=null && it.opts[MK.picks[i]]===it.ans) MK.mcqGot+=it.marks;
+    }
+  });
   buildMockResult();
   show("screen-mockres");
   if(MK.mcqMax && MK.mcqGot/MK.mcqMax>=0.5){ sfx.fanfare(); celebrate(); } else sfx.gameover();
@@ -2653,9 +2774,10 @@ function buildMockResult(){
         od.textContent=o+(o===it.ans?"  ✓":(MK.picks[i]===oi?"  ✕ (your pick)":""));
         d.appendChild(od);
       });
-      const ok=MK.picks[i]!=null&&it.opts[MK.picks[i]]===it.ans;
+      const ok=MK.saved[i]&&MK.picks[i]!=null&&it.opts[MK.picks[i]]===it.ans;
+      const pickedNotSaved=MK.picks[i]!=null&&!MK.saved[i];
       const w=document.createElement("div"); w.className="rv-why";
-      w.textContent=(ok?"✅ +"+it.marks:"❌ 0")+" · 💡 "+it.why; d.appendChild(w);
+      w.textContent=(ok?"✅ +"+it.marks:"❌ 0")+(pickedNotSaved?" · ⚠️ selected but NOT saved (VU rule: only saved answers count)":"")+" · 💡 "+it.why; d.appendChild(w);
     }else{
       const ua=document.createElement("div"); ua.className="rv-why";
       ua.textContent="✍️ Your answer: "+((MK.texts[i]||"").trim()||"(not attempted)"); d.appendChild(ua);
@@ -2774,7 +2896,7 @@ if("serviceWorker" in navigator && (location.protocol==="https:"||location.proto
 }
 
 /* Dev console access — harmless: lets you inspect app state live */
-globalThis.AHW={SUBJECTS,profile,getG:()=>G};
+globalThis.AHW={SUBJECTS,profile,getG:()=>G,getMock:()=>MK};
 
 </script>
 <script>

@@ -158,12 +158,90 @@ function assert(cond, label) {
   assert(window.AHW.profile.mistakes.length === 0, "vault reset");
   assert(window.AHW.profile.totalScore === 0, "totalScore reset");
 
-  console.log("\n[10] Mock exam entry");
+  console.log("\n[10] Mock exam — VU-exact flow");
   window.showMockSubjects();
   await sleep(20);
   assert($("#screen-mocksub").classList.contains("active"), "mock subject picker opens");
   const mockCards = doc.querySelectorAll("#mockGrid .pick-card");
   assert(mockCards.length >= 60, "mock subjects listed (" + mockCards.length + ")");
+  window.prepMock("cs101");               // objective paper (40 MCQs)
+  await sleep(20);
+  assert($("#screen-mockterms").classList.contains("active"), "conduct instructions screen");
+  const agree = doc.getElementById("mtAgree");
+  agree.checked = true; agree.dispatchEvent(new window.Event("change", { bubbles: true }));
+  assert(doc.getElementById("btnStartExam").disabled === false, "start enabled after agree");
+  window.beginMock();
+  await sleep(20);
+  assert($("#screen-mock").classList.contains("active"), "exam room opens");
+  const MKU = window.AHW.getMock();
+  assert(MKU.items.length === 40, "objective paper has 40 MCQs");
+  assert(doc.querySelectorAll("#mockPal .mp2").length === 40, "palette shows 40 questions");
+
+  // -- select an option -> both Save buttons enable
+  const rows = doc.querySelectorAll("#mockOpts .vt-orow");
+  assert(rows.length === 4, "4 radio option rows");
+  rows[1].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await sleep(10);
+  const saves = doc.querySelectorAll(".js-save");
+  assert(saves.length === 2 && saves[0].disabled === false, "Save buttons enable after pick");
+  window.mockSave();
+  await sleep(10);
+  assert(MKU.saved[0] === true, "answer 1 saved");
+  assert(doc.querySelector("#mockPal .mp2.done") !== null, "palette shows green saved");
+
+  // -- Save & Move to Next
+  doc.querySelectorAll("#mockOpts .vt-orow")[2].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await sleep(10);
+  window.mockSaveNext();
+  await sleep(150);
+  assert(MKU.idx === 1 && MKU.saved[0] === true, "Save & Move to Next works");
+
+  // -- Previous button (was broken on mobile layout)
+  window.mockPrev();
+  await sleep(10);
+  assert(MKU.idx === 0, "Previous goes back to Q1");
+  assert(doc.getElementById("mkQNo").textContent.includes("1 of 40"), "Q number repaints on Previous");
+
+  // -- modified-after-save -> hint + re-save
+  assert(doc.getElementById("mkModHint").hidden === true, "no mod hint when clean");
+  doc.querySelectorAll("#mockOpts .vt-orow")[3].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await sleep(10);
+  assert(MKU.modified[0] === true && doc.getElementById("mkModHint").hidden === false, "edit after Save shows VU re-save hint");
+  window.mockSave();
+  await sleep(10);
+  assert(MKU.modified[0] === false && doc.getElementById("mkModHint").hidden === true, "re-save clears modified state");
+
+  // -- Mark for Review + Clear Response
+  window.mockFlag();
+  await sleep(10);
+  assert(MKU.flagged[0] === true && doc.querySelector("#mockPal .mp2.sm") !== null, "saved+marked palette state");
+  window.mockClear();
+  await sleep(10);
+  assert(MKU.picks[0] === null && MKU.saved[0] === false, "Clear Response wipes selection + save state");
+
+  // -- keyboard: ArrowRight / S (select first, then save — VU order)
+  doc.body.focus();
+  doc.dispatchEvent(new window.KeyboardEvent("keydown", { key: "ArrowRight", bubbles: true }));
+  await sleep(10);
+  assert(MKU.idx === 1, "ArrowRight navigates next");
+  const q1 = MKU.items[1];
+  const rightIdx = q1.opts.indexOf(q1.ans);
+  doc.querySelectorAll("#mockOpts .vt-orow")[rightIdx].dispatchEvent(new window.MouseEvent("click", { bubbles: true }));
+  await sleep(10);
+  doc.dispatchEvent(new window.KeyboardEvent("keydown", { key: "s", bubbles: true }));
+  await sleep(10);
+  assert(MKU.saved[1] === true, "S key saves current answer");
+
+  // -- grading: only SAVED answers count (VU rule)
+  // Q2: pick a WRONG option but do NOT save -> must score 0
+  const q2 = MKU.items[2];
+  const wrongIdx = q2.opts.indexOf(q2.ans) === 0 ? 1 : 0;
+  MKU.idx = 2;
+  MKU.picks[2] = wrongIdx;
+  window.mockFinish(false);
+  await sleep(20);
+  assert($("#screen-mockres").classList.contains("active"), "result screen after finish");
+  assert(MKU.mcqGot === 1, "only the saved correct answer counted (got=" + MKU.mcqGot + ")");
 
   console.log("\n[11] Escape closes dialog");
   window.alertUser("bye");
