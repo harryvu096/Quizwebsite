@@ -1,662 +1,849 @@
-// Bolty's Puzzle Park — Core Game Engine (110 Levels from data/levels.js or data/levels.json)
-let LEVELS = (typeof window !== "undefined" && window.BOLTY_LEVELS) ? window.BOLTY_LEVELS : null;
-if (LEVELS) {
-  console.log("✅ 110 levels embedded", LEVELS.meta);
-} else {
-  fetch("./data/levels.json").then(r=>r.json()).then(d=>{ LEVELS=d; console.log("✅ 110 levels loaded", d.meta); }).catch(()=> console.warn("Levels.json not found, using procedural fallback"));
-}
-// Shared Save
-const SAVE_KEY = 'bolty_park_v1';
-let S = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null') || {
-  coins:500, gems:20, hearts:5, xp:0, levelXp:0, curLevel:1,
-  screw:{unlocked:50, stars:{}, cur:1}, sort:{unlocked:1, stars:{}, cur:1}, arrow:{unlocked:1, stars:{}, cur:1},
-  streak:2, lastLogin: Date.now(), dailyClaimed:false, missions:{screw0:false,sort0:false,boss0:false},
-  ownedSkins:['default'], curWorld:'screw', curLvl:1, xpLevel:1
-};
-function save(){ localStorage.setItem(SAVE_KEY, JSON.stringify(S)); updateHubUI(); }
-function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); }
-function vib(p=40){ if(navigator.vibrate) navigator.vibrate(p); }
+/* Bolty's Puzzle Park — UI. One screen is active at a time. */
+(function () {
+  const L = window.BoltyLogic;
+  const LEVELS = window.BOLTY_LEVELS;
+  const SAVE_KEY = "bolty_park_v2";
+  const TOTAL = { screw: 50, sort: 30, arrow: 30 };
+  const THEMES = [
+    { id: "park", name: "Park Day", price: 0, colors: ["#efe7ff", "#6d4aff", "#f5b301"] },
+    { id: "night", name: "Night Fair", price: 180, colors: ["#17142e", "#8b5cf6", "#ffd15c"] },
+    { id: "sunset", name: "Sunset Mile", price: 260, colors: ["#ffe7d6", "#e85d4c", "#ffb703"] }
+  ];
 
-// Audio (WebAudio beeps — no external files needed for preview)
-let audioOn=true, musicOn=true;
-function beep(freq=600, dur=0.15, type='sine', vol=0.3){
-  if(!audioOn) return;
-  try{
-    const ctx=new (window.AudioContext||window.webkitAudioContext)();
-    const o=ctx.createOscillator(), g=ctx.createGain();
-    o.type=type; o.frequency.value=freq; o.connect(g); g.connect(ctx.destination);
-    g.gain.value=vol; o.start(); g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime+dur); o.stop(ctx.currentTime+dur);
-  }catch(e){}
-}
+  function freshSave() {
+    return {
+      coins: 250, gems: 3, hearts: 5, xp: 0, theme: "park",
+      music: false, sfx: true, vib: true, streak: 0, lastDaily: "",
+      owned: ["park"],
+      screw: { unlocked: 1, stars: {}, cur: 1, paid: true },
+      sort: { unlocked: 1, stars: {}, cur: 1, paid: false },
+      arrow: { unlocked: 1, stars: {}, cur: 1, paid: false }
+    };
+  }
+  let S = freshSave();
+  try {
+    const raw = JSON.parse(localStorage.getItem(SAVE_KEY) || "null");
+    if (raw && raw.screw) S = Object.assign(freshSave(), raw);
+  } catch (e) {}
 
-// Screens
-function showScreen(id){
-  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
-  document.getElementById(id).classList.add('active');
-  window.scrollTo(0,0);
-}
-function openModal(id){ document.getElementById(id).classList.add('open'); }
-function closeModal(id){ document.getElementById(id).classList.remove('open'); }
-document.querySelectorAll('.modal-bg').forEach(m=> m.addEventListener('click', e=>{ if(e.target===m) m.classList.remove('open'); }));
+  let session = null;
+  let selectedPlate = null;
+  let audioCtx = null;
+  let musicTimer = null;
+  let svgN = 0;
 
-// Splash loading
-let load=0; const loadInt=setInterval(()=>{
-  load+= Math.random()*18+6; if(load>=100){ load=100; clearInterval(loadInt); setTimeout(()=>{ showScreen('screen-hub'); updateHubUI(); },400); }
-  document.getElementById('loadFill').style.width=load+'%';
-  document.getElementById('loadText').textContent='Loading Park... '+Math.floor(load)+'%';
-},120);
-
-// Hub UI
-function updateHubUI(){
-  document.getElementById('hubCoins').textContent=S.coins;
-  document.getElementById('hubGems').textContent=S.gems;
-  document.getElementById('hubHearts').textContent=S.hearts;
-  document.getElementById('lmCoins')&&(document.getElementById('lmCoins').textContent=S.coins);
-  document.getElementById('shopCoins')&&(document.getElementById('shopCoins').textContent=S.coins);
-  document.getElementById('shopGems')&&(document.getElementById('shopGems').textContent=S.gems);
-  // progress
-  const sc = Object.keys(S.screw.stars).length, st = Object.keys(S.sort.stars).length, ar = Object.keys(S.arrow.stars).length;
-  document.getElementById('progScrew').style.width=(sc/50*100)+'%';
-  document.getElementById('progScrewText').textContent=sc+'/50';
-  document.getElementById('progSort').style.width=(st/30*100)+'%';
-  document.getElementById('progSortText').textContent=st+'/30';
-  document.getElementById('progArrow').style.width=(ar/30*100)+'%';
-  document.getElementById('progArrowText').textContent=ar+'/30';
-  // locks
-  const screwMax = Math.max(...Object.keys(S.screw.stars).map(k=>parseInt(k)),0);
-  const sortUnlocked = screwMax>=10 || S.sort.unlocked>1;
-  const arrowUnlocked = screwMax>=20 || S.arrow.unlocked>1;
-  document.getElementById('badgeSort').textContent = sortUnlocked ? '✓ UNLOCKED' : '🔒 Lv 10 or 200💰 unlock';
-  document.getElementById('badgeSort').style.background = sortUnlocked?'#10b981':'#475569';
-  document.getElementById('badgeArrow').textContent = arrowUnlocked ? '✓ UNLOCKED' : '🔒 Lv 20 or 400💰 unlock';
-  document.getElementById('badgeArrow').style.background = arrowUnlocked?'#10b981':'#475569';
-  // streak dots
-  const row=document.getElementById('streakRow'); if(row){
-    row.innerHTML='';
-    for(let i=1;i<=7;i++){
-      const d=document.createElement('div'); d.className='streak-dot'+(i<=S.streak?' on':'')+(i===S.streak+1?' today':'');
-      d.textContent=i<=S.streak?'🔥':i; row.appendChild(d);
+  function save() {
+    localStorage.setItem(SAVE_KEY, JSON.stringify(S));
+    paintCurrencies();
+  }
+  function cfg(world, lv) {
+    const list = LEVELS && LEVELS[world];
+    if (list) {
+      const found = list.find((x) => x.lv === lv);
+      if (found) return found;
     }
+    if (world === "screw") return { lv: lv, colors: 2 + Math.min(3, Math.floor((lv - 1) / 8)), boxes: 2 + Math.min(4, Math.floor(lv / 6)), screwsPerBox: lv < 12 ? 2 : 3, slots: 3, time: 80, boss: lv % 10 === 0 };
+    if (world === "sort") return { lv: lv, colors: Math.min(5, 3 + Math.floor(lv / 10)), speed: lv < 8 ? "slow" : lv < 18 ? "medium" : "fast", time: 60, boss: lv % 10 === 0 };
+    return { lv: lv, size: Math.min(9, 5 + Math.floor(lv / 6)), time: 60, boss: lv % 10 === 0 };
   }
-}
-function claimDaily(){
-  if(S.dailyClaimed) return toast('Already claimed! Come tomorrow 🎁');
-  const rewards=[50,75,100,150,200,300,500];
-  const r=rewards[Math.min(S.streak,6)]||50;
-  S.coins+=r; if(S.streak===2) S.gems+=1; S.dailyClaimed=true; S.streak=Math.min(7,S.streak+1);
-  save(); toast('🎉 +'+r+' coins claimed! Streak: '+S.streak+' days');
-  beep(800,0.2);
-  document.getElementById('dailyInfo').textContent='Claimed! Come back tomorrow 🎉';
-}
-function doSpin(){ openModal('modal-spin'); }
-function spinWheel(){
-  const wheel=document.getElementById('wheel'); wheel.classList.add('spin');
-  setTimeout(()=>{
-    wheel.classList.remove('spin');
-    const opts=[20,50,100,200,500, '1💎','5💎','JACKPOT 1000💰'];
-    const pick=opts[Math.floor(Math.random()*opts.length)];
-    document.getElementById('spinResult').textContent='🎉 You won: '+pick;
-    if(typeof pick==='number') S.coins+=pick; else if(pick.includes('💎')) S.gems+=parseInt(pick); else S.coins+=1000;
-    save(); beep(900,0.3);
-  },1200);
-}
-function showMissions(){
-  const body=document.getElementById('missionsBody');
-  body.innerHTML=`
-    <div class="mission"><div><b>🔩 Clear 5 Screw levels</b><small>${S.missions.screw0?'✓ Done':'0/5'}</small></div><button class="btn btn-green small" onclick="claimMission('screw0')">${S.missions.screw0?'Claimed':'50💰'}</button></div>
-    <div class="mission"><div><b>🍕 Serve 3 customers</b><small>${S.missions.sort0?'✓ Done':'0/3'}</small></div><button class="btn btn-orange small" onclick="claimMission('sort0')">${S.missions.sort0?'Claimed':'50💰'}</button></div>
-    <div class="mission"><div><b>👑 Beat 1 Boss</b><small>${S.missions.boss0?'✓ Done':'0/1'}</small></div><button class="btn btn-purple small" onclick="claimMission('boss0')">${S.missions.boss0?'Claimed':'100💰+1💎'}</button></div>
-  `;
-  openModal('modal-missions');
-}
-function claimMission(k){
-  if(S.missions[k]) return toast('Already claimed!');
-  S.missions[k]=true;
-  if(k==='boss0'){ S.coins+=100; S.gems+=1; } else S.coins+=50;
-  save(); toast('🎉 Mission complete!'); showMissions();
-}
-function openLeaderboard(){
-  document.getElementById('lbBody').innerHTML=`
-    <div class="mission"><b>1. 🥇 You</b><span>${S.coins} 💰</span></div>
-    <div class="mission"><b>2. Ali_Gamer</b><span>2,340 💰</span></div>
-    <div class="mission"><b>3. PuzzleQueen</b><span>1,890 💰</span></div>
-    <div class="mission"><b>4. BoltyFan99</b><span>1,450 💰</span></div>
-  `;
-  openModal('modal-leaderboard');
-}
-function openShop(){ showScreen('screen-shop'); shopTab('skins'); }
-function shopTab(tab){
-  document.querySelectorAll('.shop-tabs .tab').forEach(t=>t.classList.remove('on'));
-  event?.target?.classList.add('on');
-  const g=document.getElementById('shopGrid');
-  if(tab==='skins'){
-    g.innerHTML=`
-      <div class="shop-item"><div style="font-size:40px">🤖</div><b>Default Bolty</b><small>Owned</small><button class="btn btn-gray small">Equipped</button></div>
-      <div class="shop-item"><div style="font-size:40px">🏴‍☠️</div><b>Pirate Bolty</b><small>200💰</small><button class="btn btn-green small" onclick="buySkin('pirate',200)">Buy</button></div>
-      <div class="shop-item"><div style="font-size:40px">👨‍🍳</div><b>Chef Bolty</b><small>300💰</small><button class="btn btn-green small" onclick="buySkin('chef',300)">Buy</button></div>
-      <div class="shop-item"><div style="font-size:40px">👑</div><b>King Bolty</b><small>500💰</small><button class="btn btn-green small" onclick="buySkin('king',500)">Buy</button></div>
-      <div class="shop-item"><div style="font-size:40px">🥷</div><b>Ninja Bolty</b><small>50💎</small><button class="btn btn-purple small" onclick="buySkinGem('ninja',50)">Buy</button></div>
-      <div class="shop-item"><div style="font-size:40px">🦸</div><b>Super Bolty</b><small>100💎</small><button class="btn btn-purple small" onclick="buySkinGem('super',100)">Buy</button></div>
-    `;
-  } else if(tab==='coins'){
-    g.innerHTML=`
-      <div class="shop-item"><b>500 Coins</b><small>$0.99</small><button class="btn btn-orange small" onclick="buyIAP('coins_500')">Buy</button></div>
-      <div class="shop-item"><b>2,500 Coins</b><small>$4.99</small><button class="btn btn-orange small" onclick="buyIAP('coins_2500')">Buy</button></div>
-      <div class="shop-item"><b>7,000 Coins +1k Bonus</b><small>$9.99 BEST VALUE</small><button class="btn btn-green small" onclick="buyIAP('coins_7000')">Buy</button></div>
-    `;
-  } else if(tab==='gems'){
-    g.innerHTML=`
-      <div class="shop-item"><b>100 💎</b><small>$0.99</small><button class="btn btn-purple small" onclick="buyIAP('gems_100')">Buy</button></div>
-      <div class="shop-item"><b>550 💎</b><small>$4.99</small><button class="btn btn-purple small" onclick="buyIAP('gems_550')">Buy</button></div>
-      <div class="shop-item"><b>1,200 💎</b><small>$9.99</small><button class="btn btn-green small" onclick="buyIAP('gems_1200')">Buy</button></div>
-    `;
-  } else {
-    g.innerHTML=`
-      <div class="shop-item" style="grid-column:1/-1"><b>🚫 Remove Ads</b><small>No interstitial/banner — Rewarded still available for bonuses</small><div class="price">$2.99</div><button class="btn btn-green" onclick="buyIAP('remove_ads')">Remove Ads — $2.99</button><small style="margin-top:6px">40% players buy this!</small></div>
-    `;
+  function cleared(world) {
+    return Object.keys(S[world].stars || {}).length;
   }
-}
-function buySkin(id,cost){ if(S.coins<cost) return toast('Not enough coins! Play more or watch ad.'); S.coins-=cost; S.ownedSkins.push(id); save(); toast('🎉 Pirate Bolty unlocked!'); beep(900,0.3); }
-function buySkinGem(id,cost){ if(S.gems<cost) return toast('Not enough gems!'); S.gems-=cost; S.ownedSkins.push(id); save(); toast('✨ Skin unlocked!'); }
-function buyIAP(id){ toast('💳 IAP: '+id+' — Google Play Billing (test mode). In production this opens Play Billing.'); // Simulate
-  if(id==='remove_ads'){ S.coins+=500; S.gems+=20; toast('✅ Ads removed! +500 coins bonus'); }
-  else if(id.includes('coins')){ S.coins+=500; } else if(id.includes('gems')){ S.gems+=100; }
-  save();
-}
-function openSettings(){ openModal('modal-settings'); }
-function showPrivacy(){ toast('Privacy Policy: https://bolty-park.example.com/privacy'); }
-function rateUs(){ toast('⭐ Thank you! Opening Play Store...'); }
-
-// Ads simulation
-let lastInterstitial=0;
-function showAdDemo(type){
-  if(type==='banner'){ document.getElementById('bannerAd').style.display='flex'; toast('📢 Banner Ad loaded (AdMob)'); return; }
-  toast('📺 Rewarded Ad — +50 coins! (AdMob test)');
-  S.coins+=50; save(); beep(700,0.2);
-}
-function hideBanner(){ document.getElementById('bannerAd').style.display='none'; }
-function maybeInterstitial(){
-  const now=Date.now();
-  if(now - lastInterstitial < 180000) return false; // 3 min rule
-  lastInterstitial=now;
-  toast('📺 Interstitial Ad (AdMob) — Only on Fail, not on Win ✓');
-  return true;
-}
-function watchAdForHeart(){
-  toast('📺 Rewarded Ad watched! +1 Heart ❤️');
-  S.hearts=Math.min(5,S.hearts+1); save();
-  closeModal('modal-pause');
-  retryLevel();
-}
-function watchAdUnlock(){
-  toast('📺 Ad watched! World unlocked for this session!');
-  closeModal('modal-unlock');
-  // temp unlock
-  if(S.curWorld==='sort') S.sort.unlocked=30;
-  if(S.curWorld==='arrow') S.arrow.unlocked=30;
-  save(); openLevelMap(S.curWorld);
-}
-
-// Level Map
-function openLevelMap(world){
-  S.curWorld=world;
-  // check lock
-  const screwMax = Math.max(...Object.keys(S.screw.stars).map(k=>parseInt(k)),0);
-  if(world==='sort' && screwMax<10 && S.sort.unlocked===1){
-    document.getElementById('unlockTitle').textContent='🔒 Sort & Serve Locked';
-    document.getElementById('unlockMsg').textContent='Reach Screw Level 10 or pay 200💰 to unlock early!';
-    document.getElementById('unlockPayBtn').textContent='Unlock 200💰';
-    document.getElementById('unlockPayBtn').onclick=()=>unlockPaySort();
-    openModal('modal-unlock'); return;
+  function worldOpen(world) {
+    if (world === "screw") return true;
+    if (S[world].paid) return true;
+    const screwDone = cleared("screw");
+    return world === "sort" ? screwDone >= 10 : screwDone >= 20;
   }
-  if(world==='arrow' && screwMax<20 && S.arrow.unlocked===1){
-    document.getElementById('unlockTitle').textContent='🔒 Arrow Escape Locked';
-    document.getElementById('unlockMsg').textContent='Reach Screw Level 20 or pay 400💰 to unlock early!';
-    document.getElementById('unlockPayBtn').textContent='Unlock 400💰';
-    document.getElementById('unlockPayBtn').onclick=()=>unlockPayArrow();
-    openModal('modal-unlock'); return;
+  function $(id) { return document.getElementById(id); }
+
+  function showScreen(id) {
+    document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
+    document.querySelectorAll(".modal-bg").forEach((m) => m.classList.remove("open"));
+    const el = $(id);
+    if (el) el.classList.add("active");
+    $("app").dataset.screen = id;
   }
-  showScreen('screen-levelmap');
-  const titles={screw:'🔩 Screw Rescue — 50 Levels', sort:'🍕 Sort & Serve — 30 Levels', arrow:'➡️ Arrow Escape — 30 Levels'};
-  document.getElementById('lmTitle').textContent=titles[world];
-  const grid=document.getElementById('levelGrid'); grid.innerHTML='';
-  const total= world==='screw'?50:30;
-  const unlocked = S[world].unlocked;
-  const stars=S[world].stars;
-  for(let i=1;i<=total;i++){
-    const d=document.createElement('div');
-    const isBoss = i%10===0;
-    const isLocked = i>unlocked;
-    d.className='lvl'+(isLocked?' locked':'')+(isBoss?' boss':'');
-    d.innerHTML= isLocked ? `🔒<small>Lv ${i}</small>` : `<b>${i}</b><small>${isBoss?'👑 BOSS':'Lv '+i}</small><div class="stars">${'⭐'.repeat(stars[i]||0)}${isBoss?'':''}</div>`;
-    if(!isLocked) d.onclick=()=> startGame(world,i);
-    grid.appendChild(d);
+  function openModal(id) { $(id).classList.add("open"); }
+  function closeModal(id) { $(id).classList.remove("open"); }
+  function toast(msg) {
+    const t = $("toast");
+    t.textContent = msg;
+    t.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(() => t.classList.remove("show"), 1800);
   }
-}
-function unlockPaySort(){ if(S.coins<200) return toast('Need 200 coins!'); S.coins-=200; S.sort.unlocked=30; save(); closeModal('modal-unlock'); openLevelMap('sort'); toast('✅ Unlocked!'); }
-function unlockPayArrow(){ if(S.coins<400) return toast('Need 400 coins!'); S.coins-=400; S.arrow.unlocked=30; save(); closeModal('modal-unlock'); openLevelMap('arrow'); toast('✅ Unlocked!'); }
-function goHub(){ showScreen('screen-hub'); updateHubUI(); }
-function goLevelMap(){ openLevelMap(S.curWorld); }
-function continueNext(){ const w=S.curWorld; const cur=S[w].cur; startGame(w,cur); }
+  function buzz(ms) {
+    if (S.vib && navigator.vibrate) navigator.vibrate(ms || 18);
+  }
+  function ac() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === "suspended") audioCtx.resume();
+    return audioCtx;
+  }
+  function tone(freq, dur, type, vol, delay, force) {
+    if (!force && !S.sfx) return;
+    try {
+      const ctx = ac();
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      o.type = type || "sine";
+      o.frequency.value = freq;
+      o.connect(g);
+      g.connect(ctx.destination);
+      const t0 = ctx.currentTime + (delay || 0);
+      g.gain.setValueAtTime(vol || 0.08, t0);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+      o.start(t0);
+      o.stop(t0 + dur + 0.02);
+    } catch (e) {}
+  }
+  function sfx(name) {
+    if (name === "tap") tone(540, 0.05, "triangle", 0.06);
+    else if (name === "lock") {
+      tone(523, 0.09, "sine", 0.1);
+      tone(659, 0.1, "sine", 0.09, 0.07);
+      tone(784, 0.16, "sine", 0.08, 0.14);
+    } else if (name === "bad") tone(160, 0.16, "square", 0.05);
+    else if (name === "win") {
+      [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.14, "triangle", 0.08, i * 0.09));
+    } else if (name === "lose") {
+      tone(320, 0.16, "sawtooth", 0.04);
+      tone(180, 0.28, "triangle", 0.05, 0.12);
+    } else if (name === "go") tone(660, 0.07, "square", 0.04);
+  }
+  function startMusic() {
+    if (!S.music || musicTimer) return;
+    const notes = [262, 311, 392, 466, 392, 311];
+    let i = 0;
+    musicTimer = setInterval(() => {
+      if (!S.music) return;
+      tone(notes[i % notes.length], 0.22, "sine", 0.025, 0, true);
+      i++;
+    }, 680);
+  }
+  function stopMusic() {
+    clearInterval(musicTimer);
+    musicTimer = null;
+  }
 
-// --- SCREW GAME ENGINE ---
-let gTimer=null, gTimeLeft=60, gHearts=3, gSlots=[], gBoxes=[], gUndoStack=[], gLevel=1, gWorld='screw', gMoves=0, gHintsUsed=0;
-
-const COLORS = [
-  {id:'red', hex:'#ef4444', bg:'red'}, {id:'blue', hex:'#3b82f6', bg:'blue'},
-  {id:'green', hex:'#10b981', bg:'green'}, {id:'yellow', hex:'#facc15', bg:'yellow'},
-  {id:'purple', hex:'#a78bfa', bg:'purple'}
-];
-
-function getLevelCfg(world, lv){
-  if(LEVELS && LEVELS[world]){
-    const f=LEVELS[world].find(x=> x.lv===lv);
-    if(f){
-      if(world==='screw') return {colorCount:f.colors, boxCount:f.boxes, screwsPerBox:f.screwsPerBox, slotCount:f.slots, time:f.time, boss:!!f.boss, reward:f.reward||0, cols:COLORS.slice(0,f.colors), desc:f.desc};
-      if(world==='sort') return {colors:f.colors, speed:f.speed, time:f.time, boss:!!f.boss, desc:f.desc};
-      if(world==='arrow') return {size:f.size, arrows:f.arrows, time:f.time, boss:!!f.boss, desc:f.desc};
+  function burst(x, y, n) {
+    const canvas = $("fx");
+    const ctx = canvas.getContext("2d");
+    canvas.width = canvas.offsetWidth;
+    canvas.height = canvas.offsetHeight;
+    const rect = canvas.getBoundingClientRect();
+    const pieces = [];
+    const colors = ["#f5b301", "#ff4d6d", "#6d4aff", "#12b981", "#fff"];
+    for (let i = 0; i < (n || 28); i++) {
+      pieces.push({
+        x: (x || rect.width / 2) - rect.left,
+        y: (y || rect.height / 3) - rect.top,
+        vx: (Math.random() - 0.5) * 8,
+        vy: Math.random() * -7 - 2,
+        r: Math.random() * 4 + 2,
+        c: colors[i % colors.length],
+        life: 40 + Math.random() * 16
+      });
     }
-  }
-  return null;
-}
-
-function genScrewLevel(lv){
-  const cfg=getLevelCfg('screw',lv);
-  if(cfg){
-    const boxes=[];
-    for(let b=0;b<cfg.boxCount;b++){
-      let boxCols=[];
-      for(let s=0;s<cfg.screwsPerBox;s++){
-        const c = cfg.cols[Math.floor(Math.random()*cfg.cols.length)];
-        boxCols.push(c.id);
+    let f = 0;
+    const id = setInterval(() => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      pieces.forEach((p) => {
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.28;
+        p.life--;
+        ctx.globalAlpha = Math.max(0, p.life / 50);
+        ctx.fillStyle = p.c;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fill();
+      });
+      ctx.globalAlpha = 1;
+      f++;
+      if (f > 56) {
+        clearInterval(id);
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
       }
-      boxes.push({id:b, screws:boxCols, cleared:false, color: cfg.cols[b % cfg.cols.length].id});
-    }
-    return {boxes, slotCount:cfg.slotCount, time:cfg.time, colorCount:cfg.colorCount, cols:cfg.cols, boss:cfg.boss, desc:cfg.desc};
+    }, 16);
   }
-  // fallback procedural (should not happen)
-  let colorCount=2, boxCount=2, screwsPerBox=2, slotCount=3, time=90;
-  if(lv<=5){ colorCount=2; boxCount=2; screwsPerBox=2; slotCount=3; time=90; }
-  else if(lv<=10){ colorCount=3; boxCount=3; screwsPerBox=2; slotCount=3; time=75; }
-  else if(lv<=15){ colorCount=3; boxCount=3; screwsPerBox=3; slotCount=3; time=60; }
-  else if(lv<=25){ colorCount=4; boxCount=4; screwsPerBox=2; slotCount=3; time=60; }
-  else if(lv<=35){ colorCount=4; boxCount=4; screwsPerBox=3; slotCount=4; time=60; }
-  else { colorCount=5; boxCount=5; screwsPerBox=3; slotCount=3; time=50; }
-  if(lv%10===0) time+=10;
-  const cols = COLORS.slice(0,colorCount);
-  const boxes=[];
-  for(let b=0;b<boxCount;b++){
-    let boxCols=[];
-    for(let s=0;s<screwsPerBox;s++){
-      const c = cols[Math.floor(Math.random()*cols.length)];
-      boxCols.push(c.id);
-    }
-    boxes.push({id:b, screws:boxCols, cleared:false, color: cols[b % cols.length].id});
+  function floatAt(el, text) {
+    if (!el) return;
+    const r = el.getBoundingClientRect();
+    const app = $("app").getBoundingClientRect();
+    const d = document.createElement("div");
+    d.className = "float";
+    d.textContent = text;
+    d.style.left = r.left - app.left + r.width / 2 + "px";
+    d.style.top = r.top - app.top + "px";
+    $("app").appendChild(d);
+    setTimeout(() => d.remove(), 700);
   }
-  return {boxes, slotCount, time, colorCount, cols};
-}
+  function shake(el) {
+    if (!el) return;
+    el.classList.remove("shake");
+    void el.offsetWidth;
+    el.classList.add("shake");
+  }
+  function uid() { return "g" + (++svgN); }
+  function shade(hex, percent) {
+    const n = parseInt(hex.slice(1), 16);
+    let r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    const t = percent < 0 ? 0 : 255;
+    const p = Math.abs(percent) / 100;
+    r = Math.round((t - r) * p + r);
+    g = Math.round((t - g) * p + g);
+    b = Math.round((t - b) * p + b);
+    return "#" + (0x1000000 + (r << 16) + (g << 8) + b).toString(16).slice(1);
+  }
+  function screwSVG(colorId, size) {
+    const c = L.colorById(colorId);
+    const id = uid();
+    const px = size || 46;
+    return `<svg viewBox="0 0 64 64" width="${px}" height="${px}" aria-hidden="true"><defs><radialGradient id="${id}" cx="32%" cy="28%" r="75%"><stop offset="0%" stop-color="#fff" stop-opacity=".9"/><stop offset="42%" stop-color="${c.hex}"/><stop offset="100%" stop-color="${shade(c.hex, -28)}"/></radialGradient></defs><circle cx="32" cy="32" r="28" fill="url(#${id})"/><circle cx="32" cy="32" r="27" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2"/><path d="M32 16v32M18 32h28" stroke="rgba(20,10,30,.45)" stroke-width="3.2" stroke-linecap="round"/></svg>`;
+  }
+  function plateSVG(colorId) {
+    const c = L.colorById(colorId);
+    return `<svg viewBox="0 0 80 80" width="52" height="52" aria-hidden="true"><circle cx="40" cy="40" r="34" fill="#fff" stroke="${c.hex}" stroke-width="7"/><path d="M40 18 L54 48 H26 Z" fill="${c.hex}"/><circle cx="40" cy="42" r="4" fill="#fff6d8"/></svg>`;
+  }
+  function chevron(dir) {
+    return `<svg class="arrow-chev ${dir}" viewBox="0 0 64 64" aria-hidden="true"><path d="M18 40 L32 22 L46 40"/></svg>`;
+  }
+  function flagSVG() {
+    return `<svg viewBox="0 0 64 64" aria-hidden="true"><path d="M18 8v48" stroke="#24183a" stroke-width="4" stroke-linecap="round"/><path d="M22 12h28l-7 10 7 10H22z" fill="#12b981"/></svg>`;
+  }
+  function kingSVG() {
+    return `<svg viewBox="0 0 64 64" aria-hidden="true"><circle cx="32" cy="36" r="16" fill="#ffd15c" stroke="#c88700" stroke-width="3"/><path d="M14 30 l8-12 10 10 10-14 10 16" fill="none" stroke="#c88700" stroke-width="3" stroke-linejoin="round"/></svg>`;
+  }
+  function hearts(n) {
+    return "❤".repeat(Math.max(0, n)) + "♡".repeat(Math.max(0, 3 - n));
+  }
+  function fmt(sec) {
+    sec = Math.max(0, sec | 0);
+    const m = Math.floor(sec / 60);
+    const s = sec % 60;
+    return m + ":" + String(s).padStart(2, "0");
+  }
 
-function startGame(world, level){
-  S.curWorld=world; S.curLvl=level; S[world].cur=level;
-  save();
-  if(world==='screw') startScrew(level);
-  else if(world==='sort') startSort(level);
-  else if(world==='arrow') startArrow(level);
-}
-
-function startScrew(level){
-  gWorld='screw'; gLevel=level; gHearts=3; gMoves=0; gHintsUsed=0; gUndoStack=[];
-  const cfg=genScrewLevel(level);
-  gTimeLeft=cfg.time; gSlots = Array(cfg.slotCount).fill(null); gBoxes = cfg.boxes.map(b=>({...b, screws:[...b.screws]}));
-  showScreen('screen-game-screw');
-  document.getElementById('gLevelName').textContent=(level%10===0?'👑 BOSS ':'')+'Level '+level;
-  document.getElementById('gCoins').textContent=S.coins;
-  document.getElementById('gHearts').textContent='❤️'.repeat(gHearts);
-  document.getElementById('hintText').textContent='';
-  renderScrew();
-  startTimer('gTimer', ()=> loseGame());
-}
-
-function renderScrew(){
-  const board=document.getElementById('screwBoard'); board.innerHTML='';
-  gBoxes.forEach((box, bi)=>{
-    const div=document.createElement('div'); div.className='box'+(box.cleared?' clear':'');
-    const title=document.createElement('div'); title.className='box-title';
-    const colInfo = COLORS.find(c=>c.id===box.color);
-    title.innerHTML=`<i style="background:${colInfo.hex}"></i> ${box.color.toUpperCase()} BOX`;
-    div.appendChild(title);
-    const screwsWrap=document.createElement('div'); screwsWrap.className='screws';
-    box.screws.forEach((col, si)=>{
-      const s=document.createElement('div'); s.className='screw '+col;
-      s.textContent='🔩'; s.title=col;
-      s.onclick=()=> tapScrew(bi,si);
-      screwsWrap.appendChild(s);
+  function paintCurrencies() {
+    ["hubCoins", "mapCoins", "screwCoins", "shopCoins"].forEach((id) => {
+      const el = $(id);
+      if (el) el.textContent = S.coins;
     });
-    if(box.screws.length===0 && !box.cleared) div.appendChild(document.createTextNode(' — Empty — '));
-    div.appendChild(screwsWrap);
-    board.appendChild(div);
-  });
-  const slotsEl=document.getElementById('screwSlots'); slotsEl.innerHTML='';
-  gSlots.forEach((slot, idx)=>{
-    const d=document.createElement('div'); d.className='slot'+(slot?' filled':'');
-    if(slot){
-      const s=document.createElement('div'); s.className='screw '+slot;
-      s.textContent='🔩'; d.appendChild(s);
-      d.onclick=()=> tapSlot(idx);
+    if ($("hubGems")) $("hubGems").textContent = S.gems;
+    if ($("hubHearts")) $("hubHearts").textContent = S.hearts;
+    document.documentElement.dataset.theme = S.theme || "park";
+  }
+  function renderHub() {
+    paintCurrencies();
+    const today = new Date().toDateString();
+    $("dailyInfo").textContent = S.lastDaily === today ? "Claimed today. Come back tomorrow." : "Tap to claim today's coins";
+    $("streakRow").innerHTML = "";
+    for (let i = 1; i <= 7; i++) {
+      const d = document.createElement("div");
+      d.className = "dot" + (i <= S.streak ? " on" : "");
+      d.textContent = i <= S.streak ? "✓" : i;
+      $("streakRow").appendChild(d);
     }
-    slotsEl.appendChild(d);
-  });
-  // check win: all boxes cleared
-  if(gBoxes.every(b=> b.cleared || b.screws.length===0)){
-    // need to check: if screws left but not matched? actually we clear box when its screws moved correctly
-    // For this simplified: if no screws left in any box, win
-    if(gBoxes.every(b=> b.screws.length===0)) winGame();
+    [["screw", "progScrew", "progScrewText"], ["sort", "progSort", "progSortText"], ["arrow", "progArrow", "progArrowText"]].forEach(([w, bar, label]) => {
+      const n = cleared(w);
+      $(bar).style.width = (n / TOTAL[w]) * 100 + "%";
+      $(label).textContent = n + "/" + TOTAL[w];
+    });
+    const sortOpen = worldOpen("sort");
+    const arrowOpen = worldOpen("arrow");
+    $("cardSort").classList.toggle("locked", !sortOpen);
+    $("cardArrow").classList.toggle("locked", !arrowOpen);
+    $("pillSort").textContent = sortOpen ? "PLAY" : "LOCK";
+    $("pillArrow").textContent = arrowOpen ? "PLAY" : "LOCK";
+    $("badgeSort").textContent = sortOpen ? "" : "Clear 10 Screw levels, or 200 coins";
+    $("badgeArrow").textContent = arrowOpen ? "" : "Clear 20 Screw levels, or 400 coins";
   }
-}
 
-function tapScrew(boxIdx, screwIdx){
-  const box=gBoxes[boxIdx];
-  if(box.cleared) return;
-  const color=box.screws[screwIdx];
-  // find empty slot
-  const emptyIdx=gSlots.findIndex(s=> s===null);
-  if(emptyIdx===-1){ toast('Slots full! Tap a slot to return or clear boxes.'); beep(300,0.2,'square'); return; }
-  // save undo
-  gUndoStack.push(JSON.stringify({boxes:JSON.parse(JSON.stringify(gBoxes)), slots:[...gSlots]}));
-  // move screw to slot
-  gSlots[emptyIdx]=color;
-  box.screws.splice(screwIdx,1);
-  gMoves++; vib(30); beep(650,0.12);
-  // auto-check if slot has 3 same color -> clear matching box
-  checkSlotMatch();
-  renderScrew();
-  // check if box empty -> cleared
-  if(box.screws.length===0 && !box.cleared){
-    box.cleared=true; beep(900,0.25); toast('✅ '+box.color+' BOX OPENED!'); confettiBurst();
+  function openMap(world) {
+    if (!worldOpen(world)) {
+      const price = world === "sort" ? 200 : 400;
+      const need = world === "sort" ? 10 : 20;
+      $("lockTitle").textContent = world === "sort" ? "Sort & Serve is locked" : "Arrow Escape is locked";
+      $("lockMsg").textContent = "Finish Screw level " + need + ", or unlock now for " + price + " coins.";
+      $("lockPay").textContent = "Unlock · " + price + " coins";
+      $("lockPay").onclick = () => {
+        if (S.coins < price) return toast("Not enough coins yet");
+        S.coins -= price;
+        S[world].paid = true;
+        S[world].unlocked = TOTAL[world];
+        save();
+        closeModal("modal-lock");
+        toast("World unlocked");
+        openMap(world);
+      };
+      openModal("modal-lock");
+      return;
+    }
+    S.curWorld = world;
+    showScreen("screen-map");
+    const names = { screw: "Screw Rescue", sort: "Sort & Serve", arrow: "Arrow Escape" };
+    $("mapTitle").textContent = names[world];
+    paintCurrencies();
+    const grid = $("mapGrid");
+    grid.innerHTML = "";
+    const total = TOTAL[world];
+    for (let i = 1; i <= total; i++) {
+      const btn = document.createElement("button");
+      const locked = i > S[world].unlocked;
+      const stars = S[world].stars[i] || 0;
+      btn.className = "lvl" + (locked ? " locked" : "") + (i % 10 === 0 ? " boss" : "") + (i === S[world].cur ? " current" : "") + (stars ? " done" : "");
+      btn.innerHTML = locked ? "<b>🔒</b>" : "<b>" + i + "</b><small>" + (i % 10 === 0 ? "BOSS" : "★".repeat(stars)) + "</small>";
+      if (!locked) btn.onclick = () => startGame(world, i);
+      grid.appendChild(btn);
+    }
+    $("btnContinue").onclick = () => startGame(world, Math.min(S[world].cur, S[world].unlocked));
   }
-  renderScrew();
-}
 
-function tapSlot(idx){
-  if(!gSlots[idx]) return;
-  // return screw to a box that needs it or first non-cleared
-  const color=gSlots[idx];
-  // find box with same color that is not cleared and has space (or most screws)
-  let target = gBoxes.find(b=> !b.cleared && b.color===color);
-  if(!target) target = gBoxes.find(b=> !b.cleared);
-  if(!target) return;
-  gUndoStack.push(JSON.stringify({boxes:JSON.parse(JSON.stringify(gBoxes)), slots:[...gSlots]}));
-  target.screws.push(color);
-  gSlots[idx]=null;
-  beep(400,0.1); renderScrew();
-}
+  function stopSession() {
+    if (!session) return;
+    clearInterval(session.clock);
+    session.walkToken = (session.walkToken || 0) + 1;
+    session.ended = true;
+  }
+  function beginSession(world, level, state) {
+    stopSession();
+    session = {
+      world: world,
+      level: level,
+      state: state,
+      timeLeft: state.time,
+      hearts: 3,
+      hints: 0,
+      freeHint: true,
+      ended: false,
+      paused: false,
+      clock: null,
+      walkToken: 0,
+      timerId: world === "screw" ? "screwTimer" : world === "sort" ? "sortTimer" : "arrowTimer"
+    };
+    S.curWorld = world;
+    S[world].cur = level;
+    save();
+  }
+  function startClock() {
+    clearInterval(session.clock);
+    const el = $(session.timerId);
+    const tick = () => {
+      if (!el) return;
+      el.textContent = fmt(session.timeLeft);
+      el.classList.toggle("warn", session.timeLeft <= 10);
+    };
+    tick();
+    session.clock = setInterval(() => {
+      if (!session || session.paused || session.ended) return;
+      session.timeLeft--;
+      tick();
+      if (session.timeLeft <= 0) {
+        clearInterval(session.clock);
+        lose("Time's up", "The clock ran out. The board will be the same if you retry.");
+      }
+    }, 1000);
+  }
+  function bossFlash(level) {
+    if (level % 10 !== 0) return;
+    const el = $("bossFlash");
+    el.classList.add("show");
+    setTimeout(() => el.classList.remove("show"), 900);
+  }
 
-function checkSlotMatch(){
-  // if 3 same color in slots, clear corresponding box and empty slots
-  const counts={};
-  gSlots.forEach(c=>{ if(c) counts[c]=(counts[c]||0)+1; });
-  for(let col in counts){
-    if(counts[col]>=3){
-      // find box needing this color
-      const box=gBoxes.find(b=> !b.cleared && b.color===col);
-      if(box){
-        // consume 3 slots of this color
-        let toRemove=3;
-        for(let i=0;i<gSlots.length && toRemove>0;i++){
-          if(gSlots[i]===col){ gSlots[i]=null; toRemove--; }
+  function startGame(world, level) {
+    selectedPlate = null;
+    if (world === "screw") startScrew(level);
+    else if (world === "sort") startSort(level);
+    else startArrow(level);
+    bossFlash(level);
+    sfx("tap");
+  }
+
+  function startScrew(level) {
+    const state = L.makeScrew(cfg("screw", level), "screw", level);
+    beginSession("screw", level, state);
+    showScreen("screen-screw");
+    $("screwLevel").textContent = (level % 10 === 0 ? "Boss " : "Level ") + level;
+    $("screwGoal").textContent = "Seal " + state.boxes.length + " locks";
+    $("screwHearts").textContent = hearts(session.hearts);
+    $("screwCoach").textContent = level === 1 ? "Tap two screws of the same color. The lock closes by itself." : "Fill one color at a time. Undo if the tray jams.";
+    renderScrew();
+    startClock();
+  }
+  function renderScrew() {
+    const st = session.state;
+    $("screwCoins").textContent = S.coins;
+    $("screwHint").textContent = st.slots.filter(Boolean).length + "/" + st.slots.length;
+    const locks = $("screwLocks");
+    locks.innerHTML = "";
+    st.boxes.forEach((box) => {
+      const col = L.colorById(box.color);
+      const row = document.createElement("div");
+      row.className = "lock" + (box.done ? " done" : "");
+      const holes = [];
+      for (let i = 0; i < box.need; i++) {
+        holes.push(`<i class="hole${box.done || i < box.filled ? " filled" : ""}" style="background:${box.done ? col.hex : "transparent"};border-color:${col.hex}"></i>`);
+      }
+      row.innerHTML = `<div class="lock-name" style="color:${col.hex}">${col.name}</div><div class="holes">${holes.join("")}</div>`;
+      locks.appendChild(row);
+    });
+    const pile = $("screwPile");
+    pile.innerHTML = "";
+    st.pile.forEach((color, index) => {
+      const b = document.createElement("button");
+      b.className = "screw pop";
+      b.innerHTML = screwSVG(color);
+      b.onclick = () => onScrew(index, b);
+      pile.appendChild(b);
+    });
+    const tray = $("screwSlots");
+    tray.innerHTML = "";
+    st.slots.forEach((color) => {
+      const s = document.createElement("div");
+      s.className = "slot" + (color ? " filled" : "");
+      if (color) s.innerHTML = screwSVG(color, 40);
+      tray.appendChild(s);
+    });
+  }
+  function onScrew(index, el) {
+    if (!session || session.ended || session.world !== "screw") return;
+    const snap = L.screwSnap(session.state);
+    session.undo = snap;
+    const res = L.screwTapPile(session.state, index);
+    if (!res.ok) {
+      sfx("bad");
+      shake($("screen-screw"));
+      toast(res.reason === "full" ? "Tray is full. Undo, or finish a color." : "Can't move that");
+      return;
+    }
+    buzz(12);
+    sfx(res.opened.length ? "lock" : "tap");
+    if (res.opened.length) {
+      burst(el.getBoundingClientRect().left, el.getBoundingClientRect().top, 18);
+      floatAt(el, "Locked");
+    }
+    renderScrew();
+    if (res.won) return win();
+    if (res.stuck) {
+      shake($("screen-screw"));
+      sfx("bad");
+      toast("Tray jammed. Press Undo and finish one color.");
+      $("screwCoach").textContent = "The tray is full and no lock can close. Undo, then collect one color only.";
+    }
+  }
+
+  function startSort(level) {
+    const state = L.makeSort(cfg("sort", level), level);
+    state.rng = L.mulberry32(L.hashSeed("sort", level));
+    for (let i = 0; i < 4; i++) L.sortSpawn(state, state.rng);
+    beginSession("sort", level, state);
+    showScreen("screen-sort");
+    $("sortLevel").textContent = (level % 10 === 0 ? "Boss " : "Level ") + level;
+    $("sortGoal").textContent = "Serve " + state.target + " matching plates";
+    $("sortCoach").textContent = "Tap a plate, then the table with the same color.";
+    renderSort();
+    startClock();
+  }
+  function renderSort() {
+    const st = session.state;
+    $("sortScore").textContent = st.served + "/" + st.target;
+    $("sortCombo").textContent = st.combo > 1 ? "Combo " + st.combo : "Combo";
+    const orders = $("sortOrders");
+    orders.innerHTML = "";
+    st.colors.forEach((id) => {
+      const c = L.colorById(id);
+      const d = document.createElement("div");
+      d.className = "order";
+      d.innerHTML = c.name + `<i style="background:${c.hex}"></i>`;
+      orders.appendChild(d);
+    });
+    const tray = $("sortTray");
+    tray.innerHTML = "";
+    st.tray.forEach((plate) => {
+      const b = document.createElement("button");
+      b.className = "plate" + (selectedPlate === plate.id ? " selected" : "");
+      b.innerHTML = plateSVG(plate.color);
+      b.onclick = () => {
+        selectedPlate = plate.id;
+        sfx("tap");
+        renderSort();
+      };
+      tray.appendChild(b);
+    });
+    const tables = $("sortTables");
+    tables.innerHTML = "";
+    st.colors.forEach((id) => {
+      const c = L.colorById(id);
+      const b = document.createElement("button");
+      b.className = "table";
+      b.innerHTML = `<span class="swatch" style="background:${c.hex}"></span>${c.name}`;
+      b.onclick = () => servePlate(id, b);
+      tables.appendChild(b);
+    });
+  }
+  function servePlate(tableColor, el) {
+    if (!session || session.ended || session.world !== "sort") return;
+    const st = session.state;
+    if (selectedPlate == null) {
+      toast("Tap a plate first");
+      return;
+    }
+    const res = L.sortServe(st, selectedPlate, tableColor);
+    selectedPlate = null;
+    if (!res.ok) {
+      session.timeLeft = Math.max(0, session.timeLeft - 4);
+      sfx("bad");
+      shake(el);
+      buzz(30);
+      toast("Wrong table · −4s");
+      renderSort();
+      return;
+    }
+    sfx(res.combo > 2 ? "lock" : "tap");
+    burst(el.getBoundingClientRect().left, el.getBoundingClientRect().top, 12);
+    floatAt(el, res.combo > 1 ? "x" + res.combo : "+1");
+    L.sortSpawn(st, st.rng);
+    renderSort();
+    if (res.won) win();
+  }
+
+  function startArrow(level) {
+    const state = L.makeArrow(cfg("arrow", level), level);
+    beginSession("arrow", level, state);
+    showScreen("screen-arrow");
+    $("arrowLevel").textContent = (level % 10 === 0 ? "Boss " : "Level ") + level;
+    $("arrowGoal").textContent = "Turn arrows, then GO";
+    $("arrowHearts").textContent = hearts(session.hearts);
+    $("arrowCoach").textContent = level === 1
+      ? "This road is already set. Press GO and watch Bolty walk."
+      : "Tap a tile to rotate it. Bolty follows the arrow under his feet.";
+    $("btnGo").disabled = false;
+    renderArrow(null);
+    startClock();
+  }
+  function renderArrow(king, bad) {
+    const st = session.state;
+    $("arrowWrong").textContent = L.wrongArrows(st) + " off";
+    const maze = $("arrowMaze");
+    maze.style.gridTemplateColumns = "repeat(" + st.n + ", 1fr)";
+    maze.style.gap = st.n >= 8 ? "3px" : "5px";
+    maze.innerHTML = "";
+    for (let y = 0; y < st.n; y++) {
+      for (let x = 0; x < st.n; x++) {
+        const cell = st.grid[y][x];
+        const b = document.createElement("button");
+        b.className = "cell " + cell.type;
+        if (king && king.x === x && king.y === y) b.classList.add("king");
+        if (bad && bad.x === x && bad.y === y) b.classList.add("bad");
+        if (cell.type === "wall") b.disabled = true;
+        else if (cell.type === "exit") b.innerHTML = flagSVG();
+        else b.innerHTML = chevron(cell.dir) + (king && king.x === x && king.y === y ? kingSVG() : "");
+        if (cell.type !== "wall" && cell.type !== "exit") {
+          b.onclick = () => {
+            if (!session || session.ended || session.walking) return;
+            L.arrowRotate(st, x, y);
+            sfx("tap");
+            buzz(8);
+            renderArrow({ x: 0, y: 0 });
+          };
         }
-        // if box already empty, just clear; else we keep logic
-        if(box.screws.length===0) box.cleared=true;
-        beep(1000,0.3); confettiBurst();
-        toast('🌟 3x '+col+' matched! Box clearing!');
+        maze.appendChild(b);
       }
     }
   }
-}
-
-function useHint(){
-  if(S.coins<20) return toast('Need 20 coins! Watch ad for 50 coins.');
-  S.coins-=20; gHintsUsed++; save();
-  // highlight a correct screw
-  const box=gBoxes.find(b=> !b.cleared && b.screws.length>0);
-  if(box) document.getElementById('hintText').textContent='💡 Try moving a '+box.color+' screw! Box: '+box.color;
-  else document.getElementById('hintText').textContent='💡 Almost done! Check slots.';
-  beep(700,0.2); setTimeout(()=> document.getElementById('hintText').textContent='',3000);
-}
-function undoMove(){
-  if(gUndoStack.length===0) return toast('Nothing to undo!');
-  const prev=JSON.parse(gUndoStack.pop());
-  gBoxes=prev.boxes; gSlots=prev.slots; renderScrew(); beep(500,0.1);
-}
-function shuffleHint(){
-  toast('📺 Rewarded Ad — Shuffle! (AdMob)');
-  // shuffle screws
-  let all=[];
-  gBoxes.forEach(b=>{ if(!b.cleared) all.push(...b.screws); b.screws=[]; });
-  all.sort(()=>Math.random()-0.5);
-  let idx=0;
-  gBoxes.forEach(b=>{
-    if(!b.cleared && all.length){
-      const take=Math.min(2, all.length-idx);
-      b.screws = all.slice(idx, idx+take); idx+=take;
-    }
-  });
-  gUndoStack=[]; renderScrew(); S.coins+=10; save();
-  beep(600,0.2);
-}
-
-// Timer
-function startTimer(elId, onEnd){
-  clearInterval(gTimer);
-  const el=document.getElementById(elId);
-  gTimer=setInterval(()=>{
-    gTimeLeft--;
-    el.textContent='⏱ '+gTimeLeft;
-    if(gTimeLeft<=10) el.classList.add('warn');
-    else el.classList.remove('warn');
-    if(gTimeLeft<=0){ clearInterval(gTimer); onEnd(); }
-  },1000);
-}
-function pauseGame(){ openModal('modal-pause'); clearInterval(gTimer); }
-function resumeGame(){ closeModal('modal-pause'); startTimer(gWorld==='screw'?'gTimer':gWorld==='sort'?'sortTimer':'arrowTimer', ()=> loseGame()); }
-function toggleMusic(v){ musicOn=v; toast(v?'🎵 Music ON':'🔇 Music OFF'); }
-function toggleSfx(v){ audioOn=v; }
-
-// Win / Lose
-function winGame(){
-  clearInterval(gTimer);
-  const timeBonus=Math.max(0, gTimeLeft*2);
-  const starCount = gHintsUsed===0 && gTimeLeft>30 ? 3 : gMoves<10 ? 2 : 1;
-  const coins = (gWorld==='screw'?20: gWorld==='sort'?15:25) + (gLevel%10===0?20:0) + timeBonus + (starCount===3?10:0);
-  S.coins+=coins; S.xp+=10+starCount*5;
-  // level stars
-  if(!S[gWorld].stars[gLevel] || S[gWorld].stars[gLevel] < starCount) S[gWorld].stars[gLevel]=starCount;
-  // unlock next
-  if(S[gWorld].unlocked < gLevel+1) S[gWorld].unlocked = gLevel+1;
-  S[gWorld].cur=gLevel+1;
-  save();
-  // update result screen
-  document.getElementById('resStars').textContent='⭐'.repeat(starCount)+'☆'.repeat(3-starCount);
-  document.getElementById('resCoins').textContent='+'+coins+' 💰 +'+(10+starCount*5)+' XP'+(starCount===3?' 🌟 PERFECT!':'');
-  document.getElementById('xpFill').style.width=(S.xp%100)+'%';
-  document.getElementById('xpText').textContent='Lv '+(Math.floor(S.xp/100)+1)+' — '+S.xp+' XP';
-  confettiBurst(); confettiBurst();
-  beep(900,0.4); setTimeout(()=>beep(1100,0.4),200);
-  showScreen('screen-win');
-}
-function loseGame(){
-  clearInterval(gTimer);
-  gHearts--;
-  if(gHearts>0){
-    document.getElementById('gHearts').textContent='❤️'.repeat(gHearts);
-    toast('💔 Heart lost! '+gHearts+' left');
-    gTimeLeft+=5; startTimer('gTimer', ()=> loseGame());
-    beep(300,0.4,'square');
-  } else {
-    maybeInterstitial();
-    showScreen('screen-lose');
-    beep(200,0.6,'sawtooth');
+  function kingGo() {
+    if (!session || session.ended || session.world !== "arrow" || session.walking) return;
+    const token = ++session.walkToken;
+    session.walking = true;
+    $("btnGo").disabled = true;
+    sfx("go");
+    const result = L.arrowWalk(session.state);
+    let i = 0;
+    const step = () => {
+      if (!session || session.walkToken !== token) return;
+      const pos = result.steps[i];
+      const failed = !result.ok && i === result.steps.length - 1;
+      renderArrow(pos, failed ? pos : null);
+      i++;
+      if (i < result.steps.length) {
+        setTimeout(step, 180);
+        return;
+      }
+      session.walking = false;
+      $("btnGo").disabled = false;
+      if (result.ok) {
+        burst(window.innerWidth / 2, window.innerHeight / 2, 36);
+        win();
+      } else {
+        session.hearts--;
+        $("arrowHearts").textContent = hearts(session.hearts);
+        sfx("bad");
+        shake($("screen-arrow"));
+        const why = { loop: "He walked in a circle", edge: "He walked off the board", wall: "He hit a wall", stuck: "That tile has no arrow" }[result.reason] || "Not yet";
+        toast(why);
+        if (session.hearts <= 0) lose("Bolty is stuck", why + ". Turn the road, then try GO again.");
+      }
+    };
+    step();
   }
-}
-function retryLevel(){ showScreen('screen-game-'+(gWorld==='screw'?'screw':gWorld==='sort'?'sort':'arrow')); if(gWorld==='screw') startScrew(gLevel); else if(gWorld==='sort') startSort(gLevel); else startArrow(gLevel); }
-function nextLevel(){
-  const total = gWorld==='screw'?50:30;
-  if(gLevel>=total) { toast('🎉 World Complete! Try other world!'); goHub(); return; }
-  startGame(gWorld, gLevel+1);
-}
-function buyHeartWithCoins(){
-  if(S.coins<100) return toast('Need 100 coins!');
-  S.coins-=100; S.hearts=Math.min(5,S.hearts+1); save(); toast('❤️ +1 Heart!'); retryLevel();
-}
-function crossPromo(){
-  const others={screw:'sort', sort:'arrow', arrow:'screw'};
-  const next=others[gWorld];
-  toast('🎪 Switching to '+(next==='sort'?'Sort & Serve':next==='arrow'?'Arrow Escape':'Screw Rescue')+'!');
-  openLevelMap(next);
-}
 
-// SORT WORLD
-let sortScore=0, sortTimer=null, sortTime=60;
-function startSort(level){
-  gWorld='sort'; gLevel=level; sortScore=0; sortTime=60;
-  showScreen('screen-game-sort');
-  document.getElementById('sortLevelName').textContent=(level%10===0?'👑 BOSS ':'')+'Level '+level;
-  document.getElementById('sortScore').textContent=sortScore;
-  const colors = COLORS.slice(0, Math.min(3+Math.floor(level/10),5));
-  // conveyor plates
-  const conv=document.getElementById('conveyor'); conv.innerHTML='';
-  for(let i=0;i<6;i++){
-    const col=colors[Math.floor(Math.random()*colors.length)];
-    const p=document.createElement('div'); p.className='plate '+col.id; p.textContent='🍕'; p.dataset.color=col.id; p.draggable=true;
-    p.addEventListener('dragstart', e=> e.dataTransfer.setData('color', col.id));
-    p.addEventListener('click', ()=> selectPlate(p));
-    conv.appendChild(p);
+  function starsFor() {
+    const ratio = session.timeLeft / session.state.time;
+    if (session.hints === 0 && ratio > 0.45) return 3;
+    if (ratio > 0.2) return 2;
+    return 1;
   }
-  // tables
-  const tables=document.getElementById('tables'); tables.innerHTML='';
-  colors.forEach(col=>{
-    const t=document.createElement('div'); t.className='table '+col.id; t.dataset.color=col.id;
-    t.innerHTML=`<h4>${col.id.toUpperCase()} TABLE</h4><div class="dishes" data-color="${col.id}"></div>`;
-    t.addEventListener('dragover', e=> e.preventDefault());
-    t.addEventListener('drop', e=> dropPlate(e, t));
-    t.addEventListener('click', ()=> { if(selectedPlate) dropPlate({preventDefault:()=>{}}, t); });
-    tables.appendChild(t);
-  });
-  // customers
-  document.getElementById('customers').innerHTML=`<div class="cust">🧑 Waiting: ${colors[0].id} 🍕</div><div class="cust">👩 Waiting: ${colors[1].id} 🍕</div>`;
-  startTimer('sortTimer', ()=>{
-    if(sortScore>=150) winGameSort(); else loseGame();
-  });
-}
-let selectedPlate=null;
-function selectPlate(el){
-  document.querySelectorAll('.plate').forEach(p=> p.style.outline='');
-  selectedPlate=el; el.style.outline='3px solid #7c3aed'; beep(600,0.1);
-}
-function dropPlate(e, table){
-  let col = e.dataTransfer ? e.dataTransfer.getData('color') : (selectedPlate?selectedPlate.dataset.color:null);
-  if(!col && selectedPlate) col=selectedPlate.dataset.color;
-  if(!col) return;
-  const tableCol=table.dataset.color;
-  if(col===tableCol){
-    const dish=document.createElement('div'); dish.textContent='🍕'; dish.style.fontSize='18px';
-    table.querySelector('.dishes').appendChild(dish);
-    sortScore+=20; document.getElementById('sortScore').textContent=sortScore;
-    beep(800,0.15);
-    if(selectedPlate) selectedPlate.remove(); selectedPlate=null;
-    // win check: 3 plates per table
-    const allDishes=document.querySelectorAll('.dishes');
-    let total=0; allDishes.forEach(d=> total+=d.children.length);
-    if(total>=9) winGameSort();
-    else {
-      // add new plate
-      const colors=COLORS.slice(0,3);
-      const ncol=colors[Math.floor(Math.random()*colors.length)];
-      const p=document.createElement('div'); p.className='plate '+ncol.id; p.textContent='🍕'; p.dataset.color=ncol.id; p.draggable=true;
-      p.addEventListener('dragstart', ev=> ev.dataTransfer.setData('color', ncol.id));
-      p.addEventListener('click', ()=> selectPlate(p));
-      document.getElementById('conveyor').appendChild(p);
+  function win() {
+    if (!session || session.ended) return;
+    session.ended = true;
+    clearInterval(session.clock);
+    const world = session.world;
+    const level = session.level;
+    const stars = starsFor();
+    const boss = level % 10 === 0;
+    const coins = 15 + stars * 8 + (boss ? 25 : 0) + Math.floor(session.timeLeft / 4);
+    S.coins += coins;
+    S.xp += 8 + stars * 4;
+    S.hearts = Math.min(5, S.hearts + (stars === 3 ? 1 : 0));
+    if (!S[world].stars[level] || S[world].stars[level] < stars) S[world].stars[level] = stars;
+    if (S[world].unlocked < level + 1 && level < TOTAL[world]) S[world].unlocked = level + 1;
+    S[world].cur = Math.min(TOTAL[world], level + 1);
+    save();
+    sfx("win");
+    burst(window.innerWidth / 2, 180, 48);
+    showScreen("screen-win");
+    $("winKicker").textContent = boss ? "Boss down" : "Cleared";
+    $("winTitle").textContent = "Level " + level;
+    $("winCoins").textContent = "+" + coins + " coins";
+    $("winSub").textContent = stars === 3 ? "Perfect. No hint, time to spare." : stars === 2 ? "Clean enough. The next board is open." : "Cleared. A faster run earns more stars.";
+    $("xpFill").style.width = (S.xp % 100) + "%";
+    $("xpText").textContent = "Park rank " + (Math.floor(S.xp / 100) + 1);
+    const box = $("winStars");
+    box.innerHTML = "";
+    for (let i = 0; i < 3; i++) {
+      const s = document.createElement("span");
+      s.className = "star";
+      s.textContent = i < stars ? "★" : "☆";
+      s.style.animationDelay = i * 0.12 + "s";
+      box.appendChild(s);
+      setTimeout(() => s.classList.add("in"), 40);
     }
-  } else {
-    toast('❌ Wrong table! Try '+col+' table');
-    beep(300,0.2,'square'); vib(50);
+    $("btnNext").textContent = level >= TOTAL[world] ? "World complete" : "Next level";
+    $("btnNext").onclick = () => {
+      if (level >= TOTAL[world]) {
+        toast("That world is finished");
+        showScreen("screen-hub");
+        renderHub();
+        return;
+      }
+      startGame(world, level + 1);
+    };
   }
-}
-function serveAll(){ if(sortScore>0) winGameSort(); else toast('Serve correct colors first!'); }
-function winGameSort(){ clearInterval(gTimer); S.coins+=15+Math.floor(sortScore/10); save(); winGame(); }
-function useHintSort(){ if(S.coins<20) return toast('Need 20 coins!'); S.coins-=20; save(); toast('💡 Hint: Look at customer colors above tables!'); beep(700,0.2); }
-
-// ARROW WORLD
-let mazeSize=5, mazeData=[], kingPos={x:0,y:0}, exitPos={x:4,y:4};
-function startArrow(level){
-  gWorld='arrow'; gLevel=level; sortTime= level>20?45:60;
-  showScreen('screen-game-arrow');
-  document.getElementById('arrowLevelName').textContent=(level%10===0?'👑 BOSS ':'')+'Level '+level;
-  document.getElementById('arrowHint').textContent='';
-  mazeSize = level<=10?5: level<=20?7:9;
-  const mazeEl=document.getElementById('maze'); mazeEl.style.gridTemplateColumns=`repeat(${mazeSize},1fr)`;
-  mazeEl.innerHTML='';
-  mazeData=[];
-  const dirs=['↑','→','↓','←'];
-  for(let y=0;y<mazeSize;y++){
-    mazeData[y]=[];
-    for(let x=0;x<mazeSize;x++){
-      const cell=document.createElement('div'); cell.className='cell';
-      let type='path';
-      if(x===0 && y===0){ type='start'; cell.textContent='🤖'; kingPos={x,y}; }
-      else if(x===mazeSize-1 && y===mazeSize-1){ type='exit'; cell.textContent='🏁'; exitPos={x,y}; }
-      else if(Math.random()<0.2){ type='wall'; cell.textContent='🧱'; cell.className+=' wall'; }
-      else { type='arrow'; const d=dirs[Math.floor(Math.random()*dirs.length)]; cell.textContent=d; cell.className+=' arrow'; cell.dataset.dir=d; cell.onclick=()=> rotateArrow(cell); mazeData[y][x]=d; }
-      cell.dataset.x=x; cell.dataset.y=y; cell.dataset.type=type;
-      mazeEl.appendChild(cell);
-    }
+  function lose(title, msg) {
+    if (!session || session.ended) return;
+    session.ended = true;
+    clearInterval(session.clock);
+    session.walking = false;
+    sfx("lose");
+    showScreen("screen-lose");
+    $("loseTitle").textContent = title || "Try again";
+    $("loseMsg").textContent = msg || "Same board. New attempt.";
   }
-  startTimer('arrowTimer', ()=> loseGame());
-}
-function rotateArrow(cell){
-  const dirs=['↑','→','↓','←']; const cur=cell.textContent; const idx=dirs.indexOf(cur);
-  const nxt=dirs[(idx+1)%4]; cell.textContent=nxt; cell.dataset.dir=nxt; beep(600,0.08); vib(20);
-}
-function kingGo(){
-  let x=kingPos.x, y=kingPos.y; let steps=0;
-  const visit = setInterval(()=>{
-    const dirs={ '↑':[0,-1], '→':[1,0], '↓':[0,1], '←':[-1,0] };
-    // find arrow at current pos
-    const cell = document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-    let dir = cell?cell.dataset.dir:null;
-    if(dir && dirs[dir]){
-      x+=dirs[dir][0]; y+=dirs[dir][1];
-    } else {
-      x+=1; // move right if no arrow
+  function revive() {
+    if (!session) return;
+    if (S.coins < 80) return toast("Need 80 coins");
+    S.coins -= 80;
+    save();
+    session.ended = false;
+    session.paused = false;
+    session.hearts = Math.max(1, session.hearts);
+    session.timeLeft += 25;
+    showScreen("screen-" + session.world);
+    if (session.world === "screw") renderScrew();
+    if (session.world === "sort") renderSort();
+    if (session.world === "arrow") {
+      $("btnGo").disabled = false;
+      renderArrow({ x: 0, y: 0 });
+      $("arrowHearts").textContent = hearts(session.hearts);
     }
-    if(x<0||y<0||x>=mazeSize||y>=mazeSize){ clearInterval(visit); toast('💥 Out of bounds! Rotate arrows!'); beep(300,0.4,'square'); return; }
-    const ncell=document.querySelector(`.cell[data-x="${x}"][data-y="${y}"]`);
-    if(ncell && ncell.classList.contains('wall')){ clearInterval(visit); toast('🧱 Hit wall! Try again'); beep(300,0.4); return; }
-    // move king visual
-    document.querySelectorAll('.cell').forEach(c=>{ if(c.textContent==='🤖' && c!==document.querySelector('.cell[data-x="0"][data-y="0"]')) c.textContent=c.dataset.dir||''; });
-    if(ncell) { if(ncell.dataset.type==='exit'){ ncell.textContent='🤖'; clearInterval(visit); winGame(); confettiBurst(); return; } else if(ncell.classList.contains('arrow')) ncell.textContent='🤖'; }
-    steps++; if(steps>20){ clearInterval(visit); toast('🔄 Loop detected! Reset'); }
-  },300);
-  beep(800,0.2);
-}
-function resetMaze(){ startArrow(gLevel); }
-function useHintArrow(){
-  document.getElementById('arrowHint').textContent='💡 Hint: Arrows point where King will go! Make a path to 🏁';
-  toast('📺 Ad — Hint shown (Rewarded)'); setTimeout(()=> document.getElementById('arrowHint').textContent='',4000);
-}
+    startClock();
+    toast("25 seconds restored");
+  }
+  function useHint() {
+    if (!session || session.ended) return;
+    if (!session.freeHint) {
+      if (S.coins < 20) return toast("Hints cost 20 coins");
+      S.coins -= 20;
+      save();
+    }
+    session.freeHint = false;
+    session.hints++;
+    if (session.world === "screw") {
+      const box = session.state.boxes.find((b) => !b.done);
+      if (!box) return;
+      toast("Finish " + L.colorById(box.color).name + " next");
+      $("screwCoach").textContent = "Collect " + box.need + " " + box.color + " screws before mixing another color.";
+    } else if (session.world === "sort") {
+      const plate = session.state.tray[0];
+      if (!plate) return;
+      toast("The left plate wants " + L.colorById(plate.color).name);
+      selectedPlate = plate.id;
+      renderSort();
+    } else if (session.world === "arrow") {
+      let flipped = false;
+      for (let y = 0; y < session.state.n && !flipped; y++) {
+        for (let x = 0; x < session.state.n; x++) {
+          const c = session.state.grid[y][x];
+          if (c.answer && c.dir !== c.answer) {
+            c.dir = c.answer;
+            flipped = true;
+            toast("One arrow turned onto the road");
+            break;
+          }
+        }
+      }
+      if (!flipped) toast("The road already reaches the flag. Press GO.");
+      renderArrow({ x: 0, y: 0 });
+    }
+    sfx("lock");
+  }
 
-// Confetti
-function confettiBurst(){
-  const canvas=document.getElementById('confetti'); const ctx=canvas.getContext('2d');
-  canvas.width=window.innerWidth; canvas.height=window.innerHeight;
-  const pieces=[];
-  for(let i=0;i<60;i++) pieces.push({x:Math.random()*canvas.width, y:-10, vx:(Math.random()-0.5)*8, vy:Math.random()*6+4, r:Math.random()*6+4, c:['#f59e0b','#ec4899','#8b5cf6','#10b981','#facc15'][Math.floor(Math.random()*5)]});
-  let f=0; const anim=setInterval(()=>{
-    ctx.clearRect(0,0,canvas.width,canvas.height);
-    pieces.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.vy+=0.3; ctx.fillStyle=p.c; ctx.beginPath(); ctx.arc(p.x,p.y,p.r,0,Math.PI*2); ctx.fill(); });
-    f++; if(f>60){ clearInterval(anim); ctx.clearRect(0,0,canvas.width,canvas.height); }
-  },16);
-}
+  function claimDaily() {
+    const today = new Date().toDateString();
+    if (S.lastDaily === today) return toast("Already claimed today");
+    if (S.lastDaily) {
+      const last = new Date(S.lastDaily);
+      const diff = (new Date(today) - new Date(last.toDateString())) / 86400000;
+      if (diff > 1) S.streak = 0;
+    }
+    const rewards = [40, 60, 80, 120, 160, 200, 280];
+    const gain = rewards[Math.min(S.streak, 6)];
+    S.coins += gain;
+    if (S.streak === 6) S.gems += 1;
+    S.streak = Math.min(7, (S.streak || 0) + 1);
+    S.lastDaily = today;
+    save();
+    renderHub();
+    toast("+" + gain + " coins");
+    sfx("lock");
+    burst(window.innerWidth / 2, 220, 24);
+  }
 
-// Init
-updateHubUI();
+  function renderShop() {
+    paintCurrencies();
+    showScreen("screen-shop");
+    const grid = $("shopGrid");
+    grid.innerHTML = "";
+    THEMES.forEach((theme) => {
+      const owned = S.owned.indexOf(theme.id) !== -1;
+      const card = document.createElement("div");
+      card.className = "shop-card";
+      card.innerHTML = `<h3>${theme.name}</h3><p>${owned ? (S.theme === theme.id ? "Equipped" : "Owned") : theme.price + " coins"}</p><div class="swatches">${theme.colors.map((c) => `<i style="background:${c}"></i>`).join("")}</div>`;
+      const btn = document.createElement("button");
+      btn.className = "btn " + (owned ? "ghost" : "primary") + " wide";
+      btn.textContent = owned ? (S.theme === theme.id ? "Equipped" : "Equip") : "Buy";
+      btn.onclick = () => {
+        if (!owned) {
+          if (S.coins < theme.price) return toast("Not enough coins");
+          S.coins -= theme.price;
+          S.owned.push(theme.id);
+        }
+        S.theme = theme.id;
+        save();
+        renderShop();
+        toast(theme.name + " on");
+      };
+      card.appendChild(btn);
+      grid.appendChild(card);
+    });
+    const note = document.createElement("p");
+    note.className = "legal";
+    note.textContent = "Themes are local. No account, no surprise charge.";
+    grid.appendChild(note);
+  }
+
+  function boot() {
+    document.documentElement.dataset.theme = S.theme || "park";
+    let load = 0;
+    const timer = setInterval(() => {
+      load = Math.min(100, load + 18);
+      $("loadFill").style.width = load + "%";
+      $("loadText").textContent = load < 100 ? "Setting the locks…" : "Ready";
+      if (load >= 100) {
+        clearInterval(timer);
+        setTimeout(() => {
+          showScreen("screen-hub");
+          renderHub();
+        }, 280);
+      }
+    }, 90);
+
+    $("btnSettings").onclick = () => {
+      $("setMusic").checked = !!S.music;
+      $("setSfx").checked = S.sfx !== false;
+      $("setVib").checked = S.vib !== false;
+      openModal("modal-settings");
+    };
+    $("setClose").onclick = () => closeModal("modal-settings");
+    $("setMusic").onchange = (e) => { S.music = e.target.checked; save(); if (S.music) startMusic(); else stopMusic(); };
+    $("setSfx").onchange = (e) => { S.sfx = e.target.checked; save(); };
+    $("setVib").onchange = (e) => { S.vib = e.target.checked; save(); };
+    $("btnDaily").onclick = claimDaily;
+    $("btnShop").onclick = renderShop;
+    $("shopBack").onclick = () => { showScreen("screen-hub"); renderHub(); };
+    $("btnHelp").onclick = () => openModal("modal-help");
+    $("helpClose").onclick = () => closeModal("modal-help");
+    $("lockClose").onclick = () => closeModal("modal-lock");
+    $("cardScrew").onclick = () => openMap("screw");
+    $("cardSort").onclick = () => openMap("sort");
+    $("cardArrow").onclick = () => openMap("arrow");
+    $("mapBack").onclick = () => { showScreen("screen-hub"); renderHub(); };
+    $("screwPause").onclick = pause;
+    $("sortPause").onclick = pause;
+    $("arrowPause").onclick = pause;
+    $("btnResume").onclick = resume;
+    $("btnRestart").onclick = () => session && startGame(session.world, session.level);
+    $("btnQuit").onclick = () => {
+      const world = session && session.world;
+      stopSession();
+      session = null;
+      if (world) openMap(world);
+      else { showScreen("screen-hub"); renderHub(); }
+    };
+    $("screwUndo").onclick = () => {
+      if (!session || !session.undo) return toast("Nothing to undo");
+      L.screwUndo(session.state, session.undo);
+      session.undo = null;
+      renderScrew();
+      sfx("tap");
+    };
+    $("screwHintBtn").onclick = useHint;
+    $("arrowHintBtn").onclick = useHint;
+    $("arrowReset").onclick = () => session && startArrow(session.level);
+    $("btnGo").onclick = kingGo;
+    $("btnRetry").onclick = () => session && startGame(session.world, session.level);
+    $("btnRevive").onclick = revive;
+    $("btnWinMap").onclick = () => session && openMap(session.world);
+    $("btnLoseMap").onclick = () => session && openMap(session.world);
+    document.addEventListener("pointerdown", () => { if (S.music) startMusic(); }, { once: true });
+  }
+
+  function pause() {
+    if (!session || session.ended) return;
+    session.paused = true;
+    clearInterval(session.clock);
+    openModal("modal-pause");
+  }
+  function resume() {
+    if (!session) return;
+    closeModal("modal-pause");
+    session.paused = false;
+    if (!session.ended) startClock();
+  }
+
+  if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);
+  else boot();
+})();
