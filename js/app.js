@@ -245,7 +245,40 @@ function routeApply(){
 window.addEventListener("hashchange", routeApply);
 window.addEventListener("DOMContentLoaded", routeApply);   // shared/refreshed URL par wahi screen khole
 
-function openModal(id){ sfx.click(); document.getElementById(id).classList.add("open"); }
+function openModal(id){ sfx.click(); const el=document.getElementById(id); if(!el) return;
+  el.classList.add("open");
+  /* modal a11y: remember trigger, move focus inside the dialog */
+  try{
+    const box=el.querySelector(".modal,.modal-gobalt");
+    if(box){ box.setAttribute("role","dialog"); box.setAttribute("aria-modal","true"); }
+    const f=el.querySelector("button,[href],input,select,textarea");
+    if(f) setTimeout(()=>f.focus(),40);
+  }catch(e){}
+}
+
+/* ===================== IN-APP DIALOGS (no native alert/confirm) =====================
+   askDialog/confirmUser/alertUser — promise-based, styled like the rest of the
+   game. Native alert()/confirm() freeze the page and break the game's polish. */
+let DLG_RESOLVE=null;
+function askDialog(o){
+  return new Promise(res=>{
+    const m=document.getElementById("modal-dialog"); if(!m){ res(window.confirm(o.msg||"")); return; }
+    DLG_RESOLVE=res;
+    document.getElementById("dlgTitle").textContent=o.title||"Notice";
+    document.getElementById("dlgMsg").innerHTML=o.html||escape(o.msg||"");
+    const ok=document.getElementById("dlgOk"), no=document.getElementById("dlgCancel");
+    ok.textContent=o.okText||"OK";
+    if(o.cancelText===false){ no.style.display="none"; } else { no.style.display=""; no.textContent=o.cancelText||"Cancel"; }
+    m.classList.add("open");
+    setTimeout(()=>ok.focus(),50);
+  });
+}
+function closeDialog(v){
+  const m=document.getElementById("modal-dialog"); if(m) m.classList.remove("open");
+  if(DLG_RESOLVE){ const r=DLG_RESOLVE; DLG_RESOLVE=null; r(!!v); }
+}
+function confirmUser(msg,okText){ return askDialog({title:"Are you sure?", msg:msg, okText:okText||"Yes", cancelText:"Cancel"}); }
+function alertUser(msg,title){ return askDialog({title:title||"Notice", msg:msg, okText:"OK", cancelText:false}); }
 
 /* ===================== CONTACT & SUGGESTIONS ===================== */
 const AHW_SUPPORT_WA="923470675100";
@@ -259,8 +292,8 @@ function sendSuggestion(){
   const sub=document.getElementById("sugSubject").value;
   const typ=document.getElementById("sugType").value;
   const msg=(document.getElementById("sugMsg").value||"").trim();
-  if(!n){ alert("Please type your name first! ✍️"); return; }
-  if(!msg){ alert("Please write your message / issue before sending."); return; }
+  if(!n){ alertUser("Please type your name first! ✍️"); return; }
+  if(!msg){ alertUser("Please write your message / issue before sending."); return; }
   const text="🎮 AHW QUIZVERSE - Feedback\n-----------------------------\n👤 Name: "+n+"\n📚 Subject: "+sub+"\n🏷️ Type: "+typ+"\n💬 Message: "+msg+"\n-----------------------------\n⚡ Sent from AHW Quizverse game";
   SUG_LAST={text:text, url:"https://wa.me/"+AHW_SUPPORT_WA+"?text="+encodeURIComponent(text)};
   document.getElementById("sugWaLink").href=SUG_LAST.url;
@@ -285,11 +318,16 @@ function copySuggestion(){
 function backToSuggestionForm(){ sfx.click(); document.getElementById("sugDoneView").style.display="none"; document.getElementById("sugFormView").style.display="block"; }
 function resetContactView(){ const f=document.getElementById("sugFormView"),d=document.getElementById("sugDoneView"); if(f) f.style.display="block"; if(d) d.style.display="none"; }
 function closeModal(id){ document.getElementById(id).classList.remove("open"); }
-function goHome(){ fillHome(); show("screen-home"); }
-function escape(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;"); }
+function goHome(){ if(G){ clearInterval(G.timer); clearTimeout(G.turboT); } fillHome(); show("screen-home"); }
+function escape(s){ return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;"); }
 
 function fillHome(){ document.getElementById("playerName").value=profile.name||"";
-  document.getElementById("welcomeBack").textContent = profile.name ? ("Welcome back, "+profile.name+"! 🎯 Pick up where you left off.") : ""; }
+  const wb=document.getElementById("welcomeBack");
+  wb.textContent = profile.name ? ("Welcome back, "+profile.name+"! 🎯 Pick up where you left off.") : "";
+  const d=dailyStatus();
+  const note=d.done ? ("✅ Daily Challenge done — streak "+d.streak+" 🔥 · best "+d.best+"/5")
+                    : ("⚡ Daily Challenge waiting"+(d.streak? (" — keep your "+d.streak+"-day streak alive!") : " — start a new streak!"));
+  wb.textContent = (wb.textContent? wb.textContent+" " : "")+note; }
 fillHome();
 initContactForm();
 /* dynamic subject counts on home (never go stale again) */
@@ -457,6 +495,7 @@ function buildLevelQuestions(sid,ex,L){
 
 function startLevel(sid,ex,lid){
   ac(); sfx.click();
+  clearInterval(G.timer); clearTimeout(G.turboT);   // never leak a running quiz timer
   const L=getLevel(sid,ex,lid);
   const S=SUBJECTS.find(s=>s.id===sid);
   G={level:L, sid, ex, qs:buildLevelQuestions(sid,ex,L), idx:-1, hearts:L.boss?4:3, streak:0, maxStreak:0, correct:0, score:0, xpEarned:0, timer:null, timeLeft:0, answered:false, results:[], picks:[], view:null, turboT:null, backSid:sid, backEx:ex, mistakes:[], customArena:false, revives:0};
@@ -587,7 +626,7 @@ function answer(i,timeout){
     burst(r.left+r.width/2, r.top, 26);
     buzz(60);                                  // haptic tap on correct
     fb.className="feedback show good";
-    fbTitle.innerHTML=pick(["🎉 Nailed it, "+pName()+"!","🔥 Smashed it, "+pName()+"!","💪 Brilliant, "+pName()+"!","🎯 Perfect shot, "+pName()+"!","⚡ You've got the moves, "+pName()+"!","👏 Well played, "+pName()+"!","🧠 Genius, "+pName()+"!"]);
+    fbTitle.innerHTML=pick(["🎉 Nailed it, "+pNameH()+"!","🔥 Smashed it, "+pNameH()+"!","💪 Brilliant, "+pNameH()+"!","🎯 Perfect shot, "+pNameH()+"!","⚡ You've got the moves, "+pNameH()+"!","👏 Well played, "+pNameH()+"!","🧠 Genius, "+pNameH()+"!"]);
     fbPts.classList.remove("hidden");
     fbPts.textContent="+"+pts+" pts (100 base + "+timeBonus+" speed"+(streakBonus?" + "+streakBonus+" streak":"")+")";
   } else {
@@ -597,21 +636,26 @@ function answer(i,timeout){
     if(i>=0){ btns[i].classList.remove("dim"); btns[i].classList.add("wrongpick"); sfx.heart(); }
     sfx.wrong();
     buzz([90,50,90]);                          // double buzz on wrong
-    // log into Mistake Vault
+    // log into Mistake Vault (with smart-review scheduling fields)
     if(!G.mistakes) G.mistakes=[];
     G.mistakes.push({q:q.q, opts:[...q.opts], ans:q.ans, picked:(i>=0?i:null), why:q.why, ts:Date.now()});
     if(!G.customArena){
       profile.mistakes=profile.mistakes.filter(m=>m.q!==q.q);
-      profile.mistakes.push({q:q.q, opts:[...q.opts], ans:q.ans, picked:(i>=0?i:null), why:q.why, ts:Date.now()});
-      if(profile.mistakes.length>60){ profile.mistakes=profile.mistakes.slice(-60); }
+      profile.mistakes.push({q:q.q, opts:[...q.opts], ans:q.ans, picked:(i>=0?i:null), why:q.why, ts:Date.now(), due:Date.now(), ivl:0});
+      if(profile.mistakes.length>60){
+        /* keep the MOST urgent mistakes — evict the one due furthest in the future */
+        profile.mistakes.sort((a,b)=>(b.due||0)-(a.due||0));
+        profile.mistakes=profile.mistakes.slice(0,60);
+      }
       save();
     }
     fb.className="feedback show bad";
-    fbTitle.innerHTML = timeout ? "⏰ Time's up, "+pName()+"! The answer was: <b style='color:#15803d'>"+escape(q.ans)+"</b>"
-                                : "💥 Ouch, "+pName()+"! The answer was: <b style='color:#15803d'>"+escape(q.ans)+"</b>";
+    fbTitle.innerHTML = timeout ? "⏰ Time's up, "+pNameH()+"! The answer was: <b style='color:#15803d'>"+escape(q.ans)+"</b>"
+                                : "💥 Ouch, "+pNameH()+"! The answer was: <b style='color:#15803d'>"+escape(q.ans)+"</b>";
     fbPts.classList.add("hidden");
   }
   fbWhy.innerHTML="💡 <b>Remember:</b> "+escape(q.why);
+  srsTouch(q.q, isRight);            // spaced-repetition: reschedule if this is a vault mistake
   updateScore();
   if(G.hearts<=0) document.getElementById("fbNextBtn").textContent=(G.score>=HEART_PRICE)?"❤️ Revive with 100 💰 ➜":"😵 Game Over ➜";
   scrollFeedbackIntoView();
@@ -751,6 +795,7 @@ function fallbackCopy(txt){
   ta.remove();
 }
 function pName(){ const n=(profile.name||"Warrior").trim(); return n.split(/\s+/)[0]; }
+function pNameH(){ return escape(pName()); }   // HTML-safe first name for innerHTML contexts
 
 /* ===================== REVIVE / HEART SHOP ===================== */
 function showRevive(){
@@ -821,11 +866,19 @@ function finishLevel(){
   }
   save();
 
+  if(G.customArena && G.mode==="daily") dailyFinishUpdate(pass);
+
   document.getElementById("resEmoji").textContent=pass?(perfect?"🤩":stars===3?"🏆":"🎉"):"😅";
-  document.getElementById("resTitle").textContent=pass?(G.customArena?"📕 Vault Cleared!":(G.level.boss?"👑 BOSS DEFEATED!":"Level Conquered!")):"So Close!";
+  document.getElementById("resTitle").textContent=pass
+    ? (G.mode==="daily"?"⚡ Daily Challenge Complete!":G.customArena?"📕 Vault Cleared!":(G.level.boss?"👑 BOSS DEFEATED!":"Level Conquered!"))
+    : (G.mode==="daily"?"⚡ Daily Challenge Over":"So Close!");
   document.getElementById("resMsg").textContent=pass
-    ? (perfect?("FLAWLESS! 100% — "+pName()+", you're an absolute legend!"):G.customArena?"Your mistakes are now your strengths!":unlockedNext?("You smashed it, "+pName()+"! Next level is yours."):("Great job, "+pName()+"!"))
-    : (G.customArena?("Below 50%, "+pName()+" — your vault is still haunting you. One more run!"):("You scored "+Math.round(acc*100)+"%, "+pName()+" — need 70% to unlock the next arena."));
+    ? (perfect?("FLAWLESS! 100% — "+pName()+", you're an absolute legend!")
+      :G.mode==="daily"?("Brilliant, "+pName()+"! Daily streak: "+dailyStatus().streak+" 🔥 — come back tomorrow!")
+      :G.customArena?"Your mistakes are now your strengths!":unlockedNext?("You smashed it, "+pName()+"! Next level is yours."):("Great job, "+pName()+"!"))
+    : (G.mode==="daily"?("You got "+G.correct+"/"+total+", "+pName()+" — practice your vault, tomorrow is a new chance!")
+      :G.customArena?("Below 50%, "+pName()+" — your vault is still haunting you. One more run!")
+      :("You scored "+Math.round(acc*100)+"%, "+pName()+" — need 70% to unlock the next arena."));
   document.getElementById("stScore").textContent=G.score;
   document.getElementById("stAcc").textContent=Math.round(acc*100)+"%";
   document.getElementById("stStreak").textContent=G.maxStreak+"x";
@@ -848,13 +901,117 @@ function finishLevel(){
 }
 
 function replayLevel(){ sfx.click();
-  if(G.customArena){ startMistakeArena(); return; }
+  if(G.customArena){ if(G.mode==="daily"){ startDailyChallenge(); return; } startMistakeArena(); return; }
   startLevel(G.sid,G.ex,G.level.id); }
 function nextLevel(){ sfx.click(); startLevel(G.sid,G.ex,G.level.id+1); }
 
 /* ===================== MISTAKE VAULT ===================== */
 let reviewSrc=[];          // mistake list currently shown in the review modal
 let reviewFromVault=true;   // true = all-time vault, false = this level's mistakes
+
+/* ===================== SMART REVIEW (spaced repetition lite) =====================
+   Every vault mistake carries { due, ivl }. Due mistakes come FIRST in
+   "Practice My Mistakes". A correct answer pushes the next review back
+   (1 → 3 → 7 → 21 → 45 days); a wrong answer makes it due again immediately. */
+const SRS_STEPS=[1,3,7,21,45];
+function srsTouch(qText, correct){
+  const list=profile.mistakes||[];
+  const m=list.find(x=>x.q===qText);
+  if(!m) return;
+  if(correct){ const step=SRS_STEPS[Math.min(m.ivl||0,SRS_STEPS.length-1)]; m.ivl=(m.ivl||0)+1; m.due=Date.now()+step*86400000; }
+  else { m.ivl=0; m.due=Date.now(); }
+  save();
+}
+function srsDue(list){ const now=Date.now(); return (list||[]).filter(m=>!m.due||m.due<=now); }
+function pickReviewQuestions(src){
+  const now=Date.now();
+  const due=src.filter(m=>!m.due||m.due<=now);
+  const later=src.filter(m=>m.due&&m.due>now).sort((a,b)=>a.due-b.due);
+  return due.concat(later).slice(0,12);
+}
+function srsLabel(m){
+  if(!m.due) return "";
+  const now=Date.now();
+  if(m.due<=now) return '<span class="srs-due">🔴 DUE NOW</span>';
+  const days=Math.ceil((m.due-now)/86400000);
+  return '<span class="srs-next">🟢 review in '+days+'d</span>';
+}
+
+/* deterministic PRNG — Daily Challenge picks the SAME 5 questions for everyone, all day */
+function hashStr(s){ let h=2166136261>>>0; for(let i=0;i<s.length;i++){ h^=s.charCodeAt(i); h=Math.imul(h,16777619)>>>0; } return h>>>0; }
+function seededRng(a){ return function(){ a|=0; a=(a+0x6D2B79F5)|0; let t=Math.imul(a^(a>>>15),1|a); t=(t+Math.imul(t^(t>>>7),61|t))^t; return ((t^(t>>>14))>>>0)/4294967296; }; }
+function seededShuffle(arr,rnd){ for(let i=arr.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)); const t=arr[i]; arr[i]=arr[j]; arr[j]=t; } return arr; }
+
+/* ===================== REPORT A QUESTION (QA loop) =====================
+   One tap saves the flagged MCQ locally + copies a formatted report so the
+   player can paste it in the Contact form / WhatsApp. Reports travel with
+   the Export backup. */
+function reportCurrentQuestion(btn){
+  if(!G||!G.qs||!G.qs[G.idx]) return;
+  const q=G.qs[G.idx];
+  const rep={q:q.q, opts:q.opts.slice(), ans:q.ans, why:q.why, sid:G.sid||"custom", ex:G.ex||"", level:(G.level&&G.level.id)||0, ts:Date.now()};
+  profile.reports=profile.reports||[];
+  profile.reports=profile.reports.filter(r=>r.q!==rep.q);
+  profile.reports.push(rep);
+  if(profile.reports.length>50) profile.reports=profile.reports.slice(-50);
+  save();
+  const txt="⚠️ MCQ REPORT — AHW Quizverse\n-----------------------------\n❓ Question: "+q.q+"\n📌 Marked answer: "+q.ans+
+    "\n👤 Player: "+(profile.name||"Warrior")+"\n📚 Where: "+(rep.sid)+(rep.ex?(" · "+rep.ex):"")+"\n-----------------------------\n💡 Issue: (yahan masla likhein)";
+  fallbackCopy(txt);
+  if(btn){ btn.textContent="✅ Reported"; btn.disabled=true; btn.classList.add("done"); }
+  streakBanner("⚠️ Report saved & copied — Contact se bhi bhej sakte hain. Shukriya!");
+}
+
+/* ===================== DAILY CHALLENGE =====================
+   Roz 5 mixed MCQs (same set for the whole day) · 3 hearts · pass = 60%+.
+   Ek baar complete karne par hi streak count hoti hai. */
+function todayKey(){ const d=new Date(); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function dailyStatus(){
+  const day=todayKey(), d=profile.daily;
+  if(d && d.day===day && d.done) return {done:true, streak:d.streak||0, best:d.best||0, correct:d.correct||0};
+  return {done:false, streak:(d&&d.streak)||0, best:(d&&d.best)||0, correct:0};
+}
+function startDailyChallenge(){
+  ac(); sfx.fanfare();
+  clearInterval(G.timer); clearTimeout(G.turboT);
+  const day=todayKey();
+  const pool=[];
+  SUBJECTS.forEach(S=>{
+    ["mid","final"].forEach(ex=>{
+      const E=S.exams[ex]; if(!E||E.placeholder) return;
+      E.lv.forEach(L=>(L.questions||[]).forEach(q=>pool.push({q:q[0], opts:q[1], ans:q[1][q[2]], why:q[3], code:S.code})));
+    });
+  });
+  if(!pool.length){ alertUser("No questions available yet — try again soon!"); return; }
+  const rnd=seededRng(hashStr("ahw-daily-"+day));
+  const picked=seededShuffle(pool.slice(),rnd).slice(0,5);
+  const cp=picked.map(x=>({q:x.q, opts:shuffle([...x.opts]), ans:x.ans, why:x.why}));
+  if(MK && MK.timer) clearInterval(MK.timer);
+  G={level:{id:0,name:"DAILY CHALLENGE",c1:"#f59e0b",c2:"#ef4444",boss:true,icon:"⚡"}, sid:null, ex:null,
+     qs:cp, idx:-1, hearts:3, streak:0, maxStreak:0, correct:0, score:0, xpEarned:0,
+     timer:null, timeLeft:0, answered:false, results:[], picks:[], view:null, turboT:null,
+     customArena:true, mode:"daily", mistakes:[], backSid:null, backEx:null, revives:0};
+  document.getElementById("qLevelName").textContent="⚡ DAILY CHALLENGE · "+day;
+  document.getElementById("qTopic").textContent="5 MIXED QUESTIONS · 3 HEARTS";
+  document.getElementById("qTopic").style.setProperty("--lc1","#f59e0b");
+  document.getElementById("qTopic").style.setProperty("--lc2","#ef4444");
+  document.getElementById("muteBtn2").textContent=profile.muted?"🔇":"🔊";
+  refreshQuizToggles();
+  show("screen-quiz"); nextQuestion();
+}
+function dailyFinishUpdate(pass){
+  const day=todayKey();
+  const d=profile.daily||{streak:0,best:0};
+  if(d.day!==day){                                    /* first finish today → streak counts */
+    const y=new Date(); y.setDate(y.getDate()-1);
+    const yKey=y.getFullYear()+"-"+String(y.getMonth()+1).padStart(2,"0")+"-"+String(y.getDate()).padStart(2,"0");
+    d.streak = pass ? ((d.day===yKey ? (d.streak||0)+1 : 1)) : 0;
+  }
+  d.day=day; d.done=true; d.correct=G.correct;
+  d.best=Math.max(d.best||0, G.correct);
+  profile.daily=d;
+  save();
+}
 function buildReviewCard(m){
   const div=document.createElement("div"); div.className="rv-card";
   const qEl=document.createElement("div"); qEl.className="rv-q"; qEl.textContent=m.q; div.appendChild(qEl);
@@ -865,6 +1022,7 @@ function buildReviewCard(m){
     div.appendChild(d);
   });
   const w=document.createElement("div"); w.className="rv-why"; w.textContent="💡 "+m.why; div.appendChild(w);
+  const chip=document.createElement("div"); chip.className="rv-srs"; chip.innerHTML=srsLabel(m); div.appendChild(chip);
   return div;
 }
 function showReview(fromVault){
@@ -872,11 +1030,12 @@ function showReview(fromVault){
   const src=fromVault? profile.mistakes : (G.mistakes||[]);
   reviewSrc=src; reviewFromVault=fromVault;
   const body=document.getElementById("vaultBody"); body.innerHTML="";
-  document.getElementById("vaultTitle").textContent = fromVault? "📕 Mistake Vault — All Saved" : "❌ This Level's Mistakes";
-  document.getElementById("vaultCount").textContent = src.length+" saved";
+  const dueN=fromVault? srsDue(src).length : 0;
+  document.getElementById("vaultTitle").textContent = fromVault? "📕 Mistake Vault — Smart Review" : "❌ This Level's Mistakes";
+  document.getElementById("vaultCount").textContent = src.length+" saved"+(fromVault&&dueN?(" · "+dueN+" due now"):"");
   const playBtn=document.getElementById("btnVaultPlay");
   playBtn.style.display = src.length? "":"none";
-  playBtn.textContent = fromVault? "⚔️ Practice My Mistakes" : "⚔️ Practice These Mistakes";
+  playBtn.textContent = fromVault? ("⚔️ Practice"+(dueN?(" Due ("+dueN+")"):" My Mistakes")) : "⚔️ Practice These Mistakes";
   if(!src.length){ body.innerHTML='<div class="lb-empty">No mistakes saved yet — you are unbeatable! 🏆</div>'; }
   else src.slice().reverse().forEach(m=>body.appendChild(buildReviewCard(m)));
   document.getElementById("modal-vault").classList.add("open");
@@ -885,21 +1044,22 @@ function showVault(){ showReview(true); }
 function clearVault(){
   sfx.wrong();
   if(profile.mistakes && profile.mistakes.length){
-    if(confirm("Clear ALL saved mistakes from the vault? ("+profile.mistakes.length+" questions)")){
+    confirmUser("Clear ALL saved mistakes from the vault? ("+profile.mistakes.length+" questions)","Yes, clear it").then(ok=>{
+      if(!ok) return;
       profile.mistakes=[]; save();
       document.getElementById("vaultBody").innerHTML='<div class="lb-empty">Vault cleared! Fresh start 🌱</div>';
       document.getElementById("vaultCount").textContent="0 saved";
       document.getElementById("btnVaultPlay").style.display="none";
-      document.getElementById("goQuote");
-    }
+    });
   }
 }
 function startMistakeArena(){
   const src=(reviewSrc && reviewSrc.length)? reviewSrc : (profile.mistakes||[]);
   if(!src.length) return;
   closeModal("modal-vault"); sfx.fanfare();
-  // build a custom mini-arena from the current review source (up to 12 questions)
-  const cp=src.slice(-12).map(m=>({q:m.q,opts:shuffle([...m.opts]),ans:m.ans,why:m.why}));
+  clearInterval(G.timer); clearTimeout(G.turboT);
+  // build a custom mini-arena — DUE mistakes first (spaced repetition), up to 12
+  const cp=pickReviewQuestions(src).map(m=>({q:m.q,opts:shuffle([...m.opts]),ans:m.ans,why:m.why}));
   const label = reviewFromVault ? "📕 MISTAKE VAULT" : "📕 PRACTICE ARENA";
   G={level:{id:0,name:label,c1:"#e11d48",c2:"#7c3aed",boss:true,icon:"📕"}, sid:null, ex:null,
       qs:cp, idx:-1, hearts:4, streak:0, maxStreak:0, correct:0, score:0, xpEarned:0,
@@ -994,7 +1154,7 @@ function awardCertificate(sid,ex){
 function showLeaderboard(){
   sfx.click();
   const body=document.getElementById("lbBody");
-  if(!profile.lb.length){ body.innerHTML='<div class="lb-empty">No scores yet — be the first legend! 🚀</div>'; }
+  if(!profile.lb.length){ body.innerHTML='<div class="lb-empty">No scores on this device yet — finish a level and your best runs will appear here! 🚀</div>'; }
   else{
     const rows=profile.lb.map((e,i)=>{
       const subCode=e.sub?e.sub.toUpperCase():"CS601";
@@ -1013,11 +1173,16 @@ function toggleMute(){ profile.muted=!profile.muted; save();
   if(!profile.muted) sfx.click();
 }
 function resetProgress(){
-  if(confirm("Reset ALL progress (stars, XP, levels, scores, certificates)? This cannot be undone!")){
+  confirmUser("Reset ALL progress — stars, XP, levels, scores, certificates, Mistake Vault, C++ Lab challenges & English Lab? This cannot be undone!","Yes, reset everything").then(ok=>{
+    if(!ok) return;
     profile.unlocked={}; profile.stars={}; profile.best={}; profile.xp=0; profile.lb=[];
     profile.certs=[]; profile.certStats={};
-    save(); sfx.gameover(); showSubjects();
-  }
+    profile.mistakes=[]; profile.totalScore=0;
+    profile.cppSolved={}; profile.daily=null; profile.reports=[];
+    try{ localStorage.removeItem("ahw_cpp_files"); localStorage.removeItem("ahw_cpp_cur"); localStorage.removeItem("ahw.englishLab.v1"); }catch(e){}
+    save(); sfx.gameover(); streakBanner("🗑️ All progress reset — fresh warrior!");
+    showSubjects();
+  });
 }
 document.addEventListener("keydown",e=>{
   const t=e.target;
@@ -1082,7 +1247,7 @@ function prepMock(sid){
     const longs=rest.slice(2,4).map(q=>({type:"long",q:q[0],ans:q[1][q[2]],why:q[3],marks:5}));
     items=mcqs.concat(shorts,longs);
   }
-  if(!items.length){ alert("No questions available for this subject yet."); return; }
+  if(!items.length){ alertUser("No questions available for this subject yet."); return; }
   if(MK && MK.timer) clearInterval(MK.timer);
   MK={sid,obj,S,items,idx:0,picks:items.map(()=>null),texts:items.map(()=>""),saved:items.map(()=>false),
       flagged:items.map(()=>false),award:items.map(()=>null),total:items.reduce((a,b)=>a+b.marks,0),
@@ -1282,14 +1447,27 @@ function mockExit(){
   },{passive:true});
 })();
 
-/* Modal ergonomics: Escape key or clicking the dark backdrop closes modals */
+/* Modal ergonomics: Escape key or clicking the dark backdrop closes modals.
+   The confirm dialog resolves its promise (false = cancelled) so callers
+   waiting on confirmUser/alertUser are never left hanging. */
 document.addEventListener("click", function(e){
   const t=e.target;
-  if(t && t.classList && (t.classList.contains("modal-bg")||t.classList.contains("gobalt"))) t.classList.remove("open");
+  if(!t || !t.classList) return;
+  if(t.id==="modal-dialog"){ closeDialog(false); return; }
+  if(t.classList.contains("modal-bg")||t.classList.contains("gobalt")) t.classList.remove("open");
 });
 document.addEventListener("keydown", function(e){
-  if(e.key==="Escape") document.querySelectorAll(".modal-bg.open,.gobalt.open").forEach(m=>m.classList.remove("open"));
+  if(e.key!=="Escape") return;
+  if(document.getElementById("modal-dialog") && document.getElementById("modal-dialog").classList.contains("open")){ closeDialog(false); return; }
+  document.querySelectorAll(".modal-bg.open,.gobalt.open").forEach(m=>m.classList.remove("open"));
 });
+/* modal a11y: every dialog box gets role=dialog + aria-modal */
+function enhanceModals(){
+  document.querySelectorAll(".modal-bg .modal, .gobalt .modal-gobalt").forEach(m=>{
+    m.setAttribute("role","dialog"); m.setAttribute("aria-modal","true");
+  });
+}
+document.addEventListener("DOMContentLoaded", enhanceModals);
 
 /* ===================== PROGRESS BACKUP (Export / Import) =====================
    Students switch phones or clear browsers — their XP, stars, certs and
@@ -1320,13 +1498,15 @@ function importProgress(){
         const obj=JSON.parse(r.result);
         const p=obj.profile||obj;
         if(!p || typeof p!=="object" || typeof (p.xp!=null?p.xp:0)!=="number") throw new Error("bad file");
-        if(!confirm("Replace current progress with the imported backup?")) return;
-        ["name","xp","muted","vibrate","turbo","unlocked","stars","best","lb","mistakes","totalScore","certs","certStats"].forEach(k=>{ if(p[k]!==undefined) profile[k]=p[k]; });
-        if(!Array.isArray(profile.mistakes)) profile.mistakes=[];
-        if(!Array.isArray(profile.certs)) profile.certs=[];
-        save();
-        streakBanner("📥 Progress imported — reloading...");
-        setTimeout(()=>location.reload(),900);
+        confirmUser("Replace current progress with the imported backup?","Yes, import").then(ok=>{
+          if(!ok) return;
+          ["name","xp","muted","vibrate","turbo","unlocked","stars","best","lb","mistakes","totalScore","certs","certStats","cppSolved","cppSettings","daily","reports"].forEach(k=>{ if(p[k]!==undefined) profile[k]=p[k]; });
+          if(!Array.isArray(profile.mistakes)) profile.mistakes=[];
+          if(!Array.isArray(profile.certs)) profile.certs=[];
+          save();
+          streakBanner("📥 Progress imported — reloading...");
+          setTimeout(()=>location.reload(),900);
+        });
       }catch(e){ streakBanner("❌ Invalid progress file"); }
     };
     r.readAsText(f);

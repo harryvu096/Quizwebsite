@@ -24,8 +24,11 @@ const ci = html.indexOf('<link rel="stylesheet" href="css/style.css');
 if(ci>=0){ const ce = html.indexOf('>', ci); html = html.slice(0,ci) + "<style>\n" + css + "\n</style>" + html.slice(ce+1); }
 const si = html.indexOf('<script src="data/mcqs.js');
 if(si>=0){
-  const cs = html.indexOf('<script src="js/compiler.js', si);
-  const se = html.indexOf('</script>', cs) + 9;
+  /* swallow ALL four external script tags (data, app, compiler, english) so
+     nothing is inlined twice and no leftover <script src> breaks offline use */
+  let se = html.indexOf('<script src="js/english.js', si);
+  if(se>=0){ se = html.indexOf('</script>', se) + 9; }
+  else { const cs = html.indexOf('<script src="js/compiler.js', si); se = html.indexOf('</script>', cs) + 9; }
   html = html.slice(0,si) + "<script>\n" + data + "\n</script>\n<script>\n" + app + "\n</script>\n<script>\n" + comp + "\n</script>\n<script>\n" + english + "\n</script>" + html.slice(se);
 }
 fs.writeFileSync(path.join(__dirname, "..", "standalone.html"), html);

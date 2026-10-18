@@ -3,25 +3,27 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="description" content="AHW Quizverse — free VU Exam Arena with 2000+ past-paper MCQs across CS, Math, Stats, Psychology, Mass Comm, English & more. Play levels, build streaks, beat the Grand Boss and prep for Mid + Final term exams!">
+<meta name="description" content="AHW Quizverse — free VU Exam Arena with 4,152 past-paper MCQs across 68 subjects (CS, Math, Stats, Psychology, Mass Comm, English & more). Play levels, build streaks, beat the Grand Boss and prep for Mid + Final term exams!">
 <meta name="theme-color" content="#7c3aed">
+<link rel="canonical" href="https://harryvu096.github.io/Quizwebsite/">
 <link rel="manifest" href="manifest.webmanifest">
 <link rel="apple-touch-icon" href="icon-192.png">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta property="og:type" content="website">
 <meta property="og:title" content="AHW Quizverse — VU Exam Arena 🎮">
-<meta property="og:description" content="2000+ past-paper MCQs · levels, streaks, boss battles & certificates. Free VU Mid + Final term exam prep — Learn. Play. Conquer.">
-<meta property="og:image" content="og-banner.jpg">
+<meta property="og:description" content="4,152 past-paper MCQs · 68 subjects · levels, streaks, boss battles & certificates. Free VU Mid + Final term exam prep — Learn. Play. Conquer.">
+<meta property="og:image" content="https://harryvu096.github.io/Quizwebsite/og-banner.jpg">
+<meta property="og:url" content="https://harryvu096.github.io/Quizwebsite/">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="AHW Quizverse — VU Exam Arena 🎮">
-<meta name="twitter:description" content="2000+ past-paper MCQs · levels, streaks, boss battles & certificates. Free VU Mid + Final term exam prep.">
-<meta name="twitter:image" content="og-banner.jpg">
-<title>AHW Quizverse — VU Exam Arena 🎮 | 50 Subjects Mid + Final Prep</title>
+<meta name="twitter:description" content="4,152 past-paper MCQs · 68 subjects · levels, streaks, boss battles & certificates. Free VU Mid + Final term exam prep.">
+<meta name="twitter:image" content="https://harryvu096.github.io/Quizwebsite/og-banner.jpg">
+<title>AHW Quizverse — VU Exam Arena 🎮 | 68 Subjects Mid + Final Prep</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%237c3aed'/%3E%3Ctext x='32' y='42' font-size='26' font-family='Arial' font-weight='900' fill='white' text-anchor='middle'%3EAHW%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-build="ahw9">
+<body data-build="ahw12">
 
 <div class="blob" style="left:6%;top:14%;animation-duration:11s">📡</div>
 <div class="blob" style="left:88%;top:10%;animation-duration:8s">🌐</div>
@@ -56,7 +58,7 @@
 
     <div class="card" id="home-card">
       <div class="big-title"><span id="heroCount">39</span> Subjects · Mid + Final<br><span class="grad">Exam Arena</span> 🎮</div>
-      <div class="sub">Computer Science · Mathematics · Statistics · Psychology · Mass Comm · English<br>Virtual University · <b>2000+ conceptual MCQs</b> from past papers!<br><b id="liveCountNote" style="color:#16a34a"></b></div>
+      <div class="sub">Computer Science · Mathematics · Statistics · Psychology · Mass Comm · English<br>Virtual University · <b>4,152 conceptual MCQs</b> from past papers!<br><b id="liveCountNote" style="color:#16a34a"></b></div>
 
       <div class="input-row">
         <input id="playerName" type="text" maxlength="16" placeholder="Type your warrior name...">
@@ -65,18 +67,18 @@
       <div id="welcomeBack" class="sub"></div>
 
       <div class="btn-row">
+        <button class="btn btn-orange" onclick="startDailyChallenge()">⚡ Daily Challenge</button>
         <button class="btn btn-purple" onclick="openModal('modal-how')">📖 How to Play</button>
         <button class="btn btn-pink" onclick="showCppLab()">💻 C++ Compiler</button>
         <button class="btn btn-purple" onclick="showEnglishLab()">📚 English Lab</button>
-        <!-- Mock Exam temporarily hidden (will be re-enabled later)
         <button class="btn btn-blue" onclick="showMockSubjects()">🎓 Mock Exam (VU Style)</button>
-        -->
         <button class="btn btn-orange" onclick="showCerts()">🎓 Certificates</button>
         <button class="btn btn-green" onclick="resetContactView();openModal('modal-contact')">💬 Contact & Suggestions</button>
       </div>
 
       <div class="feature-grid">
         <div class="feature"><span class="fe">📚</span><span id="featCount">39</span> Subjects</div>
+        <div class="feature"><span class="fe">⚡</span>Daily Challenge</div>
         <div class="feature"><span class="fe">🔍</span>Quick Search</div>
         <div class="feature"><span class="fe">📝</span>Mid + Final</div>
         <div class="feature"><span class="fe">⏱️</span>60s Per Question</div>
@@ -185,7 +187,7 @@
         <div class="fb-title" id="fbTitle"></div>
         <div class="fb-why" id="fbWhy"></div>
         <div class="fb-points hidden" id="fbPoints"></div>
-        <div class="fb-next"><button class="fb-copy" id="fbCopyBtn" onclick="copyCurrentQuestion(this)">📋 Copy Question</button><button class="btn btn-purple" id="fbNextBtn" onclick="fbNext()">Next ➜</button></div>
+        <div class="fb-next"><button class="fb-copy" id="fbCopyBtn" onclick="copyCurrentQuestion(this)">📋 Copy Question</button><button class="fb-copy" id="fbReportBtn" onclick="reportCurrentQuestion(this)" title="Report a problem with this question">⚠️ Report</button><button class="btn btn-purple" id="fbNextBtn" onclick="fbNext()">Next ➜</button></div>
       </div>
     </div>
   </section>
@@ -559,8 +561,20 @@
 <div class="modal-bg" id="modal-lb">
   <div class="modal">
     <button class="close-x" onclick="closeModal('modal-lb')">✖</button>
-    <h2>🏆 Leaderboard <span style="font-size:12px;color:#7a72a3">(this device)</span></h2>
+    <h2>🏆 My Scoreboard <span style="font-size:12px;color:#7a72a3">(saved on this device)</span></h2>
     <div id="lbBody"></div>
+  </div>
+</div>
+
+<!-- ============ GENERIC CONFIRM / INFO DIALOG (no native alert/confirm) ============ -->
+<div class="modal-bg" id="modal-dialog">
+  <div class="modal" style="max-width:380px;text-align:center">
+    <h2 id="dlgTitle" style="margin-top:4px">Are you sure?</h2>
+    <div id="dlgMsg" style="font-size:14px;line-height:1.6;color:#555;margin:10px 0 16px"></div>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <button class="btn btn-gray" id="dlgCancel" onclick="closeDialog(false)">Cancel</button>
+      <button class="btn btn-green" id="dlgOk" onclick="closeDialog(true)">OK</button>
+    </div>
   </div>
 </div>
 
@@ -619,9 +633,9 @@
 
 <div class="streak-banner" id="streakBanner"></div>
 
-<script src="data/mcqs.js?v=ahw9"></script>
-<script src="js/app.js?v=ahw9"></script>
-<script src="js/compiler.js?v=ahw9"></script>
-<script src="js/english.js?v=ahw11"></script>
+<script src="data/mcqs.js?v=ahw12"></script>
+<script src="js/app.js?v=ahw12"></script>
+<script src="js/compiler.js?v=ahw12"></script>
+<script src="js/english.js?v=ahw12"></script>
 </body>
 </html>

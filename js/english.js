@@ -644,11 +644,12 @@ function elHtmlHome() {
 }
 
 function elResetProgress() {
-  if (confirm("Reset ALL English Lab progress?")) {
+  confirmUser("Reset ALL English Lab progress?", "Yes, reset").then(ok => {
+    if (!ok) return;
     elClearProgress();
     renderEnglishLab();
     flashToast("✅ Progress reset");
-  }
+  });
 }
 
 /* ============================================================
@@ -903,9 +904,9 @@ function elWsNext() {
 
 function elWsShowList() {
   const lvl = WS_LEVELS[EL_STATE.ws.level];
-  const list = lvl.words.map(w => `${w.w} — ${w.meaning} (${w.urdu})`).join("\n");
-  const ex = lvl.words[0] ? `\n\nExample: "${lvl.words[0].ex}"` : "";
-  alert(`📜 Words in this level:\n\n${list}${ex}`);
+  const rows = lvl.words.map(w => `<li style="margin:6px 0"><b>${escapeHtml(w.w)}</b> — ${escapeHtml(w.meaning)} <span dir="rtl">(${escapeHtml(w.urdu)})</span></li>`).join("");
+  const ex = lvl.words[0] ? `<div style="margin-top:10px;font-style:italic">Example: “${escapeHtml(lvl.words[0].ex)}”</div>` : "";
+  askDialog({ title: "📜 Words in this level", html: `<ul style="padding-left:18px;text-align:left;margin:0">${rows}</ul>${ex}`, okText: "Close", cancelText: false });
 }
 
 /* ============================================================
