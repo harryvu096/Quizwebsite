@@ -1,0 +1,13 @@
+{
+  "name": "Arrowlane",
+  "short_name": "Arrowlane",
+  "description": "Tap arrows with a free path and clear the board.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#1a1744",
+  "theme_color": "#1a1744",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "assets/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

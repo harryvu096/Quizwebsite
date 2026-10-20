@@ -1,0 +1,126 @@
+name: Build Arrowlane APK
+
+on:
+  push:
+    branches: [ "arena/138b2864-quizwebsite" ]
+    paths:
+      - "clearlane/**"
+      - ".github/workflows/build-clearlane-apk.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build-apk:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Set up Node 20
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Build installable debug APK
+        run: |
+          set -o pipefail
+          set -e
+          cd clearlane
+          rm -rf www android ios node_modules
+          mkdir -p www/assets www/css www/js www/data
+          cp index.html privacy.html www/
+          cp -r css js data www/
+          cp assets/icon.png www/assets/
+          cp manifest.webmanifest www/ || true
+          node -e 'const fs=require("fs"); const c=JSON.parse(fs.readFileSync("capacitor.config.json","utf8")); c.webDir="www"; c.appName="Arrowlane"; fs.writeFileSync("capacitor.config.json", JSON.stringify(c,null,2));'
+          if [ -z "$ANDROID_HOME" ]; then
+            export ANDROID_HOME=/usr/local/lib/android/sdk
+          fi
+          {
+            echo "JAVA_HOME=$JAVA_HOME"
+            java -version
+            echo "ANDROID_HOME=$ANDROID_HOME"
+            ls "$ANDROID_HOME/platforms" || true
+          } | tee /tmp/build.log
+          npm install --no-audit --no-fund 2>&1 | tee -a /tmp/build.log
+          npx cap add android 2>&1 | tee -a /tmp/build.log
+          npx cap sync android 2>&1 | tee -a /tmp/build.log
+          python3 - << 'PY'
+          import pathlib, re
+          p = pathlib.Path("android/app/src/main/AndroidManifest.xml")
+          t = p.read_text()
+          if "screenOrientation" not in t:
+              t = t.replace("<activity", '<activity android:screenOrientation="portrait"', 1)
+          else:
+              t = re.sub(r'android:screenOrientation="[^"]*"', 'android:screenOrientation="portrait"', t)
+          p.write_text(t)
+          PY
+          rm -rf android/app/src/main/res/mipmap-anydpi-v26
+          for f in android/app/src/main/res/mipmap-*/ic_launcher.png android/app/src/main/res/mipmap-*/ic_launcher_round.png android/app/src/main/res/mipmap-*/ic_launcher_foreground.png; do
+            if [ -e "$f" ]; then cp assets/icon.png "$f"; fi
+          done
+          echo "sdk.dir=$ANDROID_HOME" > android/local.properties
+          echo "org.gradle.java.home=$JAVA_HOME" >> android/gradle.properties
+          cat android/local.properties | tee -a /tmp/build.log
+          chmod +x android/gradlew
+          cd android
+          ./gradlew assembleDebug --stacktrace --no-daemon 2>&1 | tee -a /tmp/build.log
+          find app/build/outputs -name "*.apk" -exec ls -lh {} \; | tee -a /tmp/build.log
+
+      - name: Save APK for download
+        if: always()
+        run: |
+          mkdir -p "$GITHUB_WORKSPACE/apk-out"
+          find clearlane/android/app/build/outputs -name "*debug*.apk" -exec cp {} "$GITHUB_WORKSPACE/apk-out/Clearlane.apk" \; || true
+          if [ -f /tmp/build.log ]; then
+            tail -n 300 /tmp/build.log > "$GITHUB_WORKSPACE/clearlane-build-log.txt"
+          else
+            echo "no build log" > "$GITHUB_WORKSPACE/clearlane-build-log.txt"
+          fi
+          ls -lh "$GITHUB_WORKSPACE/apk-out" || true
+          cd "$GITHUB_WORKSPACE"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if [ -f apk-out/Clearlane.apk ]; then
+            cp apk-out/Clearlane.apk Clearlane.apk
+            git add -f Clearlane.apk
+          fi
+          git add -f clearlane-build-log.txt
+          if git diff --cached --quiet; then
+            echo "nothing new to commit"
+          else
+            git commit -m "ci: publish Arrowlane APK and build log"
+            git push origin HEAD:arena/138b2864-quizwebsite
+          fi
+
+      - name: Post log as commit comment
+        if: always()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tail -c 45000 /tmp/build.log > /tmp/tail.txt || echo "no build log" > /tmp/tail.txt
+          {
+            echo 'Arrowlane APK build log tail'
+            echo '```'
+            cat /tmp/tail.txt
+            echo '```'
+          } > /tmp/comment.txt
+          gh api "repos/${{ github.repository }}/commits/${{ github.sha }}/comments" \
+            -f body="$(cat /tmp/comment.txt)" || echo "comment failed"
+
+      - name: Upload APK artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Clearlane-APK
+          path: apk-out/Clearlane.apk
+          retention-days: 30
+          if-no-files-found: warn

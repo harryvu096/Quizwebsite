@@ -1,0 +1,6 @@
+node_modules/
+android/
+www/
+ios/
+tools/previews/
+data/levels.json

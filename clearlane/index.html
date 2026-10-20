@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#1a1744">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <title>Arrowlane</title>
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="icon" href="assets/icon.png">
+</head>
+<body>
+  <div id="app">
+    <section id="screen-home" class="screen">
+      <header class="top bare">
+        <span></span>
+        <span></span>
+        <button id="btnGearHome" class="icon" aria-label="Settings"></button>
+      </header>
+      <div class="home-art"><canvas id="homeArt"></canvas></div>
+      <div class="home-copy">
+        <p class="kicker">Tap away</p>
+        <h1>Arrowlane</h1>
+        <p class="lede">Find the free path. Tap the arrow. Clear the board.</p>
+        <button id="btnPlay" class="play">Play</button>
+        <div class="home-actions">
+          <button id="btnDaily" class="ghost">Daily</button>
+          <button id="btnLevels" class="ghost">Levels</button>
+        </div>
+        <p id="homeProgress" class="fine"></p>
+        <button id="btnHelpHome" class="text">How to play</button>
+      </div>
+    </section>
+
+    <section id="screen-play" class="screen">
+      <header class="top">
+        <button id="btnBack" class="icon" aria-label="Back"></button>
+        <div id="titleBlock">
+          <h2 id="playTitle">Level 1</h2>
+          <p id="playSub"></p>
+        </div>
+        <button id="btnGear" class="icon" aria-label="Settings"></button>
+      </header>
+      <div class="hud">
+        <div class="pill count" id="countPill"><b id="arrowCount">0</b></div>
+        <div class="hearts" id="hearts"></div>
+        <div class="pill" id="diffPill">Normal</div>
+      </div>
+      <div id="boardWrap"><canvas id="board"></canvas></div>
+      <p id="coach" class="coach" hidden></p>
+      <footer class="tools">
+        <button id="btnHint" class="tool" aria-label="Hint"><span id="hintCount" class="badge">2</span></button>
+        <button id="btnUndo" class="tool" aria-label="Undo"></button>
+        <button id="btnGrid" class="tool" aria-label="Show lanes"></button>
+      </footer>
+    </section>
+
+    <section id="screen-map" class="screen">
+      <header class="top">
+        <button id="mapBack" class="icon" aria-label="Back"></button>
+        <div><h2>Levels</h2></div>
+        <span></span>
+      </header>
+      <div id="mapScroll"></div>
+    </section>
+
+    <div id="sheet-win" class="sheet">
+      <div class="card">
+        <p class="kicker" id="winKicker">Board clear</p>
+        <h3 id="winTitle">Level 1</h3>
+        <div id="winStars" class="stars"></div>
+        <p id="winSub" class="lede"></p>
+        <button id="btnNext" class="play">Next</button>
+        <button id="btnWinMap" class="text">All levels</button>
+      </div>
+    </div>
+
+    <div id="sheet-lose" class="sheet">
+      <div class="card">
+        <p class="kicker">Hearts gone</p>
+        <h3>Not this time</h3>
+        <p class="lede">The board is the same. Look for a head with an empty lane.</p>
+        <button id="btnRetry" class="play">Retry</button>
+        <button id="btnLoseMap" class="text">Levels</button>
+      </div>
+    </div>
+
+    <div id="sheet-settings" class="sheet">
+      <div class="card sheet-card">
+        <h3>Settings</h3>
+        <label class="row"><span>Sound</span><input id="setSfx" type="checkbox"></label>
+        <label class="row"><span>Vibration</span><input id="setVib" type="checkbox"></label>
+        <button id="setRestart" class="ghost wide">Restart level</button>
+        <button id="setHelp" class="ghost wide">How to play</button>
+        <button id="setHome" class="ghost wide">Home</button>
+        <button id="setClose" class="text">Close</button>
+      </div>
+    </div>
+
+    <div id="sheet-help" class="sheet">
+      <div class="card sheet-card">
+        <h3>How to play</h3>
+        <ol class="help">
+          <li>Every line is one arrow. It only leaves from the head.</li>
+          <li>Tap it when the straight lane in front is empty.</li>
+          <li>A blocked tap costs a heart. Hold to preview, drag off to cancel.</li>
+          <li>Hint marks a safe arrow. The grid shows every lane.</li>
+        </ol>
+        <button id="helpClose" class="play">Got it</button>
+      </div>
+    </div>
+
+    <div id="toast"></div>
+  </div>
+  <script src="js/logic.js"></script>
+  <script src="js/gen.js"></script>
+  <script src="data/levels.js"></script>
+  <script src="js/game.js"></script>
+</body>
+</html>
