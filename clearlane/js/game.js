@@ -2,12 +2,12 @@
 (function () {
   const Lane = window.Lane;
   const LEVELS = window.LANE_LEVELS || [];
-  const SAVE_KEY = "arrowlane_v1";
+  const SAVE_KEY = "arrowlane_v2";
   const COL = {
-    arrow: "#5cd2e6",
-    gold: "#ffc53d",
-    bad: "#ff5d73",
-    dot: "rgba(92, 102, 184, 0.9)"
+    arrow: "#1a2344",
+    gold: "#e0a106",
+    bad: "#e23d4e",
+    dot: "rgba(26, 35, 68, 0.16)"
   };
 
   function loadSave() {
@@ -161,14 +161,8 @@
   function updateHud() {
     if (!play) return;
     const level = play.level;
-    const titles = { 1: "Clear<br>the Board", 2: "Tap Away<br>Arrows", 3: "Find a<br>Free Path" };
     const wrap = $("titleWrap");
-    if (titles[level.lv] && !play.daily) {
-      wrap.hidden = false;
-      $("playTitle").innerHTML = titles[level.lv];
-    } else {
-      wrap.hidden = true;
-    }
+    if (wrap) wrap.hidden = true;
     $("playSub").textContent = play.daily ? "Daily" : "Level " + level.lv;
     $("arrowCount").textContent = String(play.arrows.length);
     $("diffPill").textContent = level.label || "Normal";
@@ -203,7 +197,7 @@
       cell: cell,
       ox: (cssW - boardW) / 2,
       oy: (cssH - boardH) / 2,
-      stroke: Math.max(5, cell * 0.30)
+      stroke: Math.max(1.75, cell * 0.27)
     };
   }
 
@@ -240,17 +234,14 @@
     ctx.fillStyle = color;
     ctx.lineWidth = stroke;
     ctx.lineJoin = "round";
-    ctx.lineCap = "butt";
+    ctx.lineCap = "round";
     ctx.beginPath();
     ctx.moveTo(shaft[0][0], shaft[0][1]);
     for (let i = 1; i < shaft.length; i++) ctx.lineTo(shaft[i][0], shaft[i][1]);
     ctx.stroke();
-    ctx.beginPath();
-    ctx.arc(shaft[0][0], shaft[0][1], stroke / 2, 0, Math.PI * 2);
-    ctx.fill();
     const head = shaft[shaft.length - 1];
-    const tipLen = stroke * 1.42;
-    const hw = stroke * 0.78;
+    const tipLen = Math.max(stroke * 1.7, g.cell * 0.2);
+    const hw = stroke * 0.72;
     const tip = [head[0] + d.x * tipLen, head[1] + d.y * tipLen];
     const bx = head[0] - d.x * 1.8;
     const by = head[1] - d.y * 1.8;
@@ -318,7 +309,7 @@
     ctx.translate(rect.width / 2 + play.view.x, rect.height / 2 + play.view.y);
     ctx.scale(play.view.scale, play.view.scale);
     ctx.translate(-rect.width / 2, -rect.height / 2);
-    drawDots(ctx, g, play.level.w, play.level.h);
+    if (play.gridOn) drawDots(ctx, g, play.level.w, play.level.h);
 
     if (play.gridOn) {
       play.arrows.forEach(function (arrow) {
@@ -363,10 +354,11 @@
       const p = (now - ghost.t0) / ghost.dur;
       if (p >= 1) return false;
       const d = Lane.DIRS[ghost.arrow.dir];
-      const travel = (Math.max(play.level.w, play.level.h) + 2) * g.cell;
+      const travel = (Math.max(play.level.w, play.level.h) + 3) * g.cell;
+      const ease = 1 - Math.pow(1 - Math.min(1, p), 2);
       ctx.save();
-      ctx.globalAlpha = 1 - p * 0.85;
-      drawArrow(ctx, ghost.arrow, g, COL.arrow, p * p * travel);
+      ctx.globalAlpha = 1 - p * 0.72;
+      drawArrow(ctx, ghost.arrow, g, COL.arrow, ease * travel);
       ctx.restore();
       return true;
     });
@@ -454,7 +446,7 @@
     play.history.push(cloneArrows(play.arrows));
     play.arrows = play.arrows.filter(function (a) { return a.id !== id; });
     const ray = Lane.rayCells(arrow, play.level.w, play.level.h).length;
-    play.ghosts.push({ arrow: arrow, t0: performance.now(), dur: 260 + ray * 26 });
+    play.ghosts.push({ arrow: arrow, t0: performance.now(), dur: 220 + Math.min(ray, 18) * 16 });
     play.hintId = null;
     play.teachId = null;
     play.gridOn = false;

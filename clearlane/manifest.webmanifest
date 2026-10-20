@@ -4,8 +4,8 @@
   "description": "Tap arrows with a free path and clear the board.",
   "start_url": "./index.html",
   "display": "standalone",
-  "background_color": "#2c3160",
-  "theme_color": "#2c3160",
+  "background_color": "#ffffff",
+  "theme_color": "#ffffff",
   "orientation": "portrait",
   "icons": [
     { "src": "assets/icon.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }

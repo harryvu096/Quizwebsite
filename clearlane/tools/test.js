@@ -18,16 +18,7 @@ assert(Lane.peel(cycle, 4, 1).ok === false, "mutual block is unsolvable");
 const opened = [cycle[0], Lane.reverseArrow(cycle[1])];
 assert(Lane.peel(opened, 4, 1).ok, "reversing one end opens the board");
 
-for (let lv = 1; lv <= 3; lv++) {
-  const level = Gen.handcrafted(lv);
-  assert(Lane.peel(level.arrows, level.w, level.h).ok, "handmade " + lv + " solvable");
-  assert(Lane.freeArrows(level.arrows, level.w, level.h).length >= 1, "handmade " + lv + " has a free arrow");
-  level.arrows.forEach(function (a) {
-    assert(Lane.validArrow(a, level.w, level.h), "handmade arrow " + lv + ":" + a.id);
-  });
-}
-
-const COUNT = Number(process.env.LANE_COUNT || 200);
+const COUNT = Number(process.env.LANE_COUNT || 96);
 console.log("generating", COUNT);
 const t0 = Date.now();
 const levels = Gen.campaign(COUNT);
@@ -60,6 +51,13 @@ fs.mkdirSync(path.dirname(out), { recursive: true });
 fs.writeFileSync(out, "window.LANE_LEVELS = " + JSON.stringify(levels) + ";\n");
 fs.writeFileSync(path.join(__dirname, "..", "data", "levels.json"), JSON.stringify(levels));
 console.log("OK", levels.length, "levels; max arrows", maxArrows, "; min waves", minWaves);
-console.log("L1 free", Lane.freeArrows(levels[0].arrows, levels[0].w, levels[0].h).map(function (a) { return a.id; }).join(","));
+levels.forEach(function (level) {
+  let cells = 0;
+  level.arrows.forEach(function (a) { cells += a.cells.length; });
+  level._cells = cells;
+});
+console.log("L1", levels[0].shape, levels[0].w + "x" + levels[0].h, "arrows", levels[0].arrows.length, "cells", levels[0]._cells);
+console.log("L2", levels[1].shape, "L3", levels[2].shape, "L17", levels[16].shape, levels[16].w + "x" + levels[16].h);
 console.log("L24", levels[23].w + "x" + levels[23].h, "arrows", levels[23].arrows.length, "waves", Lane.peel(levels[23].arrows, levels[23].w, levels[23].h).waves);
-console.log("L160", levels[159].w + "x" + levels[159].h, "arrows", levels[159].arrows.length, "waves", Lane.peel(levels[159].arrows, levels[159].w, levels[159].h).waves);
+const last = levels[levels.length - 1];
+console.log("L" + last.lv, last.shape, last.w + "x" + last.h, "arrows", last.arrows.length, "waves", Lane.peel(last.arrows, last.w, last.h).waves);

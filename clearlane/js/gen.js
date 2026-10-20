@@ -1,10 +1,11 @@
 /* Seeded boards. Every exported level is peel-solvable and has a free arrow. */
 (function (root, factory) {
   const Lane = root.Lane || (typeof require !== "undefined" ? require("./logic.js") : null);
-  const api = factory(Lane);
+  const Arts = root.LaneArts || (typeof require !== "undefined" ? require("./shapearts.js") : null);
+  const api = factory(Lane, Arts);
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.LaneGen = api;
-})(typeof globalThis !== "undefined" ? globalThis : this, function (Lane) {
+})(typeof globalThis !== "undefined" ? globalThis : this, function (Lane, Arts) {
   function mulberry32(seed) {
     let a = seed >>> 0;
     return function () {
@@ -28,75 +29,32 @@
   }
 
   function specFor(lv) {
-    if (lv <= 3) return { w: 5, h: 6, fill: 0.42, minLen: 2, maxLen: 4, minArrows: 3, minWaves: 2, minFill: 0.3, label: "Normal", tutorial: true };
-    if (lv <= 12) return { w: 6, h: 8, fill: 0.7, minLen: 2, maxLen: 5, minArrows: 8, minWaves: 2, minFill: 0.55, label: "Normal" };
-    if (lv <= 30) return { w: 7 + (lv % 2), h: 9 + (lv % 2), fill: 0.78, minLen: 2, maxLen: 6, minArrows: 12, minWaves: 3, minFill: 0.62, label: "Normal" };
-    if (lv <= 60) return { w: 8, h: 11, fill: 0.8, minLen: 2, maxLen: 7, minArrows: 16, minWaves: 3, minFill: 0.64, label: "Hard" };
-    if (lv <= 100) return { w: 9, h: 12, fill: 0.82, minLen: 2, maxLen: 8, minArrows: 20, minWaves: 4, minFill: 0.66, label: "Hard" };
-    if (lv <= 140) return { w: 9, h: 14, fill: 0.84, minLen: 2, maxLen: 8, minArrows: 24, minWaves: 4, minFill: 0.68, label: "Super Hard" };
-    return { w: 10, h: 15, fill: 0.84, minLen: 2, maxLen: 9, minArrows: 26, minWaves: 5, minFill: 0.68, label: "Expert" };
+    const arts = Arts.ARTS;
+    const n = arts.length;
+    const idx = (lv - 1) % n;
+    const cycle = Math.floor((lv - 1) / n);
+    const scale = 2;
+    const mirror = cycle % 2 === 1;
+    const rows = Arts.scaleRows(arts[idx].rows, scale, mirror);
+    const parsed = Arts.toMask(rows);
+    return {
+      w: parsed.w,
+      h: parsed.h,
+      mask: parsed.mask,
+      count: parsed.count,
+      fill: 0.94,
+      minLen: 2,
+      maxLen: Math.min(7, 4 + cycle),
+      minArrows: 4,
+      minWaves: Math.min(2 + Math.floor(cycle / 2), 4),
+      minFill: 0.8,
+      label: arts[idx].name,
+      shape: arts[idx].name,
+      tutorial: lv <= 2
+    };
   }
 
-  function handcrafted(lv) {
-    if (lv === 1) {
-      return {
-        lv: 1, w: 6, h: 8, label: "Normal", tutorial: true,
-        title: "Clear the Board",
-        coach: "Tap the gold arrow.",
-        arrows: [
-          { id: 1, dir: "D", cells: [[0, 1], [0, 2], [0, 3], [0, 4], [0, 5]] },
-          { id: 2, dir: "R", cells: [[2, 0], [3, 0], [4, 0], [5, 0]] },
-          { id: 3, dir: "U", cells: [[1, 2], [2, 2], [3, 2], [3, 1]] },
-          { id: 4, dir: "D", cells: [[5, 2], [5, 3], [5, 4], [5, 5]] },
-          { id: 5, dir: "L", cells: [[2, 4], [2, 5], [2, 6], [1, 6]] },
-          { id: 6, dir: "D", cells: [[4, 3], [3, 3], [3, 4], [3, 5]] },
-          { id: 7, dir: "D", cells: [[1, 4], [1, 5]] },
-          { id: 8, dir: "R", cells: [[4, 7], [5, 7]] }
-        ]
-      };
-    }
-    if (lv === 2) {
-      return {
-        lv: 2, w: 6, h: 7, label: "Normal", tutorial: true,
-        title: "Tap Away Arrows",
-        coach: "A bend still leaves straight from its head.",
-        arrows: [
-          { id: 1, dir: "R", cells: [[3, 1], [4, 1], [5, 1]] },
-          { id: 2, dir: "L", cells: [[4, 0], [3, 0], [2, 0], [1, 0]] },
-          { id: 3, dir: "D", cells: [[0, 0], [0, 1], [0, 2], [0, 3]] },
-          { id: 4, dir: "L", cells: [[5, 2], [4, 2], [3, 2], [2, 2]] },
-          { id: 5, dir: "R", cells: [[1, 1], [2, 1]] },
-          { id: 6, dir: "D", cells: [[4, 3], [4, 4], [4, 5], [4, 6]] },
-          { id: 7, dir: "R", cells: [[1, 3], [2, 3], [3, 3]] },
-          { id: 8, dir: "L", cells: [[2, 4], [2, 5], [1, 5], [0, 5]] },
-          { id: 9, dir: "U", cells: [[5, 6], [5, 5], [5, 4]] },
-          { id: 10, dir: "R", cells: [[1, 6], [2, 6], [3, 6]] },
-          { id: 11, dir: "D", cells: [[3, 4], [3, 5]] }
-        ]
-      };
-    }
-    if (lv === 3) {
-      return {
-        lv: 3, w: 6, h: 8, label: "Normal", tutorial: true,
-        title: "Find a Free Path",
-        coach: "If the lane is blocked, clear that arrow first.",
-        arrows: [
-          { id: 1, dir: "U", cells: [[0, 2], [0, 1], [0, 0]] },
-          { id: 2, dir: "L", cells: [[4, 0], [3, 0], [2, 0], [1, 0]] },
-          { id: 3, dir: "D", cells: [[5, 1], [5, 2], [5, 3], [5, 4]] },
-          { id: 4, dir: "L", cells: [[4, 2], [3, 2], [2, 2], [1, 2]] },
-          { id: 5, dir: "D", cells: [[2, 3], [2, 4], [2, 5], [2, 6]] },
-          { id: 6, dir: "R", cells: [[0, 4], [1, 4]] },
-          { id: 7, dir: "D", cells: [[4, 4], [4, 5], [4, 6], [4, 7]] },
-          { id: 8, dir: "D", cells: [[5, 5], [5, 6], [5, 7]] },
-          { id: 9, dir: "R", cells: [[1, 7], [2, 7], [3, 7]] },
-          { id: 10, dir: "D", cells: [[1, 5], [1, 6]] },
-          { id: 11, dir: "R", cells: [[1, 1], [2, 1], [3, 1]] },
-          { id: 12, dir: "U", cells: [[0, 7], [0, 6]] },
-          { id: 13, dir: "R", cells: [[3, 3], [4, 3]] }
-        ]
-      };
-    }
+  function handcrafted() {
     return null;
   }
 
@@ -138,16 +96,55 @@
     return good[Math.floor(rng() * good.length)];
   }
 
+  function outside(spec, x, y) {
+    return !!(spec && spec.mask && !spec.mask[y][x]);
+  }
+
+  function roomCount(spec, w, h) {
+    if (!spec || !spec.mask) return w * h;
+    let n = 0;
+    for (let y = 0; y < h; y++) {
+      for (let x = 0; x < w; x++) if (spec.mask[y][x]) n++;
+    }
+    return n;
+  }
+
+  function isBorder(spec, x, y, w, h) {
+    if (!spec.mask || !spec.mask[y][x]) return false;
+    if (x === 0 || y === 0 || x + 1 === w || y + 1 === h) return true;
+    return !spec.mask[y][x - 1] || !spec.mask[y][x + 1] || !spec.mask[y - 1][x] || !spec.mask[y + 1][x];
+  }
+
   function carve(w, h, rng, spec) {
     const grid = [];
     for (let y = 0; y < h; y++) {
-      grid.push(new Array(w).fill(false));
+      const row = [];
+      for (let x = 0; x < w; x++) {
+        let blocked = outside(spec, x, y);
+        if (!blocked && spec.onlyBorder && !isBorder(spec, x, y, w, h)) blocked = true;
+        row.push(blocked);
+      }
+      grid.push(row);
+    }
+    if (spec.seedArrows) {
+      for (let i = 0; i < spec.seedArrows.length; i++) {
+        const cells = spec.seedArrows[i].cells;
+        for (let c = 0; c < cells.length; c++) grid[cells[c][1]][cells[c][0]] = true;
+      }
     }
     const arrows = [];
-    const target = Math.floor(w * h * spec.fill);
+    let open = 0;
+    for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) if (!grid[y][x]) open++;
+    const target = spec.onlyBorder ? Math.floor(open * spec.fill) : Math.floor(roomCount(spec, w, h) * spec.fill);
     let filled = 0;
+    if (spec.seedArrows) {
+      for (let i = 0; i < spec.seedArrows.length; i++) filled += spec.seedArrows[i].cells.length;
+    }
     let guard = 0;
     let id = 1;
+    if (spec.seedArrows) {
+      for (let i = 0; i < spec.seedArrows.length; i++) id = Math.max(id, spec.seedArrows[i].id + 1);
+    }
     while (filled < target && guard++ < w * h * 6) {
       const empties = [];
       for (let y = 0; y < h; y++) {
@@ -227,7 +224,7 @@
 
   function deepen(arrows, w, h, rng, minWaves) {
     const list = arrows.map(Lane.cloneArrow);
-    const ids = shuffle(list.map(function (a) { return a.id; }), rng);
+    const ids = shuffle(list.map(function (a) { return a.id; }), rng).slice(0, 18);
     for (let i = 0; i < ids.length; i++) {
       const cur = list.find(function (a) { return a.id === ids[i]; });
       if (!cur) continue;
@@ -257,7 +254,11 @@
 
   function topUp(arrows, w, h, rng, spec) {
     const grid = [];
-    for (let y = 0; y < h; y++) grid.push(new Array(w).fill(false));
+    for (let y = 0; y < h; y++) {
+      const row = [];
+      for (let x = 0; x < w; x++) row.push(outside(spec, x, y));
+      grid.push(row);
+    }
     for (let i = 0; i < arrows.length; i++) {
       for (let c = 0; c < arrows[i].cells.length; c++) {
         grid[arrows[i].cells[c][1]][arrows[i].cells[c][0]] = true;
@@ -266,8 +267,9 @@
     let id = 1;
     for (let i = 0; i < arrows.length; i++) id = Math.max(id, arrows[i].id + 1);
     const list = arrows.map(Lane.cloneArrow);
-    const target = Math.floor(w * h * spec.fill);
-    let filled = Math.round(occupancy(list, w, h) * w * h);
+    const target = Math.floor(roomCount(spec, w, h) * spec.fill);
+    let filled = 0;
+    for (let i = 0; i < list.length; i++) filled += list[i].cells.length;
     let guard = 0;
     while (filled < target && guard++ < w * h * 5) {
       const empties = [];
@@ -314,62 +316,120 @@
       w: spec.w,
       h: spec.h,
       label: spec.label,
+      shape: spec.shape || spec.label,
       tutorial: !!spec.tutorial,
+      coach: lv === 1 ? "Tap a free head. The line slides out of the picture." : "",
       arrows: arrows.map(function (a) {
         return { id: a.id, dir: a.dir, cells: a.cells.map(function (c) { return [c[0], c[1]]; }) };
       })
     };
   }
 
+  function filledCount(arrows) {
+    let n = 0;
+    for (let i = 0; i < arrows.length; i++) n += arrows[i].cells.length;
+    return n;
+  }
+
+  function orientationsOf(cells) {
+    const forward = cells.map(function (c) { return [c[0], c[1]]; });
+    const backward = forward.slice().reverse();
+    const out = [];
+    for (let i = 0; i < 2; i++) {
+      const seq = i === 0 ? forward : backward;
+      if (seq.length < 2) continue;
+      const dir = Lane.dirOfStep(seq[seq.length - 2], seq[seq.length - 1]);
+      if (dir) out.push({ dir: dir, cells: seq });
+    }
+    return out;
+  }
+
+  function edgeScore(arrow, w, h) {
+    const head = arrow.cells[arrow.cells.length - 1];
+    const d = Lane.DIRS[arrow.dir];
+    if (d.x < 0) return head[0];
+    if (d.x > 0) return w - 1 - head[0];
+    if (d.y < 0) return head[1];
+    return h - 1 - head[1];
+  }
+
+  function solvePaths(paths, w, h, rng) {
+    let rem = [];
+    for (let i = 0; i < paths.length; i++) {
+      if (!paths[i] || paths[i].length < 2) continue;
+      rem.push({ id: i + 1, cells: paths[i].map(function (c) { return [c[0], c[1]]; }) });
+    }
+    const placed = [];
+    let guard = 0;
+    while (rem.length && guard++ < paths.length + 8) {
+      const occ = Lane.occupy(rem.map(function (r) { return { id: r.id, dir: "R", cells: r.cells }; }));
+      const order = shuffle(rem, rng);
+      let picked = null;
+      let bestEdge = 1e9;
+      for (let i = 0; i < order.length; i++) {
+        const options = orientationsOf(order[i].cells);
+        for (let k = 0; k < options.length; k++) {
+          const arrow = { id: order[i].id, dir: options[k].dir, cells: options[k].cells };
+          if (!Lane.validArrow(arrow, w, h) || !Lane.isFree(arrow, occ, w, h)) continue;
+          const edge = edgeScore(arrow, w, h);
+          if (!picked || edge < bestEdge) {
+            picked = arrow;
+            bestEdge = edge;
+          }
+        }
+      }
+      if (!picked) {
+        rem.sort(function (a, b) { return a.cells.length - b.cells.length; });
+        rem.shift();
+        continue;
+      }
+      placed.push(picked);
+      rem = rem.filter(function (r) { return r.id !== picked.id; });
+    }
+    return placed;
+  }
+
+  function cleanArrows(arrows, w, h) {
+    const seen = new Set();
+    for (let i = 0; i < arrows.length; i++) {
+      if (!Lane.validArrow(arrows[i], w, h)) return false;
+      for (let c = 0; c < arrows[i].cells.length; c++) {
+        const k = arrows[i].cells[c][0] + "," + arrows[i].cells[c][1];
+        if (seen.has(k)) return false;
+        seen.add(k);
+      }
+    }
+    return true;
+  }
+
   function generateOne(lv) {
-    const handmade = handcrafted(lv);
-    if (handmade) return handmade;
     const spec = specFor(lv);
     let best = null;
     let bestScore = -1;
-    for (let attempt = 0; attempt < 28; attempt++) {
+    for (let attempt = 0; attempt < 8; attempt++) {
       const rng = mulberry32((lv * 100003 + attempt * 97 + 13) >>> 0);
-      let arrows = carve(spec.w, spec.h, rng, spec);
-      arrows = repair(arrows, spec.w, spec.h, rng);
-      arrows = topUp(arrows, spec.w, spec.h, rng, spec);
-      arrows = repair(arrows, spec.w, spec.h, rng);
-      if (arrows.length < Math.min(spec.minArrows, 8)) continue;
-      arrows = deepen(arrows, spec.w, spec.h, rng, spec.minWaves);
+      const borderSpec = Object.assign({}, spec, { onlyBorder: true, fill: 0.99, minLen: 2, maxLen: 4 });
+      let carved = carve(spec.w, spec.h, rng, borderSpec);
+      const restSpec = Object.assign({}, spec, { seedArrows: carved, fill: 0.98, maxLen: Math.min(6, spec.maxLen) });
+      carved = carved.concat(carve(spec.w, spec.h, rng, restSpec));
+      const arrows = solvePaths(carved.map(function (a) { return a.cells; }), spec.w, spec.h, rng);
+      if (arrows.length < spec.minArrows || !cleanArrows(arrows, spec.w, spec.h)) continue;
       const peeled = Lane.peel(arrows, spec.w, spec.h);
       if (!peeled.ok) continue;
       const free = Lane.freeArrows(arrows, spec.w, spec.h).length;
       if (free < 1) continue;
-      let overlap = false;
-      const seen = new Set();
-      for (let i = 0; i < arrows.length && !overlap; i++) {
-        if (!Lane.validArrow(arrows[i], spec.w, spec.h)) overlap = true;
-        for (let c = 0; c < arrows[i].cells.length; c++) {
-          const k = arrows[i].cells[c][0] + "," + arrows[i].cells[c][1];
-          if (seen.has(k)) overlap = true;
-          seen.add(k);
-        }
-      }
-      if (overlap) continue;
-      const filled = occupancy(arrows, spec.w, spec.h);
-      const score = peeled.waves * 8 + arrows.length + filled * 20 - Math.abs(free - 2) * 2;
-      if (score > bestScore && filled >= (spec.minFill || 0.4) * 0.85) {
+      const filled = filledCount(arrows) / spec.count;
+      const score = filled * 200 + Math.min(peeled.waves, 12);
+      if (score > bestScore) {
         bestScore = score;
         best = pack(lv, spec, arrows);
-        best._waves = peeled.waves;
-        best._free = free;
       }
-      if (peeled.waves >= spec.minWaves && free <= Math.max(3, Math.floor(arrows.length * 0.4)) && arrows.length >= spec.minArrows && filled >= (spec.minFill || 0.45)) {
-        return pack(lv, spec, arrows);
-      }
+      if (filled >= 0.9 && free >= 1) return pack(lv, spec, arrows);
     }
-    if (best) {
-      delete best._waves;
-      delete best._free;
-      return best;
-    }
+    if (best) return best;
     const rng = mulberry32((lv * 17 + 9) >>> 0);
     const fallback = repair(carve(spec.w, spec.h, rng, spec), spec.w, spec.h, rng);
-    return pack(lv, spec, fallback);
+    return pack(lv, spec, fallback.length ? fallback : carve(spec.w, spec.h, rng, spec));
   }
 
   function campaign(count) {
@@ -383,27 +443,25 @@
     const m = date.getMonth() + 1;
     const d = date.getDate();
     const seedLv = 4000 + (y * 372 + m * 31 + d) % 5000;
-    const spec = { w: 8, h: 10, fill: 0.7, minLen: 2, maxLen: 6, minArrows: 8, minWaves: 3, minFill: 0.5, label: "Daily" };
-    for (let attempt = 0; attempt < 12; attempt++) {
+    const spec = specFor(8 + (seedLv % 40));
+    spec.label = "Daily";
+    for (let attempt = 0; attempt < 8; attempt++) {
       const rng = mulberry32((seedLv + attempt * 131) >>> 0);
-      let arrows = repair(carve(spec.w, spec.h, rng, spec), spec.w, spec.h, rng);
+      let arrows = carve(spec.w, spec.h, rng, spec);
+      arrows = repair(arrows, spec.w, spec.h, rng);
       arrows = repair(topUp(arrows, spec.w, spec.h, rng, spec), spec.w, spec.h, rng);
-      arrows = deepen(arrows, spec.w, spec.h, rng, 3);
       if (Lane.peel(arrows, spec.w, spec.h).ok && arrows.length >= 6) {
-        return {
-          lv: 0,
-          daily: true,
-          w: spec.w,
-          h: spec.h,
-          label: "Daily",
-          title: "Daily",
-          arrows: arrows.map(function (a) {
-            return { id: a.id, dir: a.dir, cells: a.cells.map(function (c) { return [c[0], c[1]]; }) };
-          })
-        };
+        const packed = pack(0, spec, arrows);
+        packed.daily = true;
+        packed.label = "Daily";
+        return packed;
       }
     }
-    return generateOne(80);
+    const packed = generateOne(18);
+    packed.daily = true;
+    packed.lv = 0;
+    packed.label = "Daily";
+    return packed;
   }
 
   return {

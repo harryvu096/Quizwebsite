@@ -2,9 +2,9 @@
   "appId": "com.arrowlane.game",
   "appName": "Arrowlane",
   "webDir": "www",
-  "backgroundColor": "#2c3160",
+  "backgroundColor": "#ffffff",
   "android": {
-    "backgroundColor": "#2c3160"
+    "backgroundColor": "#ffffff"
   },
   "server": {
     "androidScheme": "https"
