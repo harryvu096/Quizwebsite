@@ -119,7 +119,7 @@
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
     ctx.clearRect(0, 0, rect.width, rect.height);
     const g = fitGeom(rect.width, rect.height, level.w, level.h);
-    drawDots(ctx, g, level.w, level.h);
+    drawDots(ctx, g, level.arrows, level.w, level.h);
     level.arrows.forEach(function (a) { drawArrow(ctx, a, g, COL.arrow, 0); });
   }
 
@@ -141,7 +141,7 @@
       level: source,
       arrows: arrows,
       hearts: 3,
-      hints: source.label === "Normal" || source.tutorial ? 2 : 3,
+      hints: !source.lv || source.lv <= 24 ? 2 : 1,
       hintId: null,
       teachId: source.lv === 1 ? Lane.hint(arrows, source.w, source.h) : null,
       gridOn: false,
@@ -165,8 +165,9 @@
     if (wrap) wrap.hidden = true;
     $("playSub").textContent = play.daily ? "Daily" : "Level " + level.lv;
     $("arrowCount").textContent = String(play.arrows.length);
-    $("diffPill").textContent = level.label || "Normal";
-    $("diffPill").className = "pill " + (level.label || "").split(" ")[0];
+    const diff = play.daily ? "Daily" : level.lv <= 16 ? "Normal" : level.lv <= 40 ? "Hard" : level.lv <= 64 ? "Super" : "Expert";
+    $("diffPill").textContent = diff;
+    $("diffPill").className = "pill " + diff;
     const hearts = $("hearts");
     hearts.innerHTML = "";
     for (let i = 0; i < 3; i++) {
@@ -176,7 +177,7 @@
     }
     $("hintCount").textContent = String(play.hints);
     $("btnUndo").disabled = play.history.length === 0 || play.phase !== "play";
-    $("btnGrid").classList.toggle("on", play.gridOn);
+    $("btnGrid").classList.toggle("on", play.view && play.view.scale > 1.08);
     const coach = $("coach");
     if (play.coachOn && level.coach) {
       coach.hidden = false;
@@ -197,7 +198,7 @@
       cell: cell,
       ox: (cssW - boardW) / 2,
       oy: (cssH - boardH) / 2,
-      stroke: Math.max(1.75, cell * 0.27)
+      stroke: Math.max(1.8, cell * 0.30)
     };
   }
 
@@ -207,11 +208,20 @@
     return fitGeom(rect.width, rect.height, play.level.w, play.level.h);
   }
 
-  function drawDots(ctx, g, w, h) {
-    ctx.fillStyle = COL.dot;
-    const r = Math.max(1.3, g.cell * 0.055);
+  function drawDots(ctx, g, arrows, w, h) {
+    const on = new Set();
+    (arrows || []).forEach(function (a) {
+      a.cells.forEach(function (c) { on.add(c[0] + "," + c[1]); });
+    });
+    ctx.fillStyle = "rgba(186, 194, 210, 0.9)";
+    const r = Math.max(1.05, g.cell * 0.05);
     for (let y = 0; y < h; y++) {
       for (let x = 0; x < w; x++) {
+        let near = on.has(x + "," + y);
+        if (!near) {
+          near = on.has((x - 1) + "," + y) || on.has((x + 1) + "," + y) || on.has(x + "," + (y - 1)) || on.has(x + "," + (y + 1));
+        }
+        if (!near) continue;
         ctx.beginPath();
         ctx.arc(g.ox + x * g.cell, g.oy + y * g.cell, r, 0, Math.PI * 2);
         ctx.fill();
@@ -309,7 +319,7 @@
     ctx.translate(rect.width / 2 + play.view.x, rect.height / 2 + play.view.y);
     ctx.scale(play.view.scale, play.view.scale);
     ctx.translate(-rect.width / 2, -rect.height / 2);
-    if (play.gridOn) drawDots(ctx, g, play.level.w, play.level.h);
+    drawDots(ctx, g, play.arrows, play.level.w, play.level.h);
 
     if (play.gridOn) {
       play.arrows.forEach(function (arrow) {
@@ -573,12 +583,55 @@
     openSheet("sheet-settings");
   }
 
+  const ZOOM_MAX = 6.5;
+  const ZOOM_STEPS = [1, 2.2, 3.6, 5.2];
+
   function clampPan() {
     if (!play || !play.geom) return;
-    const limitX = play.geom.cssW * 0.42 * play.view.scale;
-    const limitY = play.geom.cssH * 0.42 * play.view.scale;
+    if (play.view.scale <= 1.001) {
+      play.view.scale = 1;
+      play.view.x = 0;
+      play.view.y = 0;
+      return;
+    }
+    const extra = play.view.scale - 1;
+    const limitX = play.geom.cssW * 0.58 * extra + 24;
+    const limitY = play.geom.cssH * 0.58 * extra + 24;
     play.view.x = Math.max(-limitX, Math.min(limitX, play.view.x));
     play.view.y = Math.max(-limitY, Math.min(limitY, play.view.y));
+  }
+
+  function zoomAround(nextScale, clientX, clientY) {
+    if (!play) return;
+    const rect = $("board").getBoundingClientRect();
+    const prev = play.view.scale || 1;
+    const next = Math.max(1, Math.min(ZOOM_MAX, nextScale));
+    const cx = rect.width / 2;
+    const cy = rect.height / 2;
+    const sx = clientX - rect.left;
+    const sy = clientY - rect.top;
+    const bx = (sx - cx - play.view.x) / prev + cx;
+    const by = (sy - cy - play.view.y) / prev + cy;
+    play.view.scale = next;
+    if (next <= 1.001) {
+      play.view.scale = 1;
+      play.view.x = 0;
+      play.view.y = 0;
+    } else {
+      play.view.x = sx - cx - (bx - cx) * next;
+      play.view.y = sy - cy - (by - cy) * next;
+    }
+    clampPan();
+    updateHud();
+  }
+
+  function cycleZoom() {
+    if (!play || play.phase !== "play") return;
+    const cur = play.view.scale;
+    let next = ZOOM_STEPS.find(function (s) { return s > cur + 0.15; });
+    if (!next) next = 1;
+    const rect = $("board").getBoundingClientRect();
+    zoomAround(next, rect.left + rect.width / 2, rect.top + rect.height / 2);
   }
 
   function pinchDist() {
@@ -610,15 +663,39 @@
     prev.y = e.clientY;
     if (pointers.size >= 2) {
       if (!gesture || gesture.mode !== "pinch") gesture = { mode: "pinch", dist: pinchDist(), scale: play.view.scale };
-      play.view.scale = Math.max(1, Math.min(2.8, gesture.scale * (pinchDist() / gesture.dist)));
-      if (play.view.scale === 1) { play.view.x = 0; play.view.y = 0; }
+      const rect = $("board").getBoundingClientRect();
+      const cx = rect.width / 2;
+      const cy = rect.height / 2;
+      const pts = Array.from(pointers.values());
+      const midX = (pts[0].x + pts[1].x) / 2;
+      const midY = (pts[0].y + pts[1].y) / 2;
+      if (gesture.bx == null) {
+        gesture.midX = midX;
+        gesture.midY = midY;
+        gesture.bx = (midX - rect.left - cx - play.view.x) / play.view.scale + cx;
+        gesture.by = (midY - rect.top - cy - play.view.y) / play.view.scale + cy;
+      }
+      const next = Math.max(1, Math.min(ZOOM_MAX, gesture.scale * (pinchDist() / gesture.dist)));
+      const sx = gesture.midX - rect.left;
+      const sy = gesture.midY - rect.top;
+      play.view.scale = next;
+      if (next <= 1.001) {
+        play.view.scale = 1;
+        play.view.x = 0;
+        play.view.y = 0;
+      } else {
+        play.view.x = sx - cx - (gesture.bx - cx) * next;
+        play.view.y = sy - cy - (gesture.by - cy) * next;
+      }
+      clampPan();
       return;
     }
     if (!gesture || gesture.mode === "pinch") return;
-    if (Math.hypot(e.clientX - gesture.x, e.clientY - gesture.y) > 18) {
+    const drag = Math.hypot(e.clientX - gesture.x, e.clientY - gesture.y);
+    if (drag > (play.view.scale > 1.05 ? 7 : 16)) {
       gesture.moved = true;
       play.pressed = null;
-      if (play.view.scale > 1.02) gesture.mode = "pan";
+      if (play.view.scale > 1.05) gesture.mode = "pan";
     }
     if (gesture.mode === "pan") {
       play.view.x += dx;
@@ -637,7 +714,23 @@
     const held = performance.now() - g.t > 260;
     if (!g.moved && g.hit && play.phase === "play") commit(g.hit, held && !!blockedIf(g.hit));
     else play.pressed = null;
+    if (!g.moved && !g.hit && play.phase === "play") {
+      const now = performance.now();
+      if (now - lastEmptyTap < 320 && Math.hypot(e.clientX - lastEmptyX, e.clientY - lastEmptyY) < 36) {
+        const next = play.view.scale < 1.35 ? 2.6 : play.view.scale < 3.3 ? 5 : 1;
+        zoomAround(next, e.clientX, e.clientY);
+        lastEmptyTap = 0;
+      } else {
+        lastEmptyTap = now;
+        lastEmptyX = e.clientX;
+        lastEmptyY = e.clientY;
+      }
+    }
   }
+
+  let lastEmptyTap = 0;
+  let lastEmptyX = 0;
+  let lastEmptyY = 0;
 
   function blockedIf(id) {
     const arrow = play && play.arrows.find(function (a) { return a.id === id; });
@@ -664,11 +757,7 @@
     $("mapBack").onclick = goHome;
     $("btnHint").onclick = useHint;
     $("btnUndo").onclick = undo;
-    $("btnGrid").onclick = function () {
-      if (!play || play.phase !== "play") return;
-      play.gridOn = !play.gridOn;
-      updateHud();
-    };
+    $("btnGrid").onclick = cycleZoom;
     $("btnNext").onclick = function () {
       if (!play) return goHome();
       if (play.daily || play.level.lv >= LEVELS.length) return goHome();

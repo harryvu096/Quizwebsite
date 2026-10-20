@@ -35,7 +35,7 @@ def draw_level(level, path):
     board_h = (h - 1) * cell
     ox = (W - board_w) / 2
     oy = top + ((bot - top) - board_h) / 2
-    stroke = max(1.75, cell * 0.27)
+    stroke = max(1.6, cell * 0.21)
 
     def pt(c, off=0, direc=(0, 0)):
         return (
@@ -53,8 +53,8 @@ def draw_level(level, path):
             ]
         d.line(pts, fill=INK, width=int(round(stroke)), joint="curve")
         head = pts[-1]
-        tip_len = max(stroke * 1.7, cell * 0.2)
-        hw = stroke * 0.72
+        tip_len = max(stroke * 2.05, cell * 0.22)
+        hw = stroke * 0.82
         tip = (head[0] + direc[0] * tip_len, head[1] + direc[1] * tip_len)
         bx = head[0] - direc[0] * stroke * 0.15
         by = head[1] - direc[1] * stroke * 0.15

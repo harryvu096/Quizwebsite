@@ -44,7 +44,7 @@
       count: parsed.count,
       fill: 0.94,
       minLen: 2,
-      maxLen: Math.min(7, 4 + cycle),
+      maxLen: Math.min(12, 8 + cycle),
       minArrows: 4,
       minWaves: Math.min(2 + Math.floor(cycle / 2), 4),
       minFill: 0.8,
@@ -318,7 +318,7 @@
       label: spec.label,
       shape: spec.shape || spec.label,
       tutorial: !!spec.tutorial,
-      coach: lv === 1 ? "Tap a free head. The line slides out of the picture." : "",
+      coach: lv === 1 ? "Pinch, or tap zoom, to look closer. A free line slides out of the picture." : "",
       arrows: arrows.map(function (a) {
         return { id: a.id, dir: a.dir, cells: a.cells.map(function (c) { return [c[0], c[1]]; }) };
       })
@@ -408,9 +408,9 @@
     let bestScore = -1;
     for (let attempt = 0; attempt < 8; attempt++) {
       const rng = mulberry32((lv * 100003 + attempt * 97 + 13) >>> 0);
-      const borderSpec = Object.assign({}, spec, { onlyBorder: true, fill: 0.99, minLen: 2, maxLen: 4 });
+      const borderSpec = Object.assign({}, spec, { onlyBorder: true, fill: 0.99, minLen: 2, maxLen: 8 });
       let carved = carve(spec.w, spec.h, rng, borderSpec);
-      const restSpec = Object.assign({}, spec, { seedArrows: carved, fill: 0.98, maxLen: Math.min(6, spec.maxLen) });
+      const restSpec = Object.assign({}, spec, { seedArrows: carved, fill: 0.98, maxLen: spec.maxLen });
       carved = carved.concat(carve(spec.w, spec.h, rng, restSpec));
       const arrows = solvePaths(carved.map(function (a) { return a.cells; }), spec.w, spec.h, rng);
       if (arrows.length < spec.minArrows || !cleanArrows(arrows, spec.w, spec.h)) continue;

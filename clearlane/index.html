@@ -38,19 +38,19 @@
       </div>
       <header class="play-top">
         <button id="btnBack" class="bare back" aria-label="Back"></button>
-        <div class="hearts" id="hearts"></div>
+        <p id="playSub" class="level-title">Level 1</p>
         <button id="btnGear" class="bare gear" aria-label="Settings"></button>
       </header>
-      <p id="playSub" class="quiet-lv">Level 1</p>
-      <div class="hud" hidden>
+      <div class="hud">
         <div class="pill count"><b id="arrowCount">0</b></div>
+        <div class="hearts" id="hearts"></div>
         <div class="pill" id="diffPill">Normal</div>
       </div>
       <div id="boardWrap"><canvas id="board"></canvas></div>
       <p id="coach" class="coach" hidden></p>
       <footer class="tools">
         <button id="btnHint" class="tool hint" aria-label="Hint"><span id="hintCount" class="badge">2</span></button>
-        <button id="btnGrid" class="tool grid" aria-label="Show lanes"></button>
+        <button id="btnGrid" class="tool zoom" aria-label="Zoom"></button>
       </footer>
     </section>
 
@@ -104,7 +104,7 @@
           <li>Every line is one arrow. It only leaves from the head.</li>
           <li>Tap it when the straight lane in front is empty.</li>
           <li>A blocked tap costs a heart. Hold to preview, drag off to cancel.</li>
-          <li>Hint marks a safe arrow. The grid shows every lane.</li>
+          <li>Pinch, double-tap empty space, or the zoom button to look closer. Drag to move when zoomed.</li>
         </ol>
         <button id="helpClose" class="play">Got it</button>
       </div>
