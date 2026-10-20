@@ -40,15 +40,18 @@
   function handcrafted(lv) {
     if (lv === 1) {
       return {
-        lv: 1, w: 5, h: 6, label: "Normal", tutorial: true,
+        lv: 1, w: 6, h: 8, label: "Normal", tutorial: true,
         title: "Clear the Board",
-        coach: "Gold arrows can leave. Tap one.",
+        coach: "Tap the gold arrow.",
         arrows: [
-          { id: 1, dir: "D", cells: [[0, 3], [0, 4], [0, 5]] },
-          { id: 2, dir: "R", cells: [[1, 1], [2, 1], [3, 1]] },
-          { id: 3, dir: "U", cells: [[4, 2], [4, 1], [4, 0]] },
-          { id: 4, dir: "D", cells: [[2, 4], [2, 5]] },
-          { id: 5, dir: "D", cells: [[1, 2], [2, 2], [2, 3]] }
+          { id: 1, dir: "D", cells: [[0, 1], [0, 2], [0, 3], [0, 4], [0, 5]] },
+          { id: 2, dir: "R", cells: [[2, 0], [3, 0], [4, 0], [5, 0]] },
+          { id: 3, dir: "U", cells: [[1, 2], [2, 2], [3, 2], [3, 1]] },
+          { id: 4, dir: "D", cells: [[5, 2], [5, 3], [5, 4], [5, 5]] },
+          { id: 5, dir: "L", cells: [[2, 4], [2, 5], [2, 6], [1, 6]] },
+          { id: 6, dir: "D", cells: [[4, 3], [3, 3], [3, 4], [3, 5]] },
+          { id: 7, dir: "D", cells: [[1, 4], [1, 5]] },
+          { id: 8, dir: "R", cells: [[4, 7], [5, 7]] }
         ]
       };
     }
@@ -164,7 +167,7 @@
         });
         if (!options.length) break;
         let pick = null;
-        if (prev && rng() < 0.58) {
+        if (prev && rng() < 0.72) {
           const sx = cur[0] + (cur[0] - prev[0]);
           const sy = cur[1] + (cur[1] - prev[1]);
           for (let i = 0; i < options.length; i++) {
@@ -282,7 +285,7 @@
         const options = neighbors(cur[0], cur[1], w, h).filter(function (n) { return !grid[n[1]][n[0]]; });
         if (!options.length) break;
         let pick = null;
-        if (prev && rng() < 0.58) {
+        if (prev && rng() < 0.72) {
           const sx = cur[0] + (cur[0] - prev[0]);
           const sy = cur[1] + (cur[1] - prev[1]);
           for (let i = 0; i < options.length; i++) {

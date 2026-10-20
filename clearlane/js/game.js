@@ -4,10 +4,10 @@
   const LEVELS = window.LANE_LEVELS || [];
   const SAVE_KEY = "arrowlane_v1";
   const COL = {
-    arrow: "#3ed4ee",
+    arrow: "#5cd2e6",
     gold: "#ffc53d",
     bad: "#ff5d73",
-    dot: "rgba(186, 182, 220, 0.5)"
+    dot: "rgba(92, 102, 184, 0.9)"
   };
 
   function loadSave() {
@@ -143,6 +143,7 @@
       hearts: 3,
       hints: source.label === "Normal" || source.tutorial ? 2 : 3,
       hintId: null,
+      teachId: source.lv === 1 ? Lane.hint(arrows, source.w, source.h) : null,
       gridOn: false,
       history: [],
       ghosts: [],
@@ -160,10 +161,15 @@
   function updateHud() {
     if (!play) return;
     const level = play.level;
-    const big = level.title && level.lv && level.lv <= 3;
-    $("playTitle").textContent = big ? level.title : (play.daily ? "Daily" : "Level " + level.lv);
-    $("playTitle").classList.toggle("big", !!big);
-    $("playSub").textContent = big ? "Level " + level.lv : "";
+    const titles = { 1: "Clear<br>the Board", 2: "Tap Away<br>Arrows", 3: "Find a<br>Free Path" };
+    const wrap = $("titleWrap");
+    if (titles[level.lv] && !play.daily) {
+      wrap.hidden = false;
+      $("playTitle").innerHTML = titles[level.lv];
+    } else {
+      wrap.hidden = true;
+    }
+    $("playSub").textContent = play.daily ? "Daily" : "Level " + level.lv;
     $("arrowCount").textContent = String(play.arrows.length);
     $("diffPill").textContent = level.label || "Normal";
     $("diffPill").className = "pill " + (level.label || "").split(" ")[0];
@@ -197,7 +203,7 @@
       cell: cell,
       ox: (cssW - boardW) / 2,
       oy: (cssH - boardH) / 2,
-      stroke: Math.max(4.6, cell * 0.36)
+      stroke: Math.max(5, cell * 0.30)
     };
   }
 
@@ -225,31 +231,35 @@
     const pts = arrow.cells.map(function (c) {
       return [g.ox + c[0] * g.cell + d.x * off, g.oy + c[1] * g.cell + d.y * off];
     });
-    const head = pts[pts.length - 1];
-    const tip = [head[0] + d.x * g.cell * 0.48, head[1] + d.y * g.cell * 0.48];
-    const base = [head[0] + d.x * g.cell * 0.05, head[1] + d.y * g.cell * 0.05];
+    let shaft = pts;
+    if (pts.length === 1) {
+      shaft = [[pts[0][0] - d.x * g.cell * 0.38, pts[0][1] - d.y * g.cell * 0.38], pts[0]];
+    }
+    const stroke = g.stroke;
     ctx.strokeStyle = color;
     ctx.fillStyle = color;
-    ctx.lineWidth = g.stroke;
+    ctx.lineWidth = stroke;
     ctx.lineJoin = "round";
-    ctx.lineCap = "round";
+    ctx.lineCap = "butt";
     ctx.beginPath();
-    if (pts.length === 1) {
-      ctx.moveTo(head[0] - d.x * g.cell * 0.4, head[1] - d.y * g.cell * 0.4);
-    } else {
-      ctx.moveTo(pts[0][0], pts[0][1]);
-      for (let i = 1; i < pts.length - 1; i++) ctx.lineTo(pts[i][0], pts[i][1]);
-    }
-    ctx.lineTo(base[0] - d.x * g.stroke * 0.2, base[1] - d.y * g.stroke * 0.2);
+    ctx.moveTo(shaft[0][0], shaft[0][1]);
+    for (let i = 1; i < shaft.length; i++) ctx.lineTo(shaft[i][0], shaft[i][1]);
     ctx.stroke();
-    const hw = g.stroke * 0.82;
+    ctx.beginPath();
+    ctx.arc(shaft[0][0], shaft[0][1], stroke / 2, 0, Math.PI * 2);
+    ctx.fill();
+    const head = shaft[shaft.length - 1];
+    const tipLen = stroke * 1.42;
+    const hw = stroke * 0.78;
+    const tip = [head[0] + d.x * tipLen, head[1] + d.y * tipLen];
+    const bx = head[0] - d.x * 1.8;
+    const by = head[1] - d.y * 1.8;
     const px = -d.y;
     const py = d.x;
-    const back = g.stroke * 0.42;
     ctx.beginPath();
     ctx.moveTo(tip[0], tip[1]);
-    ctx.lineTo(base[0] - d.x * back + px * hw, base[1] - d.y * back + py * hw);
-    ctx.lineTo(base[0] - d.x * back - px * hw, base[1] - d.y * back - py * hw);
+    ctx.lineTo(bx + px * hw, by + py * hw);
+    ctx.lineTo(bx - px * hw, by - py * hw);
     ctx.closePath();
     ctx.fill();
   }
@@ -271,7 +281,7 @@
     ctx.strokeStyle = color;
     ctx.globalAlpha = 0.7;
     ctx.lineWidth = Math.max(1.5, g.stroke * 0.18);
-    ctx.setLineDash([g.cell * 0.16, g.cell * 0.14]);
+    ctx.setLineDash([]);
     ctx.beginPath();
     ctx.moveTo(head[0] + d.x * g.cell * 0.5, head[1] + d.y * g.cell * 0.5);
     ctx.lineTo(end[0], end[1]);
@@ -282,7 +292,7 @@
   function arrowStyle(arrow, now) {
     if (play.flash && play.flash.id === arrow.id && now < play.flash.until) return "bad";
     if (play.pressed === arrow.id || play.hintId === arrow.id) return "hot";
-    if (play.level.lv === 1 && Lane.isFree(arrow, play.arrows, play.level.w, play.level.h)) return "hot";
+    if (play.teachId && play.teachId === arrow.id) return "hot";
     return "idle";
   }
 
@@ -446,6 +456,7 @@
     const ray = Lane.rayCells(arrow, play.level.w, play.level.h).length;
     play.ghosts.push({ arrow: arrow, t0: performance.now(), dur: 260 + ray * 26 });
     play.hintId = null;
+    play.teachId = null;
     play.gridOn = false;
     play.coachOn = false;
     sfx("go");
@@ -643,9 +654,7 @@
   }
 
   function goHome() {
-    play = null;
-    show("screen-home");
-    renderHome();
+    openMap();
   }
 
   function boot() {
@@ -711,9 +720,7 @@
       history.pushState({ lane: 1 }, "");
     });
     history.pushState({ lane: 1 }, "");
-    show("screen-home");
-    renderHome();
-    if (!S.helpSeen) openSheet("sheet-help");
+    startLevel(Math.min(S.unlocked || 1, LEVELS.length), false);
   }
 
   if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", boot);

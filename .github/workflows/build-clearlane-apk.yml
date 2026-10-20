@@ -38,7 +38,7 @@ jobs:
           mkdir -p www/assets www/css www/js www/data
           cp index.html privacy.html www/
           cp -r css js data www/
-          cp assets/icon.png www/assets/
+          cp -r assets/. www/assets/
           cp manifest.webmanifest www/ || true
           node -e 'const fs=require("fs"); const c=JSON.parse(fs.readFileSync("capacitor.config.json","utf8")); c.webDir="www"; c.appName="Arrowlane"; fs.writeFileSync("capacitor.config.json", JSON.stringify(c,null,2));'
           if [ -z "$ANDROID_HOME" ]; then

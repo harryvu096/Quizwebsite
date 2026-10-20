@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
-  <meta name="theme-color" content="#1a1744">
+  <meta name="theme-color" content="#2c3160">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <title>Arrowlane</title>
   <link rel="stylesheet" href="css/style.css">
@@ -33,25 +33,24 @@
     </section>
 
     <section id="screen-play" class="screen">
-      <header class="top">
-        <button id="btnBack" class="icon" aria-label="Back"></button>
-        <div id="titleBlock">
-          <h2 id="playTitle">Level 1</h2>
-          <p id="playSub"></p>
-        </div>
-        <button id="btnGear" class="icon" aria-label="Settings"></button>
-      </header>
+      <div id="titleWrap" class="hero-wrap">
+        <h1 id="playTitle">Clear<br>the Board</h1>
+      </div>
+      <div class="level-row">
+        <button id="btnBack" class="bare back" aria-label="Back"></button>
+        <p id="playSub">Level 1</p>
+        <button id="btnGear" class="bare gear" aria-label="Settings"></button>
+      </div>
       <div class="hud">
-        <div class="pill count" id="countPill"><b id="arrowCount">0</b></div>
+        <div class="pill count"><b id="arrowCount">0</b></div>
         <div class="hearts" id="hearts"></div>
         <div class="pill" id="diffPill">Normal</div>
       </div>
       <div id="boardWrap"><canvas id="board"></canvas></div>
       <p id="coach" class="coach" hidden></p>
       <footer class="tools">
-        <button id="btnHint" class="tool" aria-label="Hint"><span id="hintCount" class="badge">2</span></button>
-        <button id="btnUndo" class="tool" aria-label="Undo"></button>
-        <button id="btnGrid" class="tool" aria-label="Show lanes"></button>
+        <button id="btnHint" class="tool hint" aria-label="Hint"><span id="hintCount" class="badge">2</span></button>
+        <button id="btnGrid" class="tool grid" aria-label="Show lanes"></button>
       </footer>
     </section>
 
@@ -90,6 +89,7 @@
         <h3>Settings</h3>
         <label class="row"><span>Sound</span><input id="setSfx" type="checkbox"></label>
         <label class="row"><span>Vibration</span><input id="setVib" type="checkbox"></label>
+        <button id="btnUndo" class="ghost wide">Undo last</button>
         <button id="setRestart" class="ghost wide">Restart level</button>
         <button id="setHelp" class="ghost wide">How to play</button>
         <button id="setHome" class="ghost wide">Home</button>
