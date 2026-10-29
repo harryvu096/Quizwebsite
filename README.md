@@ -4,8 +4,8 @@ Gamified MCQ practice arena for Virtual University students: **68 subjects · 4,
 
 ## 🆕 Assignment Studio — VU-style .docx builder (English)
 
-- **📝 Assignment Studio** — paste rough questions + answers (any style: "Q1", "Question No. 2", "3)"), or upload **.txt / .docx** (drag & drop supported). The smart parser splits them into editable question cards.
-- **VU format output** — real **MS Word (.docx)** with cover page (Student ID, Name, Subject, Assignment No, Semester, Submitted To), "Question No. X; Y Marks / Answer:" body, **Times New Roman 12pt** — matching VU assignment instructions. File name follows the VU convention: `BC123456789_CS101_AssignmentNo1_Fall2026.docx`.
+- **📝 Assignment Studio** — paste rough questions + answers (any style: "Q1", "Question No. 2", "3)"), or upload **.txt / .md / .docx / .pdf** (drag & drop supported; PDF text extraction included). The smart parser splits them into editable question cards. One-click **📄 Sample** demo.
+- **VU format output** — real **MS Word (.docx)** with cover page (Student ID, Name, Subject, Assignment No, Semester, Due Date — larger fonts), body with **question text 14pt bold** and **answer 12pt** (clear visual difference), "Question No. X / (Marks: Y) / Answer:" structure, **Times New Roman** — matching VU assignment instructions. File name follows the VU convention: `BC123456789_CS101_AssignmentNo1_Fall2026.docx`.
 - **✨ Humanize (offline)** — student-voice polish: strips markdown & AI-sounding phrases, adds natural openers ("According to the handouts…"). No internet needed.
 - **🤖 Optional AI Humanize** — rewrite answers in a real student's voice using **your own API key** (Google Gemini free tier, or any OpenAI-compatible API). The key stays in your browser only.
 - **🖨️ Print / PDF backup** — same content printable if Word is not available. Everything runs in the browser — works offline.
