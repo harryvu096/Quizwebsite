@@ -2,6 +2,14 @@
 
 Gamified MCQ practice arena for Virtual University students: **68 subjects · 4,152 past-paper style MCQs · Mid + Finalterm arenas**, with hearts, streaks, boss battles, XP levels, certificates and a Mistake Vault.
 
+## 🆕 Assignment Studio — VU-style .docx builder (English)
+
+- **📝 Assignment Studio** — paste rough questions + answers (any style: "Q1", "Question No. 2", "3)"), or upload **.txt / .docx** (drag & drop supported). The smart parser splits them into editable question cards.
+- **VU format output** — real **MS Word (.docx)** with cover page (Student ID, Name, Subject, Assignment No, Semester, Submitted To), "Question No. X; Y Marks / Answer:" body, **Times New Roman 12pt** — matching VU assignment instructions. File name follows the VU convention: `BC123456789_CS101_AssignmentNo1_Fall2026.docx`.
+- **✨ Humanize (offline)** — student-voice polish: strips markdown & AI-sounding phrases, adds natural openers ("According to the handouts…"). No internet needed.
+- **🤖 Optional AI Humanize** — rewrite answers in a real student's voice using **your own API key** (Google Gemini free tier, or any OpenAI-compatible API). The key stays in your browser only.
+- **🖨️ Print / PDF backup** — same content printable if Word is not available. Everything runs in the browser — works offline.
+
 ## 🆕 What's New — Oct 2026 Polish Round (English)
 
 - **⚡ Daily Challenge** — 5 mixed MCQs every day (same set for the whole day), 3 hearts, streak counter 🔥. Home screen button + live status under the name box.
