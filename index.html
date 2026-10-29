@@ -23,7 +23,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%237c3aed'/%3E%3Ctext x='32' y='42' font-size='26' font-family='Arial' font-weight='900' fill='white' text-anchor='middle'%3EAHW%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-build="ahw13">
+<body data-build="ahw14">
 
 <div class="blob" style="left:6%;top:14%;animation-duration:11s">📡</div>
 <div class="blob" style="left:88%;top:10%;animation-duration:8s">🌐</div>
@@ -377,7 +377,7 @@
     <div id="mrBody" style="margin-top:16px"></div>
   </section>
 
-  <!-- ============ ASSIGNMENT STUDIO (VU-style .docx builder) ============ -->
+  <!-- ============ ASSIGNMENT STUDIO (ahw14 - VU-style .docx builder) ============ -->
   <section id="screen-assign" class="screen">
     <div class="topbar">
       <div class="mini-logo" onclick="goHome()" style="cursor:pointer" title="Home">📝 Assignment Studio <span style="opacity:.8;font-size:13px">· VU-style Word file</span></div>
@@ -386,84 +386,73 @@
       </div>
     </div>
 
-    <div class="card">
-      <div class="big-title" style="font-size:22px">Paste karo → Format hamara → <span class="grad">.docx download</span> 📄</div>
-      <div class="sub">Rough questions + answers paste ya upload karein — Assignment Studio unhe <b>VU format</b> mein set kar ke proper <b>MS Word file</b> bana deta hai (cover page ke sath, Times New Roman 12). Koi software nahi, sab browser mein — offline bhi chalta hai.</div>
+    <div class="as-wrap">
+      <div class="as-steps"><span><b>1</b> Questions daalein</span><span><b>2</b> Cover bharein</span><span><b>3</b> Humanize + Word download</span></div>
 
-      <!-- STEP 1: cover details -->
-      <div class="as-step">① Cover Page Details</div>
-      <div class="as-grid">
-        <label>Student ID *<input id="asSid" type="text" placeholder="BC210204567" maxlength="20"></label>
-        <label>Student Name<input id="asName" type="text" placeholder="Muhammad Ahmed" maxlength="40"></label>
-        <label>Subject Code *<input id="asSubject" type="text" placeholder="CS101" maxlength="12"></label>
-        <label>Subject Title<input id="asSubjectTitle" type="text" placeholder="Introduction to Computing" maxlength="60"></label>
-        <label>Assignment No.
-          <select id="asAsgNo"><option>1</option><option>2</option><option>3</option><option>4</option></select>
-        </label>
-        <label>Semester<input id="asSem" type="text" placeholder="Fall 2026" list="asSemList" maxlength="20">
-          <datalist id="asSemList"><option>Fall 2026</option><option>Spring 2026</option><option>Summer 2026</option><option>Fall 2025</option></datalist>
-        </label>
-        <label>Submitted To<input id="asTeacher" type="text" placeholder="Sir / Ma'am name" maxlength="40"></label>
-        <label>Due Date (optional)<input id="asDue" type="text" placeholder="15/12/2026" maxlength="20"></label>
+      <div class="as-card">
+        <div class="as-lbl">1&#65039;&#8419; Assignment questions + answers paste karein (ya file upload)</div>
+        <textarea id="asPaste" class="as-paste" rows="8" placeholder="Q1: What is an operating system? (5 marks)&#10;Answer: An operating system is system software that manages hardware...&#10;&#10;Q2: Explain main functions of OS.&#10;Ans: Process management, memory management..."></textarea>
+        <div class="as-row">
+          <button class="btn btn-amber btn-sm" id="asSampleBtn">&#128196; Sample try karein</button>
+          <button class="btn btn-blue btn-sm" onclick="document.getElementById('asFile').click()">&#128194; File (.txt / .md / .docx / .pdf)</button>
+          <input id="asFile" type="file" accept=".txt,.md,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none">
+          <button class="btn btn-purple btn-sm" id="asParseBtn">&#10024; Questions add karein</button>
+          <button class="btn btn-gray btn-sm" id="asClearBtn">&#128465;&#65039; Clear</button>
+          <span class="as-hint">drag &amp; drop bhi chalega &middot; .pdf/.docx se text nikal jata hai</span>
+        </div>
+        <div id="asFileMsg"></div>
+        <div id="asQList"><div class="as-empty">Upar text paste karein ya &#128196; Sample try karein dabayein &mdash; questions yahan list honge.</div></div>
       </div>
 
-      <!-- STEP 2: paste / upload -->
-      <div class="as-step">② Questions &amp; Answers — paste ya upload karein</div>
-      <div class="as-pastewrap">
-        <textarea id="asPaste" class="as-paste" rows="8" placeholder="Example — kisi bhi style mein paste kar sakte hain:&#10;&#10;Question No. 1&#10;What is operating system? (5 marks)&#10;Answer:&#10;An operating system is system software that manages hardware...&#10;&#10;Q2. Explain paging with example. (10 marks)&#10;Ans: Paging is a memory management scheme..."></textarea>
-        <div class="as-uploadrow">
-          <button class="btn btn-blue btn-sm" onclick="document.getElementById('asFile').click()">📥 Upload .txt / .docx file</button>
-          <input id="asFile" type="file" accept=".txt,.md,.docx,text/plain" style="display:none">
-          <button class="btn btn-purple btn-sm" id="asParseBtn">🔍 Parse Questions</button>
-          <button class="btn btn-gray btn-sm" id="asAddBtn">➕ Add Question</button>
-          <span class="as-hint">drag &amp; drop bhi chalega · .docx se text nikal jata hai</span>
+      <div class="as-card">
+        <div class="as-lbl">2&#65039;&#8419; Cover page (Word file ke liye)</div>
+        <div class="as-grid">
+          <label>Student ID<input id="asSid" type="text" placeholder="BC210204567" maxlength="20"></label>
+          <label>Student Name<input id="asName" type="text" placeholder="Muhammad Ahmed" maxlength="40"></label>
+          <label>Subject Code<input id="asSubject" type="text" placeholder="CS101" maxlength="12"></label>
+          <label>Subject Title<input id="asSubjectTitle" type="text" placeholder="Introduction to Computing" maxlength="60"></label>
+          <label>Assignment No.<input id="asAsgNo" type="text" placeholder="1" maxlength="4"></label>
+          <label>Semester<input id="asSem" type="text" placeholder="Fall 2026" list="asSemList" maxlength="20">
+            <datalist id="asSemList"><option>Fall 2026</option><option>Spring 2026</option><option>Summer 2026</option><option>Fall 2025</option></datalist>
+          </label>
+          <label>Due Date (optional)<input id="asDue" type="text" placeholder="15/12/2026" maxlength="20"></label>
         </div>
       </div>
-      <div id="asQList"></div>
 
-      <!-- STEP 3: humanize + style -->
-      <div class="as-step">③ Student Style &amp; Humanize</div>
-      <div class="as-grid">
-        <label>Writing style
-          <select id="asStyle">
-            <option value="student">Student — simple &amp; natural</option>
-            <option value="formal">Formal — proper academic</option>
-            <option value="detailed">Detailed — longer paragraphs</option>
-          </select>
-        </label>
-        <label class="as-check"><input type="checkbox" id="asOpener" checked> Natural openers (\"According to the handouts…\")</label>
-        <label class="as-check"><input type="checkbox" id="asCover" checked> Cover page include karein</label>
-        <label>Output file name (VU convention)<input id="asFileName" type="text" placeholder="auto: ID_CODE_AssignmentNo_Semester.docx" maxlength="60"></label>
-      </div>
-      <div class="as-btnrow">
-        <button class="btn btn-green" id="asHumBtn">✨ Humanize (offline)</button>
-        <button class="btn btn-purple" id="asDlBtn">⬇️ Download .docx (MS Word)</button>
-        <button class="btn btn-gray" id="asPrintBtn">🖨️ Print / PDF backup</button>
-      </div>
-      <div class="as-fileprev" id="asFilePreview">📄 StudentID_Subject_AssignmentNo1_Semester.docx</div>
-
-      <!-- STEP 4: optional AI -->
-      <details class="as-aibox">
-        <summary>🤖 Optional: AI se answers humanize karein (apni API key)</summary>
-        <div class="sub" style="margin:8px 0">Apni <b>khud ki API key</b> use hoti hai — key sirf aap ke browser mein save hoti hai, hamare paas nahi. Sab se asaan free tareeqa: <b>Google AI Studio</b> ki Gemini key.</div>
+      <details class="as-card as-details"><summary>&#9881;&#65039; Extra options (zaroorat nahi &mdash; defaults best hain)</summary>
         <div class="as-grid">
-          <label>Provider
-            <select id="asAiProv">
-              <option value="gemini">Google Gemini (free key)</option>
-              <option value="openai">OpenAI-compatible API</option>
+          <label>Writing style
+            <select id="asStyle">
+              <option value="student">Student &mdash; simple &amp; natural</option>
+              <option value="formal">Formal &mdash; proper academic</option>
+              <option value="concise">Short &amp; simple</option>
             </select>
           </label>
-          <label>API Key<input id="asAiKey" type="password" placeholder="AIza... / sk-..." autocomplete="off"></label>
-          <label>Model<input id="asAiModel" type="text" placeholder="gemini-2.0-flash / gpt-4o-mini" maxlength="40"></label>
-          <label>Base URL (OpenAI-compatible)<input id="asAiBase" type="text" placeholder="https://api.openai.com" maxlength="80"></label>
+          <label>Answer opener
+            <select id="asOpener">
+              <option value="mix">Mix (natural)</option>
+              <option value="handouts">VU handouts style</option>
+              <option value="simple">Simple</option>
+            </select>
+          </label>
+          <label class="as-check"><input type="checkbox" id="asCover" checked> Cover page include karein</label>
+          <label>Output file name (VU convention)<input id="asFileName" type="text" placeholder="auto: ID_CODE_AssignmentNo_Semester.docx" maxlength="60"></label>
         </div>
-        <div class="as-btnrow">
-          <button class="btn btn-pink" id="asAiBtn">🤖 AI Humanize — rewrite in student voice</button>
-        </div>
-        <div class="as-hint">Free Gemini key: <b>aistudio.google.com/apikey</b> — 2 minute mein ban jati hai.</div>
       </details>
+
+      <div class="as-card">
+        <div class="as-lbl">3&#65039;&#8419; Humanize + Download</div>
+        <div class="as-btnrow">
+          <button class="btn btn-green" id="asHumBtn">&#10024; Humanize (student voice)</button>
+          <button class="btn btn-pink" id="asDlBtn">&#128229; Download MS Word</button>
+          <button class="btn btn-gray" id="asPrintBtn">&#128424;&#65039; Print / PDF backup</button>
+        </div>
+        <div class="as-fileprev" id="asFileNameOut">&#128196; File name: <b>StudentID_Subject_AssignmentNo1_Semester.docx</b></div>
+        <div class="as-lbl" style="margin-top:12px">Preview</div>
+        <div class="as-preview" id="asPreview"><div class="as-empty">Questions add karein &mdash; live preview yahan dikhega.</div></div>
+      </div>
     </div>
-    <div id="assignPrintArea"></div>
+    <div id="assignPrintArea"><div class="pv-cover" id="asPrintCover"></div><div class="pv-sec" id="asPrintPreview"></div></div>
   </section>
 
   <!-- ============ C++ LAB v2 (mini-IDE: multi-file + settings) ============ -->
@@ -747,10 +736,10 @@
 
 <div class="streak-banner" id="streakBanner"></div>
 
-<script src="data/mcqs.js?v=ahw13"></script>
-<script src="js/app.js?v=ahw13"></script>
-<script src="js/compiler.js?v=ahw13"></script>
-<script src="js/english.js?v=ahw13"></script>
-<script src="js/assignment.js?v=ahw13"></script>
+<script src="data/mcqs.js?v=ahw14"></script>
+<script src="js/app.js?v=ahw14"></script>
+<script src="js/compiler.js?v=ahw14"></script>
+<script src="js/english.js?v=ahw14"></script>
+<script src="js/assignment.js?v=ahw14"></script>
 </body>
 </html>
