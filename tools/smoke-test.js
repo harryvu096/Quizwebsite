@@ -69,7 +69,7 @@ function assert(cond, label) {
   assert(nb > 100, "MCQ data loaded (" + nb + " banks)");
   assert($("#modal-dialog") !== null, "dialog modal exists");
   assert($("#fbReportBtn") !== null, "Report button exists");
-  assert(doc.body.getAttribute("data-build") === "ahw14", "build tag synced");
+  assert(doc.body.getAttribute("data-build") === "ahw15", "build tag synced");
 
   console.log("\n[2] Home → Subjects");
   doc.getElementById("playerName").value = "SmokeTester";
@@ -261,6 +261,23 @@ function assert(cond, label) {
   assert(/paging/i.test(parsed[1].q) && parsed[1].marks === 10, "Q2 marks parsed (" + parsed[1].marks + ")");
   assert(/Second line/.test(parsed[1].answer) && /frames/.test(parsed[1].answer), "Q2 multi-line answer kept");
   assert(/compiler and interpreter/i.test(parsed[2].q), "numbered-list question parsed");
+
+  // -- LMS question-file parser (real VU-LMS formats from sample files)
+  const lms = L.parseAssignmentText(
+    "Question No. 1\nA university campus is upgrading its department networks. Considering the above-mentioned scenario, you are required to answer the following questions:\n1. Identify the network topology used in the Finance department.\n2. Identify the network topology used in the Lab department.\n3. Calculate the total number of cables.\n\nQuestion No. 2\nFill in the correct PDU term in Column C.\nA B C\nTransport Layer Bits / Segment\n\nQ3: Identify all possible entities in the scenario. [Marks: 5]"
+  );
+  assert(lms.length === 3, "LMS: sub-questions merged, 3 questions (" + lms.length + ")");
+  assert(/Finance department/.test(lms[0].q) && /Lab department/.test(lms[0].q), "LMS: sub-parts kept in Q1 text");
+  assert(lms[2].marks === 5 && lms[2].q.indexOf("[]") === -1 && !/Marks/i.test(lms[2].q), "LMS: inline [Marks: 5] extracted + cleaned");
+
+  const sta = L.parseAssignmentText("Question # 1 of 3:\nA hospital administrator records the ages of 10 patients: 18, 52, 30.\nConstruct a stem-and-leaf display.\nAnswer Area:\n\nQuestion # 2 of 3:\nCalculate the harmonic mean.\nAnswer Area:");
+  assert(sta.length === 2 && /stem-and-leaf/.test(sta[0].q), "LMS: 'Question # 1 of 3' + Answer Area handled (" + sta.length + ")");
+
+  const lmsMeta = L.extractLmsMeta("Assignment No. 01\nSemester: Fall 2026\nCS601: Data Communication\nTotal Marks: 15\nDue Date:\n2nd November, 2026", "Fall 2026_CS601_1 (1).pdf");
+  assert(lmsMeta.subject === "CS601" && /Data Communication/.test(lmsMeta.subjectTitle), "LMS meta: subject code+title auto");
+  assert(lmsMeta.asgNo === "1" && /fall 2026/i.test(lmsMeta.semester), "LMS meta: assignment no + semester auto");
+  assert(/November.*2026/.test(lmsMeta.due), "LMS meta: due date (next-line form): " + lmsMeta.due);
+  assert(typeof L.makeAiPrompt === "function" && L.makeAiPrompt({ q: "What is LAN?", marks: 5 }, lmsMeta).indexOf("What is LAN?") > -1, "AI prompt builder (VU handouts voice)");
 
   // -- humanizer: markdown + AI-isms
   const hum = L.humanizeText("## Heading\n**In conclusion,** we *must* leverage a robust approach.\n\nMoreover, it is important to note that systems are comprehensive.", "student", "mix", {});
