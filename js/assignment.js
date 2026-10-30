@@ -46,9 +46,9 @@
   /* ================================================================
      PARSER — paste ya file se questions/answers nikalta hai
      ================================================================ */
-  const Q_START = /^\s*(?:question\s*(?:no\.?|#|:)?\s*|q\s*\.?\s*#?\s*:??\s*)(\d{1,3})\s*[.):\-]?\s*(.*)$/i;
+  const Q_START = /^\s*(?:question\s*(?:no\.?|#|:)?\s*|q\s*\.?\s*#?\s*:??\s*)(\d{1,3})\s*(?:\s*(?:of|\/)\s*\d{1,3})?\s*[.):\-–—]?\s*(.*)$/i;
   const Q_NUM_ONLY = /^\s*(\d{1,3})\s*[.)]\s+(.*)$/;
-  const A_START = /^\s*(?:answer|solution|ans)\s*[:.\-]\s*(.*)$/i;
+  const A_START = /^\s*(?:answer|solution|ans)(?:\s+area)?\s*(?:[:.\-–—]\s*|\s*$)(.*)$/i;
   const MARKS_IN = /[\(\[]?\b(\d{1,3})\s*(?:marks?|marks?\s*[=*x]\s*\d{1,2})\b[\)\]]?|marks?\s*[:=]\s*(\d{1,3})|\[(\d{1,3})\s*marks?\]/i;
   function grabMarks(line) {
     const m = line.match(MARKS_IN);
@@ -73,21 +73,35 @@
 
     for (const raw of lines) {
       const line = raw.trimEnd();
+      const s = line.trim();
+      // VU-LMS page furniture
+      if (/^page\s+\d+\s*(?:of|\/)\s*\d+\s*$/i.test(s)) continue;
+      if (/^best\s+of\s+luck\s*[!.]?\s*$/i.test(s)) continue;
+      if (/^(?:answer|solution)\s*area\s*:?\s*$/i.test(s)) { if (cur && cur.q) mode = "a"; continue; }
+
       let m = line.match(Q_START);
-      if (!m) m = line.match(Q_NUM_ONLY);
-      const numOk = m && (mode !== "a" || /^\s*question/i.test(line) || /^\s*q\s*\d/i.test(line)
-        || parseInt(m[1], 10) === out.length + (cur ? 1 : 0) + 1);   // sequential "3)" after Q2 also starts a question
+      let bare = false;
+      if (!m) { m = line.match(Q_NUM_ONLY); bare = !!m; }
+      let numOk = false;
+      if (m) {
+        const num = parseInt(m[1], 10);
+        const expected = out.length + (cur ? 1 : 0) + 1;
+        if (!bare) numOk = true;                                        // "Question No. N" / "QN:" always starts one
+        else if (mode === "a") numOk = num === expected;                // after an answer: sequential "3)" = next question
+        else if (mode === "q") numOk = !cur.explicit && num === expected && num !== 1; // numbered list continuation (not sub-parts)
+        else numOk = num === expected && /\?\s*$/.test(m[2] || ""); // pre: numbered instruction items are NOT questions
+      }
       if (m && numOk) {
         push();
         const marks = grabMarks(m[2] || "");
-        const qRest = (m[2] || "").replace(MARKS_IN, "").trim();
-        cur = { q: qRest, marks: marks, ansLines: [] };
+        const qRest = (m[2] || "").replace(MARKS_IN, "").replace(/\(\s*\)|\[\s*\]/g, "").trim();
+        cur = { q: qRest, marks: marks, ansLines: [], explicit: !bare };
         mode = "q";
         continue;
       }
       const a = line.match(A_START);
       if (a) {
-        if (!cur) cur = { q: "", marks: null, ansLines: [] };
+        if (!cur) cur = { q: "", marks: null, ansLines: [], explicit: false };
         mode = "a";
         if (a[1]) cur.ansLines.push(a[1]);
         continue;
@@ -97,12 +111,12 @@
         const mk = grabMarks(line);
         if (mk != null && cur.marks == null) {
           /* marks can share the line with the question text — keep the text! */
-          const rest = line.replace(MARKS_IN, "").trim();
+          const rest = line.replace(MARKS_IN, "").replace(/\(\s*\)|\[\s*\]/g, "").trim();
           cur.marks = mk;
           if (rest) cur.q = (cur.q ? cur.q + " " : "") + rest;
           continue;
         }
-        if (line.trim()) { cur.q = (cur.q ? cur.q + " " : "") + line.trim(); }
+        if (s) { cur.q = (cur.q ? cur.q + " " : "") + s; }
         continue;
       }
       cur.ansLines.push(raw);
@@ -110,7 +124,83 @@
     push();
     /* if nothing matched at all — treat the whole paste as one answer block */
     if (!out.length && String(text || "").trim()) out.push({ q: "", marks: null, answer: String(text).trim() });
-    return out.map(x => ({ q: x.q, marks: x.marks == null ? null : x.marks, answer: x.answer || "" }));
+    return out.map(x => ({
+      q: (x.q || "").replace(/\s{2,}/g, " ").trim(),
+      marks: x.marks == null ? null : x.marks,
+      answer: x.answer || ""
+    }));
+  }
+
+  /* ---- VU-LMS question file -> cover meta (auto-fill) ---- */
+  function extractLmsMeta(text, fileName) {
+    const t = String(text || "");
+    const meta = {};
+    let m;
+    if ((m = t.match(/(?:^|\n)\s*([A-Za-z]{2,4}\d{3})\s*[:\-–(]\s*([^\n]{3,60})/))) {
+      meta.subject = m[1].toUpperCase();
+      meta.subjectTitle = m[2].replace(/[):]+\s*$/, "").trim();
+    } else if ((m = t.match(/course\s+([A-Za-z]{2,4}\d{3})\s+([^\n]{3,60})/i))) {
+      meta.subject = m[1].toUpperCase();
+      meta.subjectTitle = m[2].replace(/[):]+\s*$/, "").trim();
+    }
+    if ((m = t.match(/assignment\s*(?:no\.?|#)?\s*[:.]?\s*(\d{1,2})/i))) meta.asgNo = String(parseInt(m[1], 10));
+    if ((m = t.match(/semester\s*:?\s*((?:fall|spring|summer|autumn|winter)\s*\d{4})/i)) ||
+        (m = t.match(/((?:fall|spring|summer|autumn|winter)\s*\d{4})/i))) {
+      meta.semester = m[1].replace(/\b\w/g, function (c) { return c.toUpperCase(); });
+    }
+    if ((m = t.match(/due\s*date\s*:?\s*\n?\s*([^\n]{1,60})/i))) {
+      let due = m[1].replace(/\s+/g, " ").trim();
+      if (!/[a-zA-Z]{3}/.test(due)) {
+        const rest = t.slice(m.index + m[0].length).match(/^\s*([^\n]{1,30})\s*\n?\s*([^\n]{1,40})/);
+        if (rest) due = (due + " " + rest[1] + " " + rest[2]).replace(/\s+/g, " ").trim();
+      }
+      meta.due = due.replace(/(\d)\s+(st|nd|rd|th)\b/gi, "$1$2").replace(/[.\s]+$/, "");
+    }
+    if ((m = t.match(/(?:total|maximum)?\s*marks\s*:?\s*(\d{1,3})/i))) meta.totalMarks = m[1];
+    // filename fallback: "Fall 2026_CS601_1 (1).pdf"
+    if (fileName) {
+      const fn = String(fileName).replace(/\.[a-z0-9]+$/i, "");
+      if (!meta.subject) { const sm = fn.match(/([A-Za-z]{2,4}\d{3})/); if (sm) meta.subject = sm[1].toUpperCase(); }
+      if (!meta.semester) { const sm = fn.match(/((?:fall|spring|summer|autumn|winter)\s*\d{4})/i); if (sm) meta.semester = sm[1]; }
+      if (!meta.asgNo) { const sm = fn.match(/_(\d{1,2})(?:\s*\(\d+\))?$/); if (sm) meta.asgNo = String(parseInt(sm[1], 10)); }
+    }
+    return meta;
+  }
+
+  /* ---- FREE AI (keyless) — VU handouts-style answers ---- */
+  var AI_SYS = "You are a Virtual University of Pakistan (VU) student writing your assignment solution in your own words, strictly according to VU handouts and lecture content. Write in simple, natural student language as VU students write. Use handout references like 'According to the handouts' naturally. No markdown, no bold, no asterisks, no headings. For calculations show clear step-by-step working. Keep each answer focused (120-260 words) unless the question needs more detail. Never mention that you are an AI. Never refuse normal academic questions.";
+
+  function makeAiPrompt(q, meta) {
+    return "Subject: " + (meta.subject || "") + " " + (meta.subjectTitle || "") + "\n" +
+      "Assignment: " + (meta.asgNo || "") + " (" + (meta.semester || "") + ")\n" +
+      "Question (" + (q.marks || "?") + " marks): " + q.q + "\n\n" +
+      "Write the complete assignment answer now (student voice, VU handouts based):";
+  }
+
+  async function aiCallOne(q, meta) {
+    var user = makeAiPrompt(q, meta);
+    /* 1) OpenAI-compatible endpoint (keyless free tier) */
+    try {
+      var r = await fetch("https://text.pollinations.ai/openai", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ model: "openai", messages: [{ role: "system", content: AI_SYS }, { role: "user", content: user }] })
+      });
+      if (r.ok) {
+        var j = await r.json();
+        var c = j && j.choices && j.choices[0] && j.choices[0].message && j.choices[0].message.content;
+        if (c && c.trim().length > 40) return c.trim();
+      }
+    } catch (e) { /* try next */ }
+    /* 2) simple GET fallback */
+    try {
+      var r2 = await fetch("https://text.pollinations.ai/" + encodeURIComponent(user + "\n\n" + AI_SYS));
+      if (r2.ok) {
+        var t2 = await r2.text();
+        if (t2 && t2.trim().length > 40 && !/^\s*(error|denied|unauthorized)/i.test(t2)) return t2.trim();
+      }
+    } catch (e2) { /* give up */ }
+    return null;
   }
 
   /* ================================================================
@@ -641,6 +731,42 @@
     toast("✨ Humanize ho gaya — student voice mein answers likhe gaye!");
   }
 
+  function aiStatus(msg) {
+    var el = $("asAiStatus");
+    if (el) el.innerHTML = msg;
+  }
+
+  async function asnAiMake() {
+    if (ASN.aiBusy) return;
+    if (!ASN.state.questions.length) { toastErr("Pehle assignment file upload/paste karein."); return; }
+    collectMeta();
+    var meta = ASN.state.meta;
+    var pending = ASN.state.questions.filter(function (q) { return !q.answer || q.answer.length < 30; });
+    if (!pending.length) { aiStatus("✅ Sare answers pehle se maujood hain — 📥 Download dabayein."); return; }
+    ASN.aiBusy = true;
+    var btn = $("asAiMakeBtn"); if (btn) btn.disabled = true;
+    try {
+      var done = 0, failed = 0;
+      for (var i = 0; i < pending.length; i++) {
+        done++;
+        aiStatus("🤖 AI answer likh raha hai… (" + done + "/" + pending.length + ") — VU handouts style");
+        var ans = await aiCallOne(pending[i], meta);
+        if (ans) pending[i].answer = humanizeText(ans, "student", "handouts", {});
+        else failed++;
+        saveState(); renderQList(); renderPreview();
+      }
+      if (failed) {
+        aiStatus("⚠️ " + failed + " answer AI se nahi ban sake — thodi der baad 🪄 button dobara dabayein.");
+      } else {
+        aiStatus("✅ Poora assignment tayyar! Ab 📥 Download MS Word dabayein.");
+        toast("🎉 Assignment tayyar — 📥 Download MS Word dabayein!");
+      }
+    } finally {
+      ASN.aiBusy = false;
+      if (btn) btn.disabled = false;
+    }
+  }
+
   function asnDownload() {
     collectMeta();
     if (!ASN.state.questions.length) { toastErr("Pehle questions add karein."); return; }
@@ -677,10 +803,21 @@
       }
       text = (text || "").trim();
       if (!text) { toastErr("File se text nahi mila (scanned PDF ho sakti hai)."); return; }
+      var lm = extractLmsMeta(text, f.name);
+      if (lm.subject) $("asSubject").value = lm.subject;
+      if (lm.subjectTitle) $("asSubjectTitle").value = lm.subjectTitle;
+      if (lm.asgNo) $("asAsgNo").value = lm.asgNo;
+      if (lm.semester) $("asSem").value = lm.semester;
+      if (lm.due) $("asDue").value = lm.due;
       var ta = $("asPaste");
       ta.value = ta.value.trim() ? ta.value + "\n\n" + text : text;
-      toast("✅ " + esc(f.name) + " se text mil gaya!");
+      toast("✅ " + esc(f.name) + " se text mil gaya!" + (lm.subject ? " — cover auto-fill: " + esc(lm.subject) : ""));
       asnParse();
+      /* LMS question file flow: answers missing -> FREE AI se poora assignment */
+      if (ASN.state.questions.some(function (q) { return !q.answer || q.answer.length < 30; })) {
+        toast("🤖 FREE AI se answers ban rahe hain — VU handouts style…");
+        asnAiMake();
+      }
     } catch (e) {
       toastErr("File read nahi ho saki: " + esc(f.name) + " (" + esc(e.message || e) + ")");
     }
@@ -718,6 +855,7 @@
     $("asClearBtn").addEventListener("click", asnClear);
     $("asParseBtn").addEventListener("click", asnParse);
     $("asHumBtn").addEventListener("click", asnHumanize);
+    $("asAiMakeBtn") && $("asAiMakeBtn").addEventListener("click", asnAiMake);
     $("asDlBtn").addEventListener("click", asnDownload);
     $("asPrintBtn").addEventListener("click", asnPrint);
 
@@ -770,6 +908,8 @@
     buildDocxXml: buildDocxXml,
     vuFileName: vuFileName,
     extractDocxText: extractDocxText,
+    extractLmsMeta: extractLmsMeta,
+    makeAiPrompt: makeAiPrompt,
     pdfToText: pdfToText,
     crc32: crc32,
     zipStore: zipStore
