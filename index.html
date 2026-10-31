@@ -23,7 +23,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%237c3aed'/%3E%3Ctext x='32' y='42' font-size='26' font-family='Arial' font-weight='900' fill='white' text-anchor='middle'%3EAHW%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-build="ahw15">
+<body data-build="ahw16">
 
 <div class="blob" style="left:6%;top:14%;animation-duration:11s">📡</div>
 <div class="blob" style="left:88%;top:10%;animation-duration:8s">🌐</div>
@@ -68,7 +68,7 @@
 
       <div class="btn-row">
         <button class="btn btn-orange" onclick="startDailyChallenge()">⚡ Daily Challenge</button>
-        <button class="btn btn-pink" onclick="showAssignmentLab()">📝 Assignment Studio</button>
+        <button class="btn btn-pink" onclick="showDriveHub()">📚 Assignment Library</button>
         <button class="btn btn-purple" onclick="openModal('modal-how')">📖 How to Play</button>
         <button class="btn btn-pink" onclick="showCppLab()">💻 C++ Compiler</button>
         <button class="btn btn-purple" onclick="showEnglishLab()">📚 English Lab</button>
@@ -377,87 +377,104 @@
     <div id="mrBody" style="margin-top:16px"></div>
   </section>
 
-  <!-- ============ ASSIGNMENT STUDIO (ahw15 - VU-style .docx builder) ============ -->
-  <section id="screen-assign" class="screen">
+  <!-- ============ ASSIGNMENT LIBRARY (Google Drive) ============ -->
+  <section id="screen-drive" class="screen">
     <div class="topbar">
-      <div class="mini-logo" onclick="goHome()" style="cursor:pointer" title="Home">📝 Assignment Studio <span style="opacity:.8;font-size:13px">· VU-style Word file</span></div>
+      <div class="mini-logo" onclick="goHome()" style="cursor:pointer" title="Home">📚 Assignment Library <span style="opacity:.8;font-size:13px">· Download &amp; Edit</span></div>
       <div style="display:flex;gap:10px">
+        <button class="icon-btn" title="Link add karein" onclick="dhAddDialog()">➕</button>
         <button class="icon-btn" title="Home" aria-label="Home" onclick="goHome()">🏠</button>
       </div>
     </div>
 
-    <div class="as-wrap">
-      <div class="as-steps"><span><b>1</b> Questions daalein</span><span><b>2</b> Cover bharein</span><span><b>3</b> Humanize + Word download</span></div>
-
-      <div class="as-card">
-        <div class="as-lbl">1&#65039;&#8419; Assignment questions + answers paste karein (ya file upload)</div>
-        <textarea id="asPaste" class="as-paste" rows="8" placeholder="Q1: What is an operating system? (5 marks)&#10;Answer: An operating system is system software that manages hardware...&#10;&#10;Q2: Explain main functions of OS.&#10;Ans: Process management, memory management..."></textarea>
-        <div class="as-row">
-          <button class="btn btn-amber btn-sm" id="asSampleBtn">&#128196; Sample try karein</button>
-          <button class="btn btn-blue btn-sm" onclick="document.getElementById('asFile').click()">&#128194; File (.txt / .md / .docx / .pdf)</button>
-          <input id="asFile" type="file" accept=".txt,.md,.docx,.pdf,text/plain,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document" style="display:none">
-          <button class="btn btn-purple btn-sm" id="asParseBtn">&#10024; Questions add karein</button>
-          <button class="btn btn-gray btn-sm" id="asClearBtn">&#128465;&#65039; Clear</button>
-          <span class="as-hint">drag &amp; drop bhi chalega &middot; .pdf/.docx se text nikal jata hai</span>
-        </div>
-        <div id="asFileMsg"></div>
-        <div id="asQList"><div class="as-empty">Upar text paste karein ya &#128196; Sample try karein dabayein &mdash; questions yahan list honge.</div></div>
+    <div class="dh-wrap" id="dhWrap">
+      <div class="card">
+        <div class="big-title" style="font-size:22px">📚 Assignments &mdash; <span class="grad">Download ya Edit</span> karein</div>
+        <div class="sub">Google Drive se assignment 📥 download karein, 👁️ preview dekhein, ya ✏️ Edit mein khol ke <b>Word jaise editor</b> se badal ke wapas <b>.docx</b> save karein. 💻 .cpp files seedhe <b>C++ Lab</b> mein compile/run ke liye khulti hain.</div>
+        <input id="dhSearch" class="dh-search" placeholder="🔍 Search — CS601, STA301, assignment..." oninput="dhRender()">
+        <div id="dhMsg"></div>
+        <div id="dhList"></div>
       </div>
-
-      <div class="as-card">
-        <div class="as-lbl">2&#65039;&#8419; Cover page (Word file ke liye)</div>
-        <div class="as-grid">
-          <label>Student ID<input id="asSid" type="text" placeholder="BC210204567" maxlength="20"></label>
-          <label>Student Name<input id="asName" type="text" placeholder="Muhammad Ahmed" maxlength="40"></label>
-          <label>Subject Code<input id="asSubject" type="text" placeholder="CS101" maxlength="12"></label>
-          <label>Subject Title<input id="asSubjectTitle" type="text" placeholder="Introduction to Computing" maxlength="60"></label>
-          <label>Assignment No.<input id="asAsgNo" type="text" placeholder="1" maxlength="4"></label>
-          <label>Semester<input id="asSem" type="text" placeholder="Fall 2026" list="asSemList" maxlength="20">
-            <datalist id="asSemList"><option>Fall 2026</option><option>Spring 2026</option><option>Summer 2026</option><option>Fall 2025</option></datalist>
-          </label>
-          <label>Due Date (optional)<input id="asDue" type="text" placeholder="15/12/2026" maxlength="20"></label>
-        </div>
-      </div>
-
-      <details class="as-card as-details"><summary>&#9881;&#65039; Extra options (zaroorat nahi &mdash; defaults best hain)</summary>
-        <div class="as-grid">
-          <label>Writing style
-            <select id="asStyle">
-              <option value="student">Student &mdash; simple &amp; natural</option>
-              <option value="formal">Formal &mdash; proper academic</option>
-              <option value="concise">Short &amp; simple</option>
-            </select>
-          </label>
-          <label>Answer opener
-            <select id="asOpener">
-              <option value="mix">Mix (natural)</option>
-              <option value="handouts">VU handouts style</option>
-              <option value="simple">Simple</option>
-            </select>
-          </label>
-          <label class="as-check"><input type="checkbox" id="asCover" checked> Cover page include karein</label>
-          <label>Output file name (VU convention)<input id="asFileName" type="text" placeholder="auto: ID_CODE_AssignmentNo_Semester.docx" maxlength="60"></label>
-        </div>
-      </details>
-
-      <div class="as-card">
-        <div class="as-lbl">3&#65039;&#8419; AI se answers + Download</div>
-        <div class="as-aimake">
-          <button class="btn btn-pink" id="asAiMakeBtn">&#129668; Poora assignment banayein — FREE AI (VU handouts style)</button>
-          <div class="as-hint">Assignment file upload karte hi AI khud answers likh deta hai — phir bas 📥 Download karein.</div>
-        </div>
-        <div class="as-aistatus" id="asAiStatus"></div>
-        <div class="as-btnrow">
-          <button class="btn btn-green" id="asHumBtn">&#10024; Humanize (student voice)</button>
-          <button class="btn btn-pink" id="asDlBtn">&#128229; Download MS Word</button>
-          <button class="btn btn-gray" id="asPrintBtn">&#128424;&#65039; Print / PDF backup</button>
-        </div>
-        <div class="as-fileprev" id="asFileNameOut">&#128196; File name: <b>StudentID_Subject_AssignmentNo1_Semester.docx</b></div>
-        <div class="as-lbl" style="margin-top:12px">Preview</div>
-        <div class="as-preview" id="asPreview"><div class="as-empty">Questions add karein &mdash; live preview yahan dikhega.</div></div>
+      <div class="card dh-help">
+        <b>⚙️ Admin:</b> naye links add karne ke liye
+        <button class="btn btn-blue btn-sm" onclick="dhAddDialog()">➕ Link add karein</button>
+        <div class="sub" style="margin-top:6px;font-size:12.5px">Google Drive link paste karein (<code>drive.google.com/file/d/…</code> ya <code>open?id=…</code>) — yeh aapke browser mein save hoti hai.</div>
       </div>
     </div>
-    <div id="assignPrintArea"><div class="pv-cover" id="asPrintCover"></div><div class="pv-sec" id="asPrintPreview"></div></div>
+
+    <!-- Word-style editor (A4 printable page + ribbon) -->
+    <div id="dhWordWrap" class="dh-editorwrap" style="display:none">
+      <div class="wp-ribbon">
+        <button class="wp-btn wp-back" onclick="wpBack()">&#8592; Library</button>
+        <select id="wpFont" onchange="wpCmd('fontName',this.value)" title="Font">
+          <option value="Times New Roman" selected>Times New Roman</option>
+          <option value="Arial">Arial</option>
+          <option value="Calibri">Calibri</option>
+          <option value="Courier New">Courier New</option>
+          <option value="Georgia">Georgia</option>
+        </select>
+        <select id="wpSize" onchange="wpSize(this.value)" title="Font size">
+          <option value="10">10</option><option value="12" selected>12</option><option value="14">14</option>
+          <option value="16">16</option><option value="18">18</option><option value="24">24</option><option value="28">28</option>
+        </select>
+        <button class="wp-btn wp-b" onclick="wpCmd('bold')" title="Bold (Ctrl+B)"><b>B</b></button>
+        <button class="wp-btn wp-i" onclick="wpCmd('italic')" title="Italic (Ctrl+I)"><i>I</i></button>
+        <button class="wp-btn" onclick="wpCmd('underline')" title="Underline (Ctrl+U)"><u>U</u></button>
+        <button class="wp-btn" onclick="wpCmd('strikeThrough')" title="Strikethrough"><s>S</s></button>
+        <button class="wp-btn" onclick="wpCmd('superscript')" title="Superscript">X&#8310;</button>
+        <button class="wp-btn" onclick="wpCmd('subscript')" title="Subscript">X&#8341;</button>
+        <input type="color" id="wpColor" value="#000000" class="wp-color" onchange="wpCmd('foreColor',this.value)" title="Text color">
+        <input type="color" id="wpHl" value="#ffff00" class="wp-color" onchange="wpCmd('hiliteColor',this.value)" title="Highlight">
+        <button class="wp-btn" onclick="wpCmd('justifyLeft')" title="Align left">&#8676;</button>
+        <button class="wp-btn" onclick="wpCmd('justifyCenter')" title="Center">&#8801;</button>
+        <button class="wp-btn" onclick="wpCmd('justifyRight')" title="Align right">&#8677;</button>
+        <button class="wp-btn" onclick="wpCmd('justifyFull')" title="Justify">&#9776;</button>
+        <button class="wp-btn" onclick="wpCmd('insertUnorderedList')" title="Bullets">&#8226;&#8801;</button>
+        <button class="wp-btn" onclick="wpCmd('insertOrderedList')" title="Numbering">1.</button>
+        <button class="wp-btn" onclick="wpCmd('outdent')" title="Outdent">&#8672;</button>
+        <button class="wp-btn" onclick="wpCmd('indent')" title="Indent">&#8674;</button>
+        <button class="wp-btn" onclick="wpBlock('H1')" title="Heading 1">H1</button>
+        <button class="wp-btn" onclick="wpBlock('H2')" title="Heading 2">H2</button>
+        <button class="wp-btn" onclick="wpBlock('P')" title="Normal text">Aa</button>
+        <button class="wp-btn" onclick="wpCmd('removeFormat')" title="Format clear">&#10060;</button>
+        <button class="wp-btn" onclick="wpCmd('undo')" title="Undo (Ctrl+Z)">&#8630;</button>
+        <button class="wp-btn" onclick="wpCmd('redo')" title="Redo (Ctrl+Y)">&#8631;</button>
+        <span class="wp-title" id="wpTitle"></span>
+        <button class="btn btn-pink btn-sm" onclick="wpDownload()">📥 Download .docx</button>
+        <button class="btn btn-gray btn-sm" onclick="window.print()">🖨️ Print</button>
+      </div>
+      <div class="word-canvas"><div id="wpPage" class="word-page" contenteditable="true" spellcheck="true"><p><br></p></div></div>
+    </div>
+
+    <!-- simple text editor -->
+    <div id="dhTextWrap" class="dh-editorwrap" style="display:none">
+      <div class="wp-ribbon">
+        <button class="wp-btn wp-back" onclick="wpBack()">&#8592; Library</button>
+        <span class="wp-title" id="dtTitle"></span>
+        <button class="btn btn-pink btn-sm" onclick="dtDownload()">📥 Download</button>
+      </div>
+      <textarea id="dtArea" class="dt-area" spellcheck="true"></textarea>
+    </div>
+
+    <!-- Drive preview overlay -->
+    <div id="dhPreviewBox" class="dh-overlay" style="display:none"></div>
+
+    <!-- add-link dialog -->
+    <div id="dhAddBox" class="dh-overlay" style="display:none">
+      <div class="dh-dialog card">
+        <div class="big-title" style="font-size:19px">➕ Assignment link add karein</div>
+        <label>Google Drive link *<input id="dhAddLink" placeholder="https://drive.google.com/file/d/.../view"></label>
+        <label>Title *<input id="dhAddTitle" placeholder="CS601 Assignment 1 Solution"></label>
+        <label>Subject code<input id="dhAddSubj" placeholder="CS601"></label>
+        <label>Detail (semester etc.)<input id="dhAddDesc" placeholder="Fall 2026"></label>
+        <label>File name (optional)<input id="dhAddName" placeholder="CS601_Assignment1.docx"></label>
+        <label>Type<select id="dhAddKind"><option value="docx">📄 MS Word (.docx)</option><option value="pdf">📕 PDF</option><option value="cpp">💻 C++ (.cpp)</option><option value="text">📝 Text</option></select></label>
+        <div class="as-row" style="margin-top:12px">
+          <button class="btn btn-green" onclick="dhAddSave()">✅ Add karein</button>
+          <button class="btn btn-gray" onclick="dhCloseAdd()">✕ Cancel</button>
+        </div>
+      </div>
+    </div>
   </section>
 
   <!-- ============ C++ LAB v2 (mini-IDE: multi-file + settings) ============ -->
@@ -741,10 +758,12 @@
 
 <div class="streak-banner" id="streakBanner"></div>
 
-<script src="data/mcqs.js?v=ahw15"></script>
-<script src="js/app.js?v=ahw15"></script>
-<script src="js/compiler.js?v=ahw15"></script>
-<script src="js/english.js?v=ahw15"></script>
-<script src="js/assignment.js?v=ahw15"></script>
+<script src="data/mcqs.js?v=ahw16"></script>
+<script src="js/app.js?v=ahw16"></script>
+<script src="js/compiler.js?v=ahw16"></script>
+<script src="js/english.js?v=ahw16"></script>
+<script src="data/assignments.js?v=ahw16"></script>
+  <script src="js/docxkit.js?v=ahw16"></script>
+  <script src="js/drivehub.js?v=ahw16"></script>
 </body>
 </html>
