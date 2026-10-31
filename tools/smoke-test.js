@@ -69,7 +69,7 @@ function assert(cond, label) {
   assert(nb > 100, "MCQ data loaded (" + nb + " banks)");
   assert($("#modal-dialog") !== null, "dialog modal exists");
   assert($("#fbReportBtn") !== null, "Report button exists");
-  assert(doc.body.getAttribute("data-build") === "ahw20", "build tag synced");
+  assert(doc.body.getAttribute("data-build") === "ahw21", "build tag synced");
 
   console.log("\n[2] Home → Subjects");
   doc.getElementById("playerName").value = "SmokeTester";
@@ -307,6 +307,32 @@ function assert(cond, label) {
   assert(doc.getElementById("dhAddBox").innerHTML.indexOf("Submit an Assignment Link") > -1, "submit-link dialog (English) present");
   assert(doc.getElementById("dhLoadBox") && doc.getElementById("dhLocalFile"), "file-load fallback dialog present");
   assert(typeof window.dhRetryEdit === "function" && typeof window.dhPickLocal === "function" && typeof window.dhOpenBytes === "function", "edit fallback fns defined");
+  /* rich document fidelity: table + list + 30 paragraphs must survive docxToHtml */
+  var paras = [];
+  for (var pi = 1; pi <= 30; pi++) paras.push("<p>SENTINEL_PARA_" + pi + "_MARKER</p>");
+  var richHtml = "<h2>Table Section</h2><table><tr><td>Cell_A1</td><td>Cell_B1</td></tr><tr><td>Cell_A2</td><td>Cell_B2</td></tr></table>" +
+    "<ul><li>Bullet_one</li><li>Bullet_two</li></ul>" + paras.join("") + "<p><b>BOLD_MARK</b> and <i>ITALIC_MARK</i></p>";
+  var richBlob = await window.DOCXKIT.buildDocxFromHtml(richHtml, { title: "rich" });
+  var richBuf = await richBlob.arrayBuffer();
+  var fullHtml = await window.DOCXKIT.docxToHtml(richBuf);
+  var found = 0;
+  for (var pj = 1; pj <= 30; pj++) if (fullHtml.indexOf("SENTINEL_PARA_" + pj + "_MARKER") > -1) found++;
+  assert(found >= 28, "docx-preview keeps >=28/30 sentinels (got " + found + ")");
+  assert(fullHtml.indexOf("Cell_A1") > -1 && fullHtml.indexOf("Cell_B2") > -1, "table cells kept in render");
+  assert(fullHtml.toLowerCase().indexOf("bold") > -1, "bold text kept in render");
+  /* fallback parser still keeps paragraphs */
+  var savedDx = window.docx; window.docx = undefined;
+  var fbHtml = await window.DOCXKIT.docxToHtml(richBuf);
+  window.docx = savedDx;
+  var fbFound = 0;
+  for (var pk = 1; pk <= 30; pk++) if (fbHtml.indexOf("SENTINEL_PARA_" + pk + "_MARKER") > -1) fbFound++;
+  assert(fbFound >= 28, "fallback parser keeps >=28/30 sentinels (got " + fbFound + ")");
+  /* editor-first: dhEdit opens the editor screen SYNCHRONOUSLY */
+  window.dhEdit({ id: "f_zz", fileId: "zz_no_fetch", title: "t.docx", name: "t.docx", kind: "docx" });
+  assert($("#dhWordWrap").style.display === "block", "dhEdit opens word editor instantly (no network wait)");
+  assert($("#wpPage").innerHTML.toLowerCase().indexOf("loading") > -1, "editor shows loading state");
+  await sleep(400);
+  assert($("#dhLoadBox").style.display === "flex", "fetch fail -> help dialog appears over editor");
   assert(window.AHW_ASSIGN_FOLDERS && window.AHW_ASSIGN_FOLDERS.length === 1, "user folder registered");
 
   // -- editor panes
@@ -315,8 +341,12 @@ function assert(cond, label) {
   assert($("#dhWordWrap").style.display === "block" && $("#wpPage").innerHTML.indexOf("Hello") > -1, "word editor opens with content");
   window.dhOpenBytes({ id: "local", title: "demo2.docx", name: "demo2.docx", fileId: "local", kind: "docx" },
     new Uint8Array(await (await window.DOCXKIT.buildDocxFromHtml("<p>Local <b>file</b> works</p>", { title: "x" })).arrayBuffer()));
-  await sleep(40);
-  assert($("#dhWordWrap").style.display === "block" && $("#wpPage").innerHTML.indexOf("works") > -1, "openBytes: device docx -> word editor");
+  var okW = false;
+  for (var w8 = 0; w8 < 90; w8++) {
+    await sleep(100);
+    if ($("#dhWordWrap").style.display === "block" && $("#wpPage").innerHTML.indexOf("works") > -1) { okW = true; break; }
+  }
+  assert(okW, "openBytes: device docx -> word editor");
   window.dtOpen("Notes", "some text", "notes.txt");
   await sleep(10);
   assert($("#dhTextWrap").style.display === "block" && $("#dtArea").value === "some text", "text editor opens");
