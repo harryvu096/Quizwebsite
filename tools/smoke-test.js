@@ -69,7 +69,7 @@ function assert(cond, label) {
   assert(nb > 100, "MCQ data loaded (" + nb + " banks)");
   assert($("#modal-dialog") !== null, "dialog modal exists");
   assert($("#fbReportBtn") !== null, "Report button exists");
-  assert(doc.body.getAttribute("data-build") === "ahw15", "build tag synced");
+  assert(doc.body.getAttribute("data-build") === "ahw16", "build tag synced");
 
   console.log("\n[2] Home → Subjects");
   doc.getElementById("playerName").value = "SmokeTester";
@@ -243,86 +243,57 @@ function assert(cond, label) {
   assert($("#screen-mockres").classList.contains("active"), "result screen after finish");
   assert(MKU.mcqGot === 1, "only the saved correct answer counted (got=" + MKU.mcqGot + ")");
 
-  console.log("\n[12] Assignment Studio");
-  assert(typeof window.showAssignmentLab === "function", "showAssignmentLab defined");
-  const L = window.ASN_LIB;
-  assert(L && typeof L.parseAssignmentText === "function" && typeof L.buildDocx === "function" && typeof L.pdfToText === "function", "ASN_LIB loaded (+pdfToText)");
+  console.log("\n[12] Assignment Library (Drive) + DOCX kit");
+  const K = window.DOCXKIT;
+  assert(K && typeof K.buildDocxFromHtml === "function" && typeof K.docxToHtml === "function", "DOCXKIT loaded");
 
-  // -- parser: messy student paste
-  const parsed = L.parseAssignmentText(
-    "Assignment #1 CS101\n" +
-    "Question No. 1\nWhat is operating system? (5 marks)\nAnswer:\nAn OS is system software that manages hardware and software resources.\n\n" +
-    "Q2. Explain paging with example. (10 marks)\nAns: Paging splits memory into fixed-size frames so processes can be stored non-contiguously.\nSecond line of answer.\n\n" +
-    "3) Differentiate between compiler and interpreter.\nSolution: A compiler translates the whole program at once while an interpreter translates line by line."
-  );
-  assert(parsed.length === 3, "parser found 3 questions (title line dropped)");
-  assert(/operating system/i.test(parsed[0].q) && parsed[0].marks === 5, "Q1 text + marks parsed (" + parsed[0].marks + ")");
-  assert(/system software/i.test(parsed[0].answer), "Q1 answer parsed");
-  assert(/paging/i.test(parsed[1].q) && parsed[1].marks === 10, "Q2 marks parsed (" + parsed[1].marks + ")");
-  assert(/Second line/.test(parsed[1].answer) && /frames/.test(parsed[1].answer), "Q2 multi-line answer kept");
-  assert(/compiler and interpreter/i.test(parsed[2].q), "numbered-list question parsed");
+  // -- Drive link parsing
+  assert(K.fileIdFromLink("https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUv/view?usp=sharing") === "1AbCdEfGhIjKlMnOpQrStUv", "fileId from /file/d/ link");
+  assert(K.fileIdFromLink("https://drive.google.com/open?id=1AbCdEfGhIjKlMnOpQrStUv") === "1AbCdEfGhIjKlMnOpQrStUv", "fileId from open?id= link");
+  assert(K.fileIdFromLink("not a drive link") === null, "junk link -> null");
+  assert(K.detectKind("a.cpp") === "cpp" && K.detectKind("a.docx") === "docx" && K.detectKind("a.pdf") === "pdf" && K.detectKind("a.txt") === "text", "detectKind mapping");
 
-  // -- LMS question-file parser (real VU-LMS formats from sample files)
-  const lms = L.parseAssignmentText(
-    "Question No. 1\nA university campus is upgrading its department networks. Considering the above-mentioned scenario, you are required to answer the following questions:\n1. Identify the network topology used in the Finance department.\n2. Identify the network topology used in the Lab department.\n3. Calculate the total number of cables.\n\nQuestion No. 2\nFill in the correct PDU term in Column C.\nA B C\nTransport Layer Bits / Segment\n\nQ3: Identify all possible entities in the scenario. [Marks: 5]"
-  );
-  assert(lms.length === 3, "LMS: sub-questions merged, 3 questions (" + lms.length + ")");
-  assert(/Finance department/.test(lms[0].q) && /Lab department/.test(lms[0].q), "LMS: sub-parts kept in Q1 text");
-  assert(lms[2].marks === 5 && lms[2].q.indexOf("[]") === -1 && !/Marks/i.test(lms[2].q), "LMS: inline [Marks: 5] extracted + cleaned");
-
-  const sta = L.parseAssignmentText("Question # 1 of 3:\nA hospital administrator records the ages of 10 patients: 18, 52, 30.\nConstruct a stem-and-leaf display.\nAnswer Area:\n\nQuestion # 2 of 3:\nCalculate the harmonic mean.\nAnswer Area:");
-  assert(sta.length === 2 && /stem-and-leaf/.test(sta[0].q), "LMS: 'Question # 1 of 3' + Answer Area handled (" + sta.length + ")");
-
-  const lmsMeta = L.extractLmsMeta("Assignment No. 01\nSemester: Fall 2026\nCS601: Data Communication\nTotal Marks: 15\nDue Date:\n2nd November, 2026", "Fall 2026_CS601_1 (1).pdf");
-  assert(lmsMeta.subject === "CS601" && /Data Communication/.test(lmsMeta.subjectTitle), "LMS meta: subject code+title auto");
-  assert(lmsMeta.asgNo === "1" && /fall 2026/i.test(lmsMeta.semester), "LMS meta: assignment no + semester auto");
-  assert(/November.*2026/.test(lmsMeta.due), "LMS meta: due date (next-line form): " + lmsMeta.due);
-  assert(typeof L.makeAiPrompt === "function" && L.makeAiPrompt({ q: "What is LAN?", marks: 5 }, lmsMeta).indexOf("What is LAN?") > -1, "AI prompt builder (VU handouts voice)");
-
-  // -- humanizer: markdown + AI-isms
-  const hum = L.humanizeText("## Heading\n**In conclusion,** we *must* leverage a robust approach.\n\nMoreover, it is important to note that systems are comprehensive.", "student", "mix", {});
-  assert(!hum.includes("##") && !hum.includes("**") && !hum.includes("In conclusion"), "markdown + AI phrases stripped");
-  assert(/use/.test(hum) && !/leverage/.test(hum), "AI vocabulary humanized");
-
-  // -- docx writer: real ZIP + OOXML
-  const meta = { sid: "BC210204567", name: "Test Student", subject: "CS101", subjectTitle: "Intro to Computing", asgNo: "1", semester: "Fall 2026", due: "" };
-  const blob = L.buildDocx(meta, parsed, { cover: true });
-  assert(blob && blob.size > 1500, "docx blob generated (" + blob.size + " bytes)");
+  // -- docx write/read roundtrip with formatting
+  const docHtml = '<h2>Question 1</h2><p><b>Bold move</b> and <i>italic words</i> with <span style="font-size:14pt">big text</span>.</p><p style="text-align:center">Centered para</p>';
+  const blob = K.buildDocxFromHtml(docHtml, { title: "Round Trip" });
+  assert(blob && blob.size > 2000, "buildDocxFromHtml blob (" + blob.size + " bytes)");
   const buf = new Uint8Array(await blob.arrayBuffer());
-  assert(buf[0] === 0x50 && buf[1] === 0x4B, "ZIP magic bytes present");
-  assert(/_AssignmentNo1_.*\.docx$/.test(L.vuFileName(meta)), "VU filename convention: " + L.vuFileName(meta));
+  assert(buf[0] === 0x50 && buf[1] === 0x4B, "ZIP magic");
+  const xmlBack = K.htmlToDocxXml(docHtml, {});
+  assert(xmlBack.indexOf("<w:b/>") > -1 && xmlBack.indexOf("Bold move") > -1, "docx xml keeps bold run");
+  assert(xmlBack.indexOf('w:val="center"') > -1, "docx xml keeps center align");
+  assert(xmlBack.indexOf('w:val="28"') > -1, "docx xml keeps 14pt size");
+  const rt = await K.docxToHtml(buf.buffer);
+  assert(/Bold move/.test(rt) && /<b>Bold move<\/b>|<b>[^<]*Bold move/.test(rt), "docx->html keeps bold text");
+  assert(/italic words/.test(rt), "docx->html keeps italic text");
+  assert(/Centered para/.test(rt), "docx->html keeps paragraph");
+  const flat = await K.extractDocxText(buf.buffer);
+  assert(/Bold move/.test(flat) && /Centered para/.test(flat), "extractDocxText plain text");
 
-  // -- read our own docx back (stored method) and verify content
-  const backText = await L.extractDocxText(buf.buffer);
-  assert(backText.includes("Virtual University of Pakistan"), "cover page university line");
-  assert(backText.includes("BC210204567") && backText.includes("CS101"), "cover has student ID + subject");
-  assert(backText.includes("Question No. 1") && backText.includes("Marks: 5"), "Q1 heading + marks in docx");
-  assert(/operating system/i.test(backText) && /system software/i.test(backText), "question + answer text in docx");
-  assert(backText.includes("Answer:"), "Answer: labels present");
-  assert(backText.includes("Question No. 3"), "all 3 questions in docx");
-
-  // -- XML: VU style checks (question 14pt bold > answer 12pt, cover 20pt, no Submitted To)
-  const xml = L.buildDocxXml(meta, parsed, { cover: true });
-  const opens = (xml.match(/<w:p[ >]/g) || []).length, closes = (xml.match(/<\/w:p>/g) || []).length;
-  assert(opens === closes, "document.xml paragraphs balanced (" + opens + "/" + closes + ")");
-  assert(xml.indexOf("Submitted To") === -1, "cover: Submitted To removed");
-  assert(xml.indexOf('sz w:val="40"') > -1, "cover title 20pt (bigger)");
-  assert(xml.indexOf('<w:b/><w:sz w:val="28"/>') > -1, "question text 14pt bold");
-  assert(xml.indexOf('<w:sz w:val="24"/>') > -1, "answer text 12pt");
-  assert(xml.indexOf("Times New Roman") > -1, "Times New Roman font");
-
-  // -- UI flow: open studio, paste, parse -> cards
-  window.showAssignmentLab();
+  // -- Library UI
+  assert(typeof window.showDriveHub === "function" && typeof window.openInCppLab === "function", "showDriveHub + openInCppLab defined");
+  window.AHW_ASSIGNMENTS.push({ id: "test1", title: "Demo Assignment", subject: "CS101", link: "https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUv/view", type: "docx" });
+  window.showDriveHub();
   await sleep(30);
-  assert($("#screen-assign").classList.contains("active"), "assignment screen opens");
-  doc.getElementById("asSid").value = "BC210204567";
-  doc.getElementById("asSubject").value = "cs101";
-  doc.getElementById("asPaste").value = "Q1: What is RAM? (2 marks)\nAns: RAM is random access memory.";
-  window.asnParse();
+  assert($("#screen-drive").classList.contains("active"), "library screen opens");
+  assert(doc.querySelectorAll("#dhList .dh-card").length >= 1, "assignment card rendered");
+  assert($("#dhList").innerHTML.indexOf("Demo Assignment") > -1, "card shows title");
+
+  // -- editor panes
+  window.wpOpen("Demo", "<p><b>Hello</b> world</p>", "demo.docx");
+  await sleep(10);
+  assert($("#dhWordWrap").style.display === "block" && $("#wpPage").innerHTML.indexOf("Hello") > -1, "word editor opens with content");
+  window.dtOpen("Notes", "some text", "notes.txt");
+  await sleep(10);
+  assert($("#dhTextWrap").style.display === "block" && $("#dtArea").value === "some text", "text editor opens");
+  window.wpBack();
+  await sleep(10);
+
+  // -- C++ handoff
+  const ok = window.openInCppLab("t9.cpp", "int main(){return 0;}");
   await sleep(20);
-  assert(window.ASN_LIB.state.questions.length === 1, "UI parse stored 1 question");
-  assert(doc.querySelectorAll("#asQList .as-q").length === 1, "question card rendered");
-  assert(doc.getElementById("asFileNameOut").innerHTML.indexOf("BC210204567") > -1, "VU file name auto-shown");
+  assert(ok === true && $("#screen-cpp").classList.contains("active"), "openInCppLab navigates to C++ Lab");
+  assert(window.eval("CPP_FILES.some(f=>f.name==='t9.cpp')") === true, "cpp file added to C++ Lab");
 
   console.log("\n[13] Escape closes dialog");
   window.alertUser("bye");
