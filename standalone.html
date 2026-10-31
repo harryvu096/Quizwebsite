@@ -845,7 +845,7 @@ section#screen-mock{padding-bottom:120px}
 
 </style>
 </head>
-<body data-build="ahw16">
+<body data-build="ahw17">
 
 <div class="blob" style="left:6%;top:14%;animation-duration:11s">📡</div>
 <div class="blob" style="left:88%;top:10%;animation-duration:8s">🌐</div>
@@ -1215,6 +1215,7 @@ section#screen-mock{padding-bottom:120px}
         <div class="sub">Google Drive se assignment 📥 download karein, 👁️ preview dekhein, ya ✏️ Edit mein khol ke <b>Word jaise editor</b> se badal ke wapas <b>.docx</b> save karein. 💻 .cpp files seedhe <b>C++ Lab</b> mein compile/run ke liye khulti hain.</div>
         <input id="dhSearch" class="dh-search" placeholder="🔍 Search — CS601, STA301, assignment..." oninput="dhRender()">
         <div id="dhMsg"></div>
+        <div id="dhFolderBox"></div>
         <div id="dhList"></div>
       </div>
       <div class="card dh-help">
@@ -1285,7 +1286,7 @@ section#screen-mock{padding-bottom:120px}
     <div id="dhAddBox" class="dh-overlay" style="display:none">
       <div class="dh-dialog card">
         <div class="big-title" style="font-size:19px">➕ Assignment link add karein</div>
-        <label>Google Drive link *<input id="dhAddLink" placeholder="https://drive.google.com/file/d/.../view"></label>
+        <label>Google Drive link * (file ya folder)<input id="dhAddLink" placeholder="https://drive.google.com/file/d/.../view ya /folders/..."></label>
         <label>Title *<input id="dhAddTitle" placeholder="CS601 Assignment 1 Solution"></label>
         <label>Subject code<input id="dhAddSubj" placeholder="CS601"></label>
         <label>Detail (semester etc.)<input id="dhAddDesc" placeholder="Fall 2026"></label>
@@ -1601,7 +1602,12 @@ window.MCQS={"Q_CS601_FINAL":{"lv":[{"id":1,"icon":"🔗","name":"Data Link Cont
    NOTE: user ki list — neeche entries add karte jayen.
    ============================================================ */
 window.AHW_ASSIGNMENTS = [
-  // Links yahan add hongi (user bhejenge):
+  // Individual file links yahan add ho sakti hain:
+];
+
+/* 📁 Google Drive FOLDERS — ek link se saari assignments list hoti hain */
+window.AHW_ASSIGN_FOLDERS = [
+  "1ImDidPTeNxMEbwT28qG1ILwMNYzxf247"   // main assignments folder (Fall 2026)
 ];
 
 </script>
@@ -3202,7 +3208,7 @@ globalThis.AHW={SUBJECTS,profile,getG:()=>G,getMock:()=>MK};
 
 /* Build self-heal: agar index.html aur compiler.js ke versions mix ho jayen
    (stale cache), ek dafa auto-reload kar ke fresh pair le lo. */
-const AHW_BUILD="ahw16";
+const AHW_BUILD="ahw17";
 (function(){
   try{
     const b=document.body ? document.body.getAttribute("data-build") : null;
@@ -5623,6 +5629,52 @@ function elInitScreen() {
     return "other";
   }
 
+  /* ---------- folder link + folder HTML listing parse ---------- */
+  function folderIdFromLink(link) {
+    var m = String(link || "").match(/\/folders\/([a-zA-Z0-9_-]{10,})/);
+    return m ? m[1] : null;
+  }
+
+  function parseFolderHtml(html) {
+    var s = String(html || "");
+    // JS string escapes ko normalise karein taake quoted patterns match hon
+    var t = s.replace(/\\u003d/gi, "=").replace(/\\u0026/gi, "&")
+             .replace(/\\x3d/gi, "=").replace(/\\"/g, '"').replace(/\\\//g, "/");
+    var files = [], seen = {};
+    function add(id, name) {
+      if (!id || !name) return;
+      if (seen[id]) return;
+      name = String(name).replace(/\s+/g, " ").trim();
+      if (name.length < 3 || name.length > 150) return;
+      if (!/\.[a-z0-9]{2,6}$/i.test(name)) return;   // real file name jaisi honi chahiye
+      if (!/^[^\/\\]+$/.test(name)) return;
+      seen[id] = 1;
+      files.push({ fileId: id, name: name, kind: detectKind(name) });
+    }
+    // entries arrays hoti hain: ["<id>", mid..., "<name>"] ya ["<name>", mid..., "<id>"]
+    var mid = '(?:null|"[^"]*"|[0-9.]+|true|false|\\[\\])';
+    var namePat = '"([^"\\\\]{3,150}\\.[A-Za-z0-9]{2,6})"';
+    var idPat = '"([A-Za-z0-9_-]{25,45})"';
+    function scan(idFirst) {
+      for (var k = 0; k <= 4; k++) {
+        var mids = "";
+        for (var j = 0; j < k; j++) mids += mid + ",";
+        var src = idFirst
+          ? "\\[" + idPat + "," + mids + namePat
+          : "\\[" + namePat + "," + mids + idPat;
+        var re = new RegExp(src, "g");
+        var m;
+        while ((m = re.exec(t))) {
+          if (idFirst) add(m[1], m[2]);
+          else add(m[2], m[1]);
+        }
+      }
+    }
+    scan(true);
+    scan(false);
+    return files;
+  }
+
   globalThis.DOCXKIT = {
     crc32: crc32,
     zipStore: zipStore,
@@ -5631,6 +5683,8 @@ function elInitScreen() {
     docxToHtml: docxToHtml,
     extractDocxText: extractDocxText,
     fileIdFromLink: fileIdFromLink,
+    folderIdFromLink: folderIdFromLink,
+    parseFolderHtml: parseFolderHtml,
     detectKind: detectKind
   };
 })();
@@ -5649,9 +5703,40 @@ function elInitScreen() {
   "use strict";
 
   var EXTRA_KEY = "ahw_drive_extra_v1";
+  var FOLDER_KEY = "ahw_folder_cache_v1";
+  var FOLDER_EXTRA_KEY = "ahw_folder_extra_v1";
   var W = { title: "", fileName: "" };
 
   function $(id) { return document.getElementById(id); }
+
+  function folderIds() {
+    var ids = (globalThis.AHW_ASSIGN_FOLDERS || []).slice();
+    try {
+      var ex = JSON.parse(localStorage.getItem(FOLDER_EXTRA_KEY) || "[]");
+      if (Array.isArray(ex)) ids = ids.concat(ex);
+    } catch (e) {}
+    return ids.filter(Boolean);
+  }
+
+  function folderFiles() {
+    var out = [];
+    try {
+      var c = JSON.parse(localStorage.getItem(FOLDER_KEY) || "{}");
+      (c.files || []).forEach(function (f) {
+        if (!f || !f.fileId) return;
+        out.push({
+          id: "f_" + f.fileId,
+          title: f.name,
+          name: f.name,
+          fileId: f.fileId,
+          kind: f.kind || DOCXKIT.detectKind(f.name),
+          desc: "📁 Folder",
+          fromFolder: true
+        });
+      });
+    } catch (e) {}
+    return out;
+  }
 
   function allItems() {
     var base = (globalThis.AHW_ASSIGNMENTS || []).slice();
@@ -5659,7 +5744,7 @@ function elInitScreen() {
       var ex = JSON.parse(localStorage.getItem(EXTRA_KEY) || "[]");
       if (Array.isArray(ex)) base = base.concat(ex);
     } catch (e) {}
-    return base.map(function (it) {
+    var items = base.map(function (it) {
       var o = {};
       for (var k in it) o[k] = it[k];
       o.fileId = o.fileId || DOCXKIT.fileIdFromLink(o.link || o.url || "");
@@ -5667,12 +5752,41 @@ function elInitScreen() {
       o.id = o.id || ("dh" + String(o.fileId || o.title || Math.random()).slice(-10));
       return o;
     }).filter(function (it) { return it.fileId; });
+    return items.concat(folderFiles());
+  }
+
+  function dhRenderFolderBox() {
+    var box = $("dhFolderBox");
+    if (!box) return;
+    var ids = folderIds();
+    if (!ids.length) { box.innerHTML = ""; return; }
+    var n = folderFiles().length;
+    var frames = ids.map(function (fid) {
+      return '<iframe class="dh-folder-frame" loading="lazy" src="https://drive.google.com/embeddedfolderview?id=' + esc(fid) + '#list"></iframe>';
+    }).join("");
+    box.innerHTML = '<div class="dh-folder card">' +
+      '<div class="dh-fold-head">📁 Assignment Folder' + (n ? " — <b>" + n + " files</b> list hue" : "") + "</div>" +
+      '<div class="sub" style="margin-top:4px">Folder ki saari files neeche cards mein — 📥 Download, 👁️ Preview, ✏️ Edit.</div>' +
+      '<div class="dh-acts" style="margin-top:10px">' +
+      '<button class="btn btn-blue btn-sm" data-fact="scan">🔄 List refresh</button>' +
+      '<button class="btn btn-gray btn-sm" data-fact="open">🌐 Drive folder kholein</button>' +
+      "</div>" +
+      '<div id="dhFolderStatus" class="sub" style="margin-top:6px;font-size:12px"></div>' +
+      '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px">📁 Folder browser (Drive view)</summary>' + frames + "</details>" +
+      "</div>";
+    box.querySelectorAll("[data-fact]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        if (b.dataset.fact === "scan") dhScanFolders(true);
+        else dhOpenFolderView();
+      });
+    });
   }
 
   var KIND_ICON = { docx: "📄", pdf: "📕", cpp: "💻", text: "📝", other: "📦" };
   var KIND_LABEL = { docx: "MS Word", pdf: "PDF", cpp: "C++ code", text: "Text", other: "File" };
 
   function dhRender() {
+    dhRenderFolderBox();
     var box = $("dhList");
     if (!box) return;
     var q = (($("dhSearch") && $("dhSearch").value) || "").toLowerCase().trim();
@@ -5746,14 +5860,17 @@ function elInitScreen() {
   }
 
   /* ---------- fetch drive bytes (direct -> CORS proxies) ---------- */
-  async function fetchDriveBytes(fileId) {
-    var direct = driveDownloadUrl(fileId);
-    var urls = [
+  function proxyUrls(direct) {
+    return [
       direct,
       "https://api.allorigins.win/raw?url=" + encodeURIComponent(direct),
       "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(direct),
       "https://corsproxy.io/?" + encodeURIComponent(direct)
     ];
+  }
+  async function fetchDriveBytes(fileId) {
+    var direct = driveDownloadUrl(fileId);
+    var urls = proxyUrls(direct);
     for (var i = 0; i < urls.length; i++) {
       try {
         var r = await fetch(urls[i], { redirect: "follow" });
@@ -5767,6 +5884,56 @@ function elInitScreen() {
       } catch (e) { /* next */ }
     }
     return null;
+  }
+
+  async function fetchFolderHtml(folderId) {
+    var urls = proxyUrls("https://drive.google.com/drive/folders/" + folderId + "?hl=en");
+    for (var i = 0; i < urls.length; i++) {
+      try {
+        var r = await fetch(urls[i], { redirect: "follow" });
+        if (!r.ok) continue;
+        var t = await r.text();
+        if (t && t.length > 2000 && /drive|google/i.test(t)) return t;
+      } catch (e) { /* next */ }
+    }
+    return null;
+  }
+
+  function folderStatus(msg) {
+    var el = $("dhFolderStatus");
+    if (el) el.innerHTML = msg || "";
+  }
+
+  function readFolderCache() {
+    try { return JSON.parse(localStorage.getItem(FOLDER_KEY) || "{}"); } catch (e) { return {}; }
+  }
+
+  async function dhScanFolders(force) {
+    var ids = folderIds();
+    if (!ids.length) return;
+    var cache = readFolderCache();
+    if (!force && cache.ts && cache.files && cache.files.length && (Date.now() - cache.ts) < 30 * 60 * 1000) return;
+    folderStatus("🔄 Folder scan ho raha hai — saari assignments list ho rahi hain…");
+    var files = [], fail = 0;
+    for (var i = 0; i < ids.length; i++) {
+      var html = await fetchFolderHtml(ids[i]);
+      if (html) {
+        var got = DOCXKIT.parseFolderHtml(html);
+        got.forEach(function (f) {
+          if (!files.some(function (x) { return x.fileId === f.fileId; })) files.push(f);
+        });
+      } else fail++;
+    }
+    try { localStorage.setItem(FOLDER_KEY, JSON.stringify({ ts: Date.now(), files: files })); } catch (e) {}
+    if (files.length) folderStatus("✅ " + files.length + " files mil gayin — cards neeche!");
+    else folderStatus('⚠️ Folder list nahi mili — "🌐 Drive folder kholein" se manually dekhein (folder sharing "Anyone with the link" honi chahiye).');
+    dhRender();
+  }
+
+  function dhOpenFolderView() {
+    var ids = folderIds();
+    if (!ids.length) return;
+    window.open("https://drive.google.com/drive/folders/" + ids[0], "_blank", "noopener");
   }
 
   /* ---------- open editor by kind ---------- */
@@ -5878,8 +6045,20 @@ function elInitScreen() {
   }
   function dhAddSave() {
     var link = $("dhAddLink").value.trim();
+    var folderId = DOCXKIT.folderIdFromLink(link);
+    if (folderId) {
+      try {
+        var fx = JSON.parse(localStorage.getItem(FOLDER_EXTRA_KEY) || "[]");
+        if (fx.indexOf(folderId) < 0) fx.push(folderId);
+        localStorage.setItem(FOLDER_EXTRA_KEY, JSON.stringify(fx));
+      } catch (e) {}
+      dhCloseAdd();
+      dhScanFolders(true);
+      dhToast("✅ Folder add ho gaya — files list ho rahi hain…");
+      return;
+    }
     var fileId = DOCXKIT.fileIdFromLink(link);
-    if (!fileId) { dhErr("Google Drive link theek nahi — file/d/… ya open?id=… wala link paste karein."); return; }
+    if (!fileId) { dhErr("Google Drive link theek nahi — file/d/…, open?id=… ya /folders/… wala link paste karein."); return; }
     var it = {
       id: "dhx" + Date.now(),
       title: $("dhAddTitle").value.trim() || "Assignment",
@@ -5930,7 +6109,7 @@ function elInitScreen() {
     $("dhWordWrap").style.display = "none";
     $("dhTextWrap").style.display = "none";
     dhRender();
-    if (typeof window.fillHome === "function") { /* noop */ }
+    dhScanFolders(false);   // cache pura ho to turant, warna background mein scan
   }
 
   globalThis.showDriveHub = showDriveHub;
@@ -5940,6 +6119,8 @@ function elInitScreen() {
   globalThis.dhAddDialog = dhAddDialog;
   globalThis.dhCloseAdd = dhCloseAdd;
   globalThis.dhAddSave = dhAddSave;
+  globalThis.dhScanFolders = dhScanFolders;
+  globalThis.dhOpenFolderView = dhOpenFolderView;
   globalThis.dhAddExtra = function (it) {
     try {
       var ex = JSON.parse(localStorage.getItem(EXTRA_KEY) || "[]");

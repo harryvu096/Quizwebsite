@@ -13,5 +13,10 @@
    NOTE: user ki list — neeche entries add karte jayen.
    ============================================================ */
 window.AHW_ASSIGNMENTS = [
-  // Links yahan add hongi (user bhejenge):
+  // Individual file links yahan add ho sakti hain:
+];
+
+/* 📁 Google Drive FOLDERS — ek link se saari assignments list hoti hain */
+window.AHW_ASSIGN_FOLDERS = [
+  "1ImDidPTeNxMEbwT28qG1ILwMNYzxf247"   // main assignments folder (Fall 2026)
 ];
