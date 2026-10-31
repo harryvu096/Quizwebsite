@@ -69,7 +69,7 @@ function assert(cond, label) {
   assert(nb > 100, "MCQ data loaded (" + nb + " banks)");
   assert($("#modal-dialog") !== null, "dialog modal exists");
   assert($("#fbReportBtn") !== null, "Report button exists");
-  assert(doc.body.getAttribute("data-build") === "ahw17", "build tag synced");
+  assert(doc.body.getAttribute("data-build") === "ahw18", "build tag synced");
 
   console.log("\n[2] Home → Subjects");
   doc.getElementById("playerName").value = "SmokeTester";
@@ -262,6 +262,9 @@ function assert(cond, label) {
   const fh2 = 'AF_initDataCallback({key:\'ds:1\', data:[[[["1CdEfGhIjKlMnOpQrStUvXyZ34567",null,"CS403_Lab.cpp"]]]]});';
   const pf2 = K.parseFolderHtml(fh2);
   assert(pf2.length === 1 && pf2[0].kind === "cpp", "parseFolderHtml: AF_initDataCallback entries");
+  const fh3 = '<a href="https://drive.google.com/file/d/1XyZabCdEfGhIjKlMnOpQrStUvWx9876/view?usp=drive_web"><span class="flip-entry-title" title="CS601_A1.docx">CS601_A1.docx</span></a>';
+  const pf3 = K.parseFolderHtml(fh3);
+  assert(pf3.length === 1 && pf3[0].kind === "docx" && pf3[0].name === "CS601_A1.docx", "parseFolderHtml: anchor/embeddedfoldiew entries");
 
   // -- docx write/read roundtrip with formatting
   const docHtml = '<h2>Question 1</h2><p><b>Bold move</b> and <i>italic words</i> with <span style="font-size:14pt">big text</span>.</p><p style="text-align:center">Centered para</p>';
@@ -286,9 +289,15 @@ function assert(cond, label) {
   window.showDriveHub();
   await sleep(30);
   assert($("#screen-drive").classList.contains("active"), "library screen opens");
-  assert(doc.querySelectorAll("#dhList .dh-card").length >= 1, "assignment card rendered");
+  assert(doc.querySelectorAll("#dhList .dhx-card").length >= 1, "assignment card rendered");
   assert($("#dhList").innerHTML.indexOf("Demo Assignment") > -1, "card shows title");
-  assert($("#dhFolderBox").innerHTML.indexOf("Assignment Folder") > -1, "folder box rendered");
+  window.AHW_ASSIGNMENTS.push({ id: "test2", title: "CS601 Assignment 2", subject: "CS601", link: "https://drive.google.com/file/d/1BcDeFgHiJkLmNoPqRsTuVwXyZ23456/view", type: "docx" });
+  window.dhRender();
+  await sleep(20);
+  assert($("#dhList").innerHTML.indexOf("dhx-group") > -1, "subject groups rendered");
+  assert($("#dhList").innerHTML.indexOf("CS601") > -1, "CS601 group header shown");
+  assert($("#dhFolderBox").innerHTML.toLowerCase().indexOf("folder") > -1, "folder strip rendered");
+  assert($("#dhStats").innerHTML.indexOf("assignments") > -1, "hero stats rendered");
   assert(window.AHW_ASSIGN_FOLDERS && window.AHW_ASSIGN_FOLDERS.length === 1, "user folder registered");
 
   // -- editor panes

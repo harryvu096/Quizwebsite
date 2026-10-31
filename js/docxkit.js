@@ -507,6 +507,19 @@
     }
     scan(true);
     scan(false);
+
+    /* anchor-based parse — embeddedfoldiew/server-rendered pages:
+       <a href=".../file/d/ID/view"><span title="name.docx">..</span></a> */
+    var reA = /<a\b[^>]*?href="([^"]+)"[^>]*?>([\s\S]{0,700}?)<\/a>/gi;
+    var ma;
+    while ((ma = reA.exec(t))) {
+      var id2 = fileIdFromLink(ma[1]);
+      if (!id2) continue;
+      var tagPart = ma[0].slice(0, ma[0].indexOf(">") + 1);
+      var tm = /title="([^"<>]{3,150})"/.exec(tagPart) || /title="([^"<>]{3,150})"/.exec(ma[2]);
+      var name2 = tm ? tm[1] : ma[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      add(id2, name2);
+    }
     return files;
   }
 

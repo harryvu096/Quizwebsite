@@ -818,3 +818,56 @@ section#screen-mock{padding-bottom:120px}
   .word-page, .word-page *{visibility:visible}
   .word-page{position:absolute;left:0;top:0;width:100%;min-height:0;box-shadow:none;padding:0;margin:0}
 }
+
+/* ===================== Assignment Library v2 (ahw18) — subject-wise, modern ===================== */
+.dhx-hero{position:relative;overflow:hidden;border-radius:26px;padding:30px 26px 26px;color:#fff;
+  background:linear-gradient(130deg,#5b21b6 0%,#7c3aed 42%,#ec4899 100%);box-shadow:0 16px 40px rgba(91,33,182,.35)}
+.dhx-hero::after{content:"📚";position:absolute;right:-12px;bottom:-28px;font-size:150px;opacity:.13;transform:rotate(-12deg)}
+.dhx-hero-t{font-size:38px;font-weight:900;letter-spacing:1px;text-shadow:0 4px 0 rgba(0,0,0,.18)}
+.dhx-hero-s{font-size:15px;font-weight:600;opacity:.96;margin-top:6px;max-width:560px;line-height:1.55}
+.dhx-stats{display:flex;gap:10px;flex-wrap:wrap;margin-top:16px}
+.dhx-stat{background:rgba(255,255,255,.18);border:1.5px solid rgba(255,255,255,.32);border-radius:999px;
+  padding:7px 15px;font-size:13px;font-weight:600;backdrop-filter:blur(4px)}
+.dhx-stat b{font-size:15px;margin-right:3px}
+.dhx-upd{opacity:.9}
+.dhx-searchrow{display:flex;gap:10px;margin:16px 2px;flex-wrap:wrap}
+.dhx-search{flex:1;min-width:230px;padding:14px 18px;border-radius:16px;border:2px solid #ddd5f0;
+  font-size:15px;background:#fff;color:var(--ink);box-shadow:0 6px 18px rgba(43,33,64,.08)}
+.dhx-search:focus{outline:none;border-color:#7c3aed;box-shadow:0 6px 22px rgba(124,58,237,.22)}
+.dhx-strip{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  background:linear-gradient(120deg,#f3edff,#ffeef7);border:2px solid #e3d5ff;border-radius:16px;
+  padding:12px 16px;margin-bottom:14px;font-size:13.5px;font-weight:600;color:#4a3d6e}
+.dhx-strip-warn{background:linear-gradient(120deg,#fff7e6,#ffeedd);border-color:#f5d9a8;color:#7a5a1e}
+.dhx-folder-frame{width:100%;height:420px;border:2px solid #e3d5ff;border-radius:16px;background:#fff;margin-bottom:14px}
+.dhx-group{margin-bottom:26px}
+.dhx-ghead{display:flex;align-items:center;gap:13px;margin:0 2px 12px}
+.dhx-gicon{width:50px;height:50px;border-radius:15px;display:flex;align-items:center;justify-content:center;
+  font-size:25px;background:linear-gradient(135deg,var(--gc,#7c3aed),color-mix(in srgb,var(--gc,#7c3aed) 55%,#fff));
+  box-shadow:0 8px 20px color-mix(in srgb,var(--gc,#7c3aed) 35%,transparent)}
+.dhx-gtitle{display:flex;flex-direction:column;line-height:1.3}
+.dhx-gtitle b{font-size:19px;color:#2b2140;letter-spacing:.4px}
+.dhx-gtitle span{font-size:12.5px;font-weight:600;color:#7a6da0}
+.dhx-card{display:flex;align-items:center;gap:14px;background:#fff;border-radius:18px;padding:13px 15px;
+  margin-bottom:10px;border:2px solid #efeaf9;box-shadow:0 6px 16px rgba(43,33,64,.07);flex-wrap:wrap;
+  transition:transform .15s ease, box-shadow .15s ease}
+.dhx-card:hover{transform:translateY(-2px);box-shadow:0 12px 26px rgba(43,33,64,.13)}
+.dhx-ic{width:48px;height:48px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:23px;flex-shrink:0}
+.dhx-k-docx{background:#e3edff}.dhx-k-pdf{background:#ffe3e3}.dhx-k-cpp{background:#e3f6e9}
+.dhx-k-text{background:#fff3d9}.dhx-k-other{background:#f0edfa}
+.dhx-info{flex:1;min-width:170px}
+.dhx-t{font-size:15px;font-weight:800;color:#2b2140;line-height:1.35;word-break:break-word}
+.dhx-m{font-size:12px;font-weight:600;color:#8b7db5;margin-top:2px;word-break:break-word}
+.dhx-acts{display:flex;gap:8px;flex-wrap:wrap}
+.dhx-btn{border:0;border-radius:12px;padding:9px 15px;font-size:13px;font-weight:800;cursor:pointer;
+  transition:transform .12s ease, filter .12s ease;white-space:nowrap}
+.dhx-btn:hover{transform:scale(1.05);filter:brightness(1.05)}
+.dhx-btn-dl{background:linear-gradient(135deg,#2563eb,#1d4ed8);color:#fff}
+.dhx-btn-ed{background:linear-gradient(135deg,#16a34a,#15803d);color:#fff}
+.dhx-btn-pv{background:#f1ecfd;color:#5b2bbf}
+.dhx-empty{opacity:.85;font-size:14.5px;padding:28px;text-align:center;border:2.5px dashed #d5c9f2;
+  border-radius:18px;background:#faf8ff;color:#5a4e7a;font-weight:600}
+@media (max-width:560px){
+  .dhx-hero{padding:22px 18px}
+  .dhx-hero-t{font-size:29px}
+  .dhx-btn{padding:8px 12px;font-size:12px}
+}

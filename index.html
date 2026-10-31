@@ -23,7 +23,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%237c3aed'/%3E%3Ctext x='32' y='42' font-size='26' font-family='Arial' font-weight='900' fill='white' text-anchor='middle'%3EAHW%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-build="ahw17">
+<body data-build="ahw18">
 
 <div class="blob" style="left:6%;top:14%;animation-duration:11s">📡</div>
 <div class="blob" style="left:88%;top:10%;animation-duration:8s">🌐</div>
@@ -388,19 +388,18 @@
     </div>
 
     <div class="dh-wrap" id="dhWrap">
-      <div class="card">
-        <div class="big-title" style="font-size:22px">📚 Assignments &mdash; <span class="grad">Download ya Edit</span> karein</div>
-        <div class="sub">Google Drive se assignment 📥 download karein, 👁️ preview dekhein, ya ✏️ Edit mein khol ke <b>Word jaise editor</b> se badal ke wapas <b>.docx</b> save karein. 💻 .cpp files seedhe <b>C++ Lab</b> mein compile/run ke liye khulti hain.</div>
-        <input id="dhSearch" class="dh-search" placeholder="🔍 Search — CS601, STA301, assignment..." oninput="dhRender()">
-        <div id="dhMsg"></div>
-        <div id="dhFolderBox"></div>
-        <div id="dhList"></div>
+      <div class="dhx-hero">
+        <div class="dhx-hero-t">📚 Assignments</div>
+        <div class="dhx-hero-s">Jo bhi assignment Drive mein dalenge, yahan khud nazar aayegi &mdash; 📥 download karo, ✏️ edit karo, submit karo.</div>
+        <div class="dhx-stats" id="dhStats"></div>
       </div>
-      <div class="card dh-help">
-        <b>⚙️ Admin:</b> naye links add karne ke liye
-        <button class="btn btn-blue btn-sm" onclick="dhAddDialog()">➕ Link add karein</button>
-        <div class="sub" style="margin-top:6px;font-size:12.5px">Google Drive link paste karein (<code>drive.google.com/file/d/…</code> ya <code>open?id=…</code>) — yeh aapke browser mein save hoti hai.</div>
+      <div class="dhx-searchrow">
+        <input id="dhSearch" class="dhx-search" placeholder="🔍 Assignment dhoondein — CS601, STA301..." oninput="dhRender()">
+        <button class="dhx-btn dhx-btn-ed" onclick="dhScanFolders(true)">🔄 Nayi assignments check</button>
       </div>
+      <div id="dhMsg"></div>
+      <div id="dhFolderBox"></div>
+      <div id="dhList"></div>
     </div>
 
     <!-- Word-style editor (A4 printable page + ribbon) -->
@@ -463,16 +462,16 @@
     <!-- add-link dialog -->
     <div id="dhAddBox" class="dh-overlay" style="display:none">
       <div class="dh-dialog card">
-        <div class="big-title" style="font-size:19px">➕ Assignment link add karein</div>
-        <label>Google Drive link * (file ya folder)<input id="dhAddLink" placeholder="https://drive.google.com/file/d/.../view ya /folders/..."></label>
-        <label>Title *<input id="dhAddTitle" placeholder="CS601 Assignment 1 Solution"></label>
-        <label>Subject code<input id="dhAddSubj" placeholder="CS601"></label>
-        <label>Detail (semester etc.)<input id="dhAddDesc" placeholder="Fall 2026"></label>
+        <div class="big-title" style="font-size:19px">➕ Nayi assignment jodein</div>
+        <label>Google Drive link<input id="dhAddLink" placeholder="Drive ki file ya folder ka link paste karein"></label>
+        <label>Assignment ka naam<input id="dhAddTitle" placeholder="CS601 Assignment 1"></label>
+        <label>Subject (agar pata ho)<input id="dhAddSubj" placeholder="CS601"></label>
+        <label>Semester / detail<input id="dhAddDesc" placeholder="Fall 2026"></label>
         <label>File name (optional)<input id="dhAddName" placeholder="CS601_Assignment1.docx"></label>
         <label>Type<select id="dhAddKind"><option value="docx">📄 MS Word (.docx)</option><option value="pdf">📕 PDF</option><option value="cpp">💻 C++ (.cpp)</option><option value="text">📝 Text</option></select></label>
         <div class="as-row" style="margin-top:12px">
-          <button class="btn btn-green" onclick="dhAddSave()">✅ Add karein</button>
-          <button class="btn btn-gray" onclick="dhCloseAdd()">✕ Cancel</button>
+          <button class="btn btn-green" onclick="dhAddSave()">✅ Jor dein</button>
+          <button class="btn btn-gray" onclick="dhCloseAdd()">✕ Rehne dein</button>
         </div>
       </div>
     </div>
@@ -759,12 +758,12 @@
 
 <div class="streak-banner" id="streakBanner"></div>
 
-<script src="data/mcqs.js?v=ahw17"></script>
-<script src="js/app.js?v=ahw17"></script>
-<script src="js/compiler.js?v=ahw17"></script>
-<script src="js/english.js?v=ahw17"></script>
-<script src="data/assignments.js?v=ahw17"></script>
-  <script src="js/docxkit.js?v=ahw17"></script>
-  <script src="js/drivehub.js?v=ahw17"></script>
+<script src="data/mcqs.js?v=ahw18"></script>
+<script src="js/app.js?v=ahw18"></script>
+<script src="js/compiler.js?v=ahw18"></script>
+<script src="js/english.js?v=ahw18"></script>
+<script src="data/assignments.js?v=ahw18"></script>
+  <script src="js/docxkit.js?v=ahw18"></script>
+  <script src="js/drivehub.js?v=ahw18"></script>
 </body>
 </html>
