@@ -168,6 +168,11 @@
       var tag = (ch.tagName || "").toUpperCase();
       if (tag === "BR") { out.push(brRunXml(fmt)); continue; }
       if (tag === "SCRIPT" || tag === "STYLE") continue;
+      if (tag === "IMG") {
+        var ialt = (ch.getAttribute && (ch.getAttribute("alt") || ch.getAttribute("title"))) || "";
+        out.push(runXml(ialt ? "[" + ialt + "]" : "[Image]", fmt));
+        continue;
+      }
       var f = {};
       for (var k in fmt) f[k] = fmt[k];
       if (tag === "B" || tag === "STRONG") f.b = 1;
@@ -204,6 +209,10 @@
   }
 
   function blockXml(el, prefix) {
+    if (el.nodeType === 3) {
+      return '<w:p><w:pPr><w:spacing w:after="120"/></w:pPr>' +
+        runXml(el.nodeValue || "", { font: "Times New Roman", size: 12 }) + '</w:p>';
+    }
     var tag = (el.tagName || "P").toUpperCase();
     var fmt = { font: "Times New Roman", size: 12 };
     var jc = "";
@@ -252,9 +261,37 @@
         else out.push(blockXml(ch));
         continue;
       }
+      if (tag === "TABLE") { var tx = tableXml(ch); if (tx) out.push(tx); continue; }
       if (tag === "BR") { out.push(blockXml(ch)); continue; }
       walkBlocks(ch, out);
     }
+  }
+
+  function tableXml(el) {
+    var trs = el.getElementsByTagName("tr");
+    var rows = [];
+    var maxCols = 1;
+    for (var i = 0; i < trs.length; i++) {
+      var tds = trs[i].children || [];
+      var cells = [];
+      for (var j = 0; j < tds.length; j++) {
+        var cellRuns = [];
+        inlineWalk(tds[j], { font: "Times New Roman", size: 12 }, cellRuns);
+        if (!cellRuns.length) cellRuns.push(runXml("", { font: "Times New Roman", size: 12 }));
+        cells.push('<w:tc><w:tcPr><w:tcW w:w="0" w:type="auto"/></w:tcPr>' +
+          '<w:p><w:pPr><w:spacing w:after="60"/></w:pPr>' + cellRuns.join("") + '</w:p></w:tc>');
+      }
+      if (cells.length > maxCols) maxCols = cells.length;
+      if (cells.length) rows.push('<w:tr>' + cells.join("") + '</w:tr>');
+    }
+    if (!rows.length) return "";
+    var grid = "";
+    for (var g = 0; g < maxCols; g++) grid += '<w:gridCol w:w="2000"/>';
+    return '<w:tbl><w:tblPr><w:tblW w:w="5000" w:type="pct"/><w:tblBorders>' +
+      '<w:top w:val="single" w:sz="4" w:color="000000"/><w:left w:val="single" w:sz="4" w:color="000000"/>' +
+      '<w:bottom w:val="single" w:sz="4" w:color="000000"/><w:right w:val="single" w:sz="4" w:color="000000"/>' +
+      '<w:insideH w:val="single" w:sz="4" w:color="000000"/><w:insideV w:val="single" w:sz="4" w:color="000000"/>' +
+      '</w:tblBorders></w:tblPr><w:tblGrid>' + grid + '</w:tblGrid>' + rows.join("") + '</w:tbl>';
   }
 
   function htmlToDocxXml(html, opts) {
@@ -352,7 +389,43 @@
     return s;
   }
 
+  function docxToHtmlDocxPreview(arrayBuffer) {
+    return new Promise(function (resolve) {
+      try {
+        if (!globalThis.docx || typeof globalThis.docx.renderAsync !== "function") return resolve("");
+        var holder = document.createElement("div");
+        holder.style.cssText = "position:absolute;left:-99999px;top:0;width:794px;background:#fff";
+        document.body.appendChild(holder);
+        var settled = false;
+        var done = function (html) {
+          if (settled) return;
+          settled = true;
+          try { document.body.removeChild(holder); } catch (e) {}
+          resolve(html || "");
+        };
+        setTimeout(function () { done(""); }, 6000); /* engine hang -> fallback parser */
+        globalThis.docx.renderAsync(arrayBuffer, holder, undefined, {
+          inWrapper: false, breakPages: false, ignoreHeight: true,
+          renderHeaders: true, renderFooters: true,
+          useBase64URL: true, renderChanges: false
+        }).then(function () {
+          var html = holder.innerHTML || "";
+          if (html.length > 200) {
+            html = html.replace(/<script[\s\S]*?<\/script>/gi, "");
+            done(html);
+          } else done("");
+        }).catch(function () { done(""); });
+      } catch (e) { resolve(""); }
+    });
+  }
+
   function docxToHtml(arrayBuffer) {
+    return docxToHtmlDocxPreview(arrayBuffer).then(function (html) {
+      return html || docxToHtmlFallback(arrayBuffer);
+    });
+  }
+
+  function docxToHtmlFallback(arrayBuffer) {
     return getDocxXml(arrayBuffer).then(function (xml) {
       if (!xml) return "";
       var doc;

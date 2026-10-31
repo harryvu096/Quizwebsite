@@ -232,11 +232,13 @@
     ];
   }
   function fetchWithTimeout(url, ms) {
-    var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
-    var timer = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, ms || 9000) : null;
-    return fetch(url, { redirect: "follow", signal: ctrl ? ctrl.signal : undefined })
-      .then(function (r) { if (timer) clearTimeout(timer); return r; })
-      .catch(function (e) { if (timer) clearTimeout(timer); throw e; });
+    try {
+      var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+      var timer = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, ms || 9000) : null;
+      return fetch(url, { redirect: "follow", signal: ctrl ? ctrl.signal : undefined })
+        .then(function (r) { if (timer) clearTimeout(timer); return r; })
+        .catch(function (e) { if (timer) clearTimeout(timer); throw e; });
+    } catch (e) { return Promise.reject(e); }
   }
   async function fetchTextViaProxies(url) {
     var urls = proxyUrls(url);
@@ -266,7 +268,7 @@
     if (s.indexOf("{") === 0) return false;                       // json error
     return true;
   }
-  async function fetchDriveBytes(fileId, kind) {
+  function fetchDriveBytes(fileId, kind) {
     var directs = [
       "https://drive.google.com/uc?export=download&confirm=t&id=" + fileId,
       "https://drive.usercontent.google.com/download?id=" + fileId + "&export=download"
@@ -279,16 +281,25 @@
       urls.push("https://corsproxy.io/?" + encodeURIComponent(d));
       urls.push("https://api.cors.lol/?url=" + encodeURIComponent(d));
     });
-    for (var i = 0; i < urls.length; i++) {
-      try {
-        var r = await fetchWithTimeout(urls[i], 11000);
-        if (!r.ok) continue;
-        var b = new Uint8Array(await r.arrayBuffer());
-        if (!bytesLookValid(b, kind)) continue;
-        return b;
-      } catch (e) { /* next */ }
-    }
-    return null;
+    return new Promise(function (resolve) {
+      var done = false;
+      if (typeof fetch !== "function") { resolve(null); return; }
+      var left = urls.length;
+      var finish = function (b) { if (!done) { done = true; resolve(b); } };
+      setTimeout(function () { finish(null); }, 13000); /* overall hard cap */
+      urls.forEach(function (u) {
+        fetchWithTimeout(u, 13000).then(function (r) {
+          if (!r || !r.ok) return null;
+          return r.arrayBuffer();
+        }).then(function (ab) {
+          if (!ab) return;
+          var b = new Uint8Array(ab);
+          if (bytesLookValid(b, kind)) finish(b);
+        }).catch(function () {}).then(function () {
+          if (--left === 0) finish(null);
+        });
+      });
+    });
   }
 
   /* ---------------- folder scan (auto) ---------------- */
@@ -337,8 +348,20 @@
 
   function dhEdit(it) {
     lastEditItem = it;
-    dhToast("Loading " + (it.title || "file") + "&hellip;");
-    fetchDriveBytes(it.fileId, it.kind).then(function (bytes) {
+    var kind = it.kind || DOCXKIT.detectKind(it.name || "");
+    var name = it.name || String(it.title || "assignment").replace(/[^\w.\- ]+/g, "_");
+    /* 1) editor TURANT khulta hai — kabhi "kuch nahi hua" nahi lagega */
+    if (kind === "pdf") { dhPreview(it); return; }
+    if (kind === "cpp") {
+      openInCppLab(name, "// " + (it.title || name) + " load ho raha hai ...\n");
+    } else if (kind === "docx") {
+      wpOpen(it.title || name, "<p style=\"color:#999\">Loading document&hellip;</p>", /\.docx$/i.test(name) ? name : name + ".docx");
+    } else {
+      dtOpen(it.title || name, "Loading " + (it.title || name) + " ...", /\.[a-z0-9]+$/i.test(name) ? name : name + ".txt");
+    }
+    dhToast("Fetching " + (it.title || "file") + "&hellip;");
+    /* 2) file background mein aati hai; fail ho to help dialog editor ke upar */
+    fetchDriveBytes(it.fileId, kind).then(function (bytes) {
       if (!bytes) { dhLoadDialog(it); return; }
       openBytes(it, bytes);
     });
@@ -536,6 +559,7 @@
   globalThis.dhAddSave = dhAddSave;
   globalThis.dhScanFolders = dhScanFolders;
   globalThis.dhOpenFolderView = dhOpenFolderView;
+  globalThis.dhEdit = dhEdit;
   globalThis.dhRetryEdit = dhRetryEdit;
   globalThis.dhPickLocal = dhPickLocal;
   globalThis.dhCloseLoad = dhCloseLoad;
