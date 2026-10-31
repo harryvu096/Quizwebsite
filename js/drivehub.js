@@ -231,14 +231,20 @@
       "https://r.jina.ai/" + direct
     ];
   }
+  function fetchWithTimeout(url, ms) {
+    var ctrl = typeof AbortController !== "undefined" ? new AbortController() : null;
+    var timer = ctrl ? setTimeout(function () { try { ctrl.abort(); } catch (e) {} }, ms || 9000) : null;
+    return fetch(url, { redirect: "follow", signal: ctrl ? ctrl.signal : undefined })
+      .then(function (r) { if (timer) clearTimeout(timer); return r; })
+      .catch(function (e) { if (timer) clearTimeout(timer); throw e; });
+  }
   async function fetchTextViaProxies(url) {
     var urls = proxyUrls(url);
     for (var i = 0; i < urls.length; i++) {
       try {
-        var r = await fetch(urls[i], { redirect: "follow" });
+        var r = await fetchWithTimeout(urls[i], 9000);
         if (!r.ok) continue;
         var t = await r.text();
-        /* allorigins /get JSON variant */
         if (t && t.length > 20 && t[0] === "{") {
           try {
             var j = JSON.parse(t);
@@ -250,17 +256,35 @@
     }
     return null;
   }
-  async function fetchDriveBytes(fileId) {
-    var direct = driveDownloadUrl(fileId);
-    var urls = proxyUrls(direct);
+  function bytesLookValid(b, kind) {
+    if (!b || b.length < 200) return false;
+    var s = String.fromCharCode(b[0], b[1], b[2], b[3], b[4], b[5], b[6], b[7]).toLowerCase();
+    if (b[0] === 0x50 && b[1] === 0x4b) return true;             // zip (.docx)
+    if (b[0] === 0xD0 && b[1] === 0xCF) return true;             // OLE (.doc)
+    if (kind === "pdf") return s.indexOf("%pdf") === 0;
+    if (s.indexOf("<") === 0) return false;                       // html error page
+    if (s.indexOf("{") === 0) return false;                       // json error
+    return true;
+  }
+  async function fetchDriveBytes(fileId, kind) {
+    var directs = [
+      "https://drive.google.com/uc?export=download&confirm=t&id=" + fileId,
+      "https://drive.usercontent.google.com/download?id=" + fileId + "&export=download"
+    ];
+    var urls = [];
+    directs.forEach(function (d) {
+      urls.push(d);
+      urls.push("https://api.allorigins.win/raw?url=" + encodeURIComponent(d));
+      urls.push("https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(d));
+      urls.push("https://corsproxy.io/?" + encodeURIComponent(d));
+      urls.push("https://api.cors.lol/?url=" + encodeURIComponent(d));
+    });
     for (var i = 0; i < urls.length; i++) {
       try {
-        var r = await fetch(urls[i], { redirect: "follow" });
+        var r = await fetchWithTimeout(urls[i], 11000);
         if (!r.ok) continue;
         var b = new Uint8Array(await r.arrayBuffer());
-        if (b.length < 200) continue;
-        var head = String.fromCharCode(b[0], b[1], b[2], b[3], b[4], b[5]).toLowerCase();
-        if (head.indexOf("<") === 0) continue;   // HTML error page -> next
+        if (!bytesLookValid(b, kind)) continue;
         return b;
       } catch (e) { /* next */ }
     }
@@ -309,30 +333,56 @@
   }
 
   /* ---------------- editors ---------------- */
-  async function dhEdit(it) {
+  var lastEditItem = null;
+
+  function dhEdit(it) {
+    lastEditItem = it;
     dhToast("Loading " + (it.title || "file") + "&hellip;");
-    var bytes = await fetchDriveBytes(it.fileId);
-    if (!bytes) { dhErr("Could not load the file automatically. Use Download, or try again shortly."); return; }
-    var kind = it.kind;
-    var name = it.name || (String(it.title || "assignment").replace(/[^\w.\- ]+/g, "_") + "." + (kind === "docx" ? "docx" : kind === "cpp" ? "cpp" : "txt"));
+    fetchDriveBytes(it.fileId, it.kind).then(function (bytes) {
+      if (!bytes) { dhLoadDialog(it); return; }
+      openBytes(it, bytes);
+    });
+  }
+
+  function dhLoadDialog(it) {
+    var box = $("dhLoadBox");
+    if (!box) { dhErr("Could not load the file automatically. Use Download, or try again shortly."); return; }
+    $("dhLoadMsg").innerHTML = "<b>" + esc(it.title || "The file") + "</b> automatically load nahi hui (network/Drive). " +
+      "Aap <b>Download</b> kar ke file apne device par le lein, phir <b>Choose File</b> se editor mein khol lein — editing 100% kaam karegi.";
+    box.style.display = "flex";
+  }
+  function dhCloseLoad() { var b = $("dhLoadBox"); if (b) b.style.display = "none"; }
+  function dhRetryEdit() {
+    dhCloseLoad();
+    if (lastEditItem) dhEdit(lastEditItem);
+  }
+  function dhPickLocal() { var f = $("dhLocalFile"); if (f) f.click(); }
+
+  function openBytes(it, bytes) {
+    var name = it.name || (String(it.title || "assignment").replace(/[^\w.\- ]+/g, "_"));
     try {
-      if (kind === "docx") {
-        var isZip = bytes[0] === 0x50 && bytes[1] === 0x4b;
-        if (isZip) {
-          var html = await DOCXKIT.docxToHtml(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
-          if (!html) { dhErr("This Word file cannot be opened in the editor (old .doc format). Please use Download."); return; }
-          wpOpen(it.title || name, html, /\.(docx|doc)$/i.test(name) ? name.replace(/\.(doc)$/i, ".docx") : name + ".docx");
-        } else {
-          dtOpen(it.title || name, new TextDecoder().decode(bytes), name.replace(/\.[^.]+$/, "") + ".txt");
-        }
-      } else if (kind === "cpp") {
+      var isZip = bytes[0] === 0x50 && bytes[1] === 0x4b;
+      var isOle = bytes[0] === 0xD0 && bytes[1] === 0xCF;
+      if (isOle) { dhErr("Purana .doc format editor mein nahi khulta. File ko MS Word mein .docx Save As kar ke dobara try karein."); return; }
+      if (isZip) {
+        var html = DOCXKIT.docxToHtml(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
+        Promise.resolve(html).then(function (h) {
+          if (!h) { dhErr("Word file ka content read nahi hua — dobara try karein."); return; }
+          var fname = /\.(docx|doc)$/i.test(name) ? name.replace(/\.(doc)$/i, ".docx") : name + ".docx";
+          wpOpen(it.title || name, h, fname);
+          dhCloseLoad();
+        });
+      } else if (/\.(cpp|cc|c|h|hpp)$/i.test(name)) {
         openInCppLab(name, new TextDecoder().decode(bytes));
         dhToast("Opened in C++ Lab &mdash; press Run to compile and execute.");
-      } else if (kind === "text") {
-        dtOpen(it.title || name, new TextDecoder().decode(bytes), name);
+        dhCloseLoad();
+      } else if (/\.pdf$/i.test(name)) {
+        if (it.fileId && it.fileId !== "local") dhPreview(it);
+        dhToast("PDF files edit nahi hoti — Preview ya Download use karein.");
+        dhCloseLoad();
       } else {
-        dhPreview(it);
-        dhToast("This file type cannot be edited here. Use Preview or Download.");
+        dtOpen(it.title || name, new TextDecoder().decode(bytes), /\.[a-z0-9]+$/i.test(name) ? name : name + ".txt");
+        dhCloseLoad();
       }
     } catch (e) {
       dhErr("Could not open the file: " + esc(e.message || e));
@@ -346,6 +396,8 @@
     $("wpTitle").textContent = title + " — ✏️ Edit";
     var page = $("wpPage");
     page.innerHTML = html || "<p><br></p>";
+    try { document.execCommand("styleWithCSS", false, true); } catch (e) {}
+    try { document.execCommand("defaultParagraphSeparator", false, "p"); } catch (e) {}
     page.focus();
   }
   function wpBack() {
@@ -484,6 +536,10 @@
   globalThis.dhAddSave = dhAddSave;
   globalThis.dhScanFolders = dhScanFolders;
   globalThis.dhOpenFolderView = dhOpenFolderView;
+  globalThis.dhRetryEdit = dhRetryEdit;
+  globalThis.dhPickLocal = dhPickLocal;
+  globalThis.dhCloseLoad = dhCloseLoad;
+  globalThis.dhOpenBytes = openBytes;
   globalThis.wpBack = wpBack;
   globalThis.wpCmd = wpCmd;
   globalThis.wpSize = wpSize;
@@ -494,6 +550,31 @@
   globalThis.dtDownload = dtDownload;
 
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") { dhClosePreview(); dhCloseAdd(); }
+    if (e.key === "Escape") { dhClosePreview(); dhCloseAdd(); dhCloseLoad(); }
+  });
+
+  /* local device file -> editor (guaranteed fallback) */
+  document.addEventListener("DOMContentLoaded", function () {
+    var inp = $("dhLocalFile");
+    if (!inp || inp.dataset.wired) return;
+    inp.dataset.wired = "1";
+    inp.addEventListener("change", function () {
+      var f = inp.files && inp.files[0];
+      if (!f) return;
+      f.arrayBuffer().then(function (ab) {
+        var b = new Uint8Array(ab);
+        var kind = DOCXKIT.detectKind(f.name);
+        var it = {
+          id: "local", title: f.name, name: f.name, fileId: "local", kind: kind, desc: "Device file"
+        };
+        if (kind === "pdf") {
+          dhCloseLoad();
+          dhToast("PDF files edit nahi hoti — Preview ya Download use karein.");
+          return;
+        }
+        openBytes(it, b);
+      }).catch(function (e) { dhErr("File read nahi hui: " + esc(e.message || e)); });
+      inp.value = "";
+    });
   });
 })();

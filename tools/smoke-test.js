@@ -69,7 +69,7 @@ function assert(cond, label) {
   assert(nb > 100, "MCQ data loaded (" + nb + " banks)");
   assert($("#modal-dialog") !== null, "dialog modal exists");
   assert($("#fbReportBtn") !== null, "Report button exists");
-  assert(doc.body.getAttribute("data-build") === "ahw19", "build tag synced");
+  assert(doc.body.getAttribute("data-build") === "ahw20", "build tag synced");
 
   console.log("\n[2] Home → Subjects");
   doc.getElementById("playerName").value = "SmokeTester";
@@ -305,12 +305,18 @@ function assert(cond, label) {
   assert($("#dhFolderBox").innerHTML.toLowerCase().indexOf("folder") > -1, "folder strip rendered");
   assert($("#dhStats").innerHTML.indexOf("assignments") > -1, "hero stats rendered");
   assert(doc.getElementById("dhAddBox").innerHTML.indexOf("Submit an Assignment Link") > -1, "submit-link dialog (English) present");
+  assert(doc.getElementById("dhLoadBox") && doc.getElementById("dhLocalFile"), "file-load fallback dialog present");
+  assert(typeof window.dhRetryEdit === "function" && typeof window.dhPickLocal === "function" && typeof window.dhOpenBytes === "function", "edit fallback fns defined");
   assert(window.AHW_ASSIGN_FOLDERS && window.AHW_ASSIGN_FOLDERS.length === 1, "user folder registered");
 
   // -- editor panes
   window.wpOpen("Demo", "<p><b>Hello</b> world</p>", "demo.docx");
   await sleep(10);
   assert($("#dhWordWrap").style.display === "block" && $("#wpPage").innerHTML.indexOf("Hello") > -1, "word editor opens with content");
+  window.dhOpenBytes({ id: "local", title: "demo2.docx", name: "demo2.docx", fileId: "local", kind: "docx" },
+    new Uint8Array(await (await window.DOCXKIT.buildDocxFromHtml("<p>Local <b>file</b> works</p>", { title: "x" })).arrayBuffer()));
+  await sleep(40);
+  assert($("#dhWordWrap").style.display === "block" && $("#wpPage").innerHTML.indexOf("works") > -1, "openBytes: device docx -> word editor");
   window.dtOpen("Notes", "some text", "notes.txt");
   await sleep(10);
   assert($("#dhTextWrap").style.display === "block" && $("#dtArea").value === "some text", "text editor opens");
