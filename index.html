@@ -23,7 +23,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%237c3aed'/%3E%3Ctext x='32' y='42' font-size='26' font-family='Arial' font-weight='900' fill='white' text-anchor='middle'%3EAHW%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-build="ahw19">
+<body data-build="ahw20">
 
 <div class="blob" style="left:6%;top:14%;animation-duration:11s">📡</div>
 <div class="blob" style="left:88%;top:10%;animation-duration:8s">🌐</div>
@@ -439,7 +439,8 @@
         <button class="wp-btn" onclick="wpCmd('undo')" title="Undo (Ctrl+Z)">&#8630;</button>
         <button class="wp-btn" onclick="wpCmd('redo')" title="Redo (Ctrl+Y)">&#8631;</button>
         <span class="wp-title" id="wpTitle"></span>
-        <button class="btn btn-pink btn-sm" onclick="wpDownload()">📥 Download .docx</button>
+        <button class="wp-btn wp-back" onclick="dhPickLocal()" title="Device se file kholein">📂 Open file</button>
+        <button class="btn btn-pink btn-sm" onclick="wpDownload()">Download .docx</button>
         <button class="btn btn-gray btn-sm" onclick="window.print()">🖨️ Print</button>
       </div>
       <div class="word-canvas"><div id="wpPage" class="word-page" contenteditable="true" spellcheck="true"><p><br></p></div></div>
@@ -450,13 +451,28 @@
       <div class="wp-ribbon">
         <button class="wp-btn wp-back" onclick="wpBack()">&#8592; Library</button>
         <span class="wp-title" id="dtTitle"></span>
-        <button class="btn btn-pink btn-sm" onclick="dtDownload()">📥 Download</button>
+        <button class="wp-btn wp-back" onclick="dhPickLocal()" title="Device se file kholein">📂 Open file</button>
+        <button class="btn btn-pink btn-sm" onclick="dtDownload()">Download</button>
       </div>
       <textarea id="dtArea" class="dt-area" spellcheck="true"></textarea>
     </div>
 
     <!-- Drive preview overlay -->
     <div id="dhPreviewBox" class="dh-overlay" style="display:none"></div>
+
+    <!-- file-load fallback dialog -->
+    <div id="dhLoadBox" class="dh-overlay" style="display:none">
+      <div class="dh-dialog card">
+        <div class="big-title" style="font-size:18px">Open in Editor</div>
+        <div class="sub" id="dhLoadMsg" style="margin:8px 0"></div>
+        <div class="as-row" style="margin-top:10px">
+          <button class="btn btn-blue" onclick="dhRetryEdit()">Try Again</button>
+          <button class="btn btn-green" onclick="dhPickLocal()">Choose File from Device</button>
+          <button class="btn btn-gray" onclick="dhCloseLoad()">Cancel</button>
+        </div>
+        <input type="file" id="dhLocalFile" style="display:none" accept=".docx,.doc,.txt,.md,.cpp,.cc,.c,.h,.hpp,.csv,.log">
+      </div>
+    </div>
 
     <!-- add-link dialog -->
     <div id="dhAddBox" class="dh-overlay" style="display:none">
@@ -758,12 +774,12 @@
 
 <div class="streak-banner" id="streakBanner"></div>
 
-<script src="data/mcqs.js?v=ahw19"></script>
-<script src="js/app.js?v=ahw19"></script>
-<script src="js/compiler.js?v=ahw19"></script>
-<script src="js/english.js?v=ahw19"></script>
-<script src="data/assignments.js?v=ahw19"></script>
-  <script src="js/docxkit.js?v=ahw19"></script>
-  <script src="js/drivehub.js?v=ahw19"></script>
+<script src="data/mcqs.js?v=ahw20"></script>
+<script src="js/app.js?v=ahw20"></script>
+<script src="js/compiler.js?v=ahw20"></script>
+<script src="js/english.js?v=ahw20"></script>
+<script src="data/assignments.js?v=ahw20"></script>
+  <script src="js/docxkit.js?v=ahw20"></script>
+  <script src="js/drivehub.js?v=ahw20"></script>
 </body>
 </html>
