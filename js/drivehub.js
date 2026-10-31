@@ -88,11 +88,12 @@
   function agoText(ts) {
     if (!ts) return "";
     var d = Math.round((Date.now() - ts) / 60000);
-    if (d < 1) return "abhi abhi";
-    if (d < 60) return d + " minute pehle";
+    if (d < 1) return "just now";
+    if (d < 60) return d + " min ago";
     var h = Math.round(d / 60);
-    if (h < 24) return h + " ghante pehle";
-    return Math.round(h / 24) + " din pehle";
+    if (h < 24) return h + (h === 1 ? " hour ago" : " hours ago");
+    var dd = Math.round(h / 24);
+    return dd + (dd === 1 ? " day ago" : " days ago");
   }
 
   function dhRender() {
@@ -107,9 +108,7 @@
     });
 
     if (!items.length) {
-      box.innerHTML = '<div class="dhx-empty">' + (q
-        ? "🔍 Yeh nahi mila — doosra naam try karein."
-        : "📭 Abhi list khaali hai… folder scan ho raha hai. Thodi der mein sab assignments yahan dikhengi.") + "</div>";
+      box.innerHTML = q ? '<div class="dhx-empty">No assignment matched your search.</div>' : "";
       return;
     }
 
@@ -131,12 +130,12 @@
       var meta = code !== "OTHER" ? subjectMeta(code) : null;
       var color = meta ? (meta.c1 || fallbackColor(code)) : fallbackColor(code === "OTHER" ? "zz" : code);
       var icon = meta ? (meta.icon || "📚") : (code === "OTHER" ? "📁" : "📚");
-      var title = meta ? meta.title : (code === "OTHER" ? "Baqi assignments" : "Assignments");
+      var title = meta ? meta.title : (code === "OTHER" ? "Unclassified" : "Assignments");
       h += '<section class="dhx-group">';
       h += '<div class="dhx-ghead" style="--gc:' + esc(color) + '">' +
         '<span class="dhx-gicon">' + icon + "</span>" +
-        '<div class="dhx-gtitle"><b>' + esc(code === "OTHER" ? "📁 Others" : code) + "</b>" +
-        "<span>" + esc(title) + " · " + groups[code].items.length + " file" + (groups[code].items.length > 1 ? "s" : "") + "</span></div>" +
+        '<div class="dhx-gtitle"><b>' + esc(code === "OTHER" ? "Other Files" : code) + "</b>" +
+        "<span>" + esc(title) + " &middot; " + groups[code].items.length + " assignment" + (groups[code].items.length > 1 ? "s" : "") + "</span></div>" +
         "</div>";
       groups[code].items.forEach(function (it) {
         h += '<div class="dhx-card">' +
@@ -146,9 +145,9 @@
           '<div class="dhx-m">' + esc([(it.name && it.name !== it.title ? it.name : ""), it.desc].filter(Boolean).join(" · ")) + "</div>" +
           "</div>" +
           '<div class="dhx-acts">' +
-          '<button class="dhx-btn dhx-btn-dl" data-act="dl" data-id="' + esc(it.id) + '">📥 Download</button>' +
-          (it.kind === "pdf" ? "" : '<button class="dhx-btn dhx-btn-ed" data-act="ed" data-id="' + esc(it.id) + '">✏️ Edit</button>') +
-          '<button class="dhx-btn dhx-btn-pv" data-act="pv" data-id="' + esc(it.id) + '">👁️</button>' +
+          '<button class="dhx-btn dhx-btn-dl" data-act="dl" data-id="' + esc(it.id) + '">Download</button>' +
+          (it.kind === "pdf" ? "" : '<button class="dhx-btn dhx-btn-ed" data-act="ed" data-id="' + esc(it.id) + '">Edit</button>') +
+          '<button class="dhx-btn dhx-btn-pv" data-act="pv" data-id="' + esc(it.id) + '">Preview</button>' +
           "</div></div>";
       });
       h += "</section>";
@@ -175,7 +174,7 @@
     el.innerHTML =
       '<span class="dhx-stat"><b>' + items.length + "</b> assignments</span>" +
       '<span class="dhx-stat"><b>' + Object.keys(subs).length + "</b> subjects</span>" +
-      (cache.ts ? '<span class="dhx-stat dhx-upd">🔄 ' + esc(agoText(cache.ts)) + " auto-update</span>" : "");
+      (cache.ts ? '<span class="dhx-stat dhx-upd">Updated ' + esc(agoText(cache.ts)) + "</span>" : "");
   }
 
   function renderFolderStrip() {
@@ -185,15 +184,15 @@
     var n = folderFiles().length;
     if (n) {
       box.innerHTML = '<div class="dhx-strip">' +
-        '<span>📁 Google Drive folder se ' + n + " files — nayi upload khud yahan aa jayegi.</span>" +
-        '<button class="dhx-btn dhx-btn-pv" data-fact="open">🌐 Folder kholein</button>' +
+        "<span>Google Drive folder &middot; " + n + " files</span>" +
+        '<button class="dhx-btn dhx-btn-pv" data-fact="open">Open Drive Folder</button>' +
         "</div>";
     } else {
       box.innerHTML = '<div class="dhx-strip dhx-strip-warn">' +
-        "<span>⏳ Folder ki list load ho rahi hai… Agar kuch na dikhe to folder kholein:</span>" +
-        '<button class="dhx-btn dhx-btn-pv" data-fact="open">🌐 Folder kholein</button>' +
+        "<span>Loading the assignment list&hellip;</span>" +
+        '<button class="dhx-btn dhx-btn-pv" data-fact="open">Open Drive Folder</button>' +
         "</div>" +
-        '<iframe class="dhx-folder-frame" loading="lazy" src="https://drive.google.com/embeddedfolderview?id=' +
+        '<iframe class="dhx-folder-frame" loading="lazy" src="https://drive.google.com/embeddedfoldiew?id=' +
         esc(folderIds()[0]) + '#list"></iframe>';
     }
     box.querySelectorAll("[data-fact]").forEach(function (b) {
@@ -227,7 +226,9 @@
       direct,
       "https://api.allorigins.win/raw?url=" + encodeURIComponent(direct),
       "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(direct),
-      "https://corsproxy.io/?" + encodeURIComponent(direct)
+      "https://corsproxy.io/?" + encodeURIComponent(direct),
+      "https://api.cors.lol/?url=" + encodeURIComponent(direct),
+      "https://r.jina.ai/" + direct
     ];
   }
   async function fetchTextViaProxies(url) {
@@ -237,6 +238,13 @@
         var r = await fetch(urls[i], { redirect: "follow" });
         if (!r.ok) continue;
         var t = await r.text();
+        /* allorigins /get JSON variant */
+        if (t && t.length > 20 && t[0] === "{") {
+          try {
+            var j = JSON.parse(t);
+            if (j && typeof j.contents === "string" && j.contents.length > 500) t = j.contents;
+          } catch (e2) {}
+        }
         if (t && t.length > 500) return t;
       } catch (e) { /* next */ }
     }
@@ -272,22 +280,24 @@
     if (!force && cache.ts && cache.files && cache.files.length && (Date.now() - cache.ts) < 5 * 60 * 1000) return;
     scanning = true;
     var files = [];
-    for (var i = 0; i < ids.length; i++) {
-      /* embeddedfoldiew = server-rendered list — sab se reliable */
-      var html = await fetchTextViaProxies("https://drive.google.com/embeddedfolderview?id=" + ids[i]);
-      if (!html) html = await fetchTextViaProxies("https://drive.google.com/drive/folders/" + ids[i] + "?hl=en");
-      if (html) {
-        DOCXKIT.parseFolderHtml(html).forEach(function (f) {
-          if (!files.some(function (x) { return x.fileId === f.fileId; })) files.push(f);
-        });
+    for (var attempt = 0; attempt < 3 && !files.length; attempt++) {
+      for (var i = 0; i < ids.length && !files.length; i++) {
+        /* embeddedfoldiew = server-rendered list — sab se reliable */
+        var html = await fetchTextViaProxies("https://drive.google.com/embeddedfolderview?id=" + ids[i]);
+        if (!html) html = await fetchTextViaProxies("https://drive.google.com/drive/folders/" + ids[i] + "?hl=en");
+        if (html) {
+          DOCXKIT.parseFolderHtml(html).forEach(function (f) {
+            if (!files.some(function (x) { return x.fileId === f.fileId; })) files.push(f);
+          });
+        }
       }
+      if (!files.length && attempt < 2) await new Promise(function (r) { setTimeout(r, 4000); }); // retry after 4s
     }
     scanning = false;
     if (files.length) {
       try { localStorage.setItem(FOLDER_KEY, JSON.stringify({ ts: Date.now(), files: files })); } catch (e) {}
       dhRender();
     } else {
-      /* purani cache rehne dein, sirf message dikhayein */
       renderFolderStrip();
     }
   }
@@ -300,9 +310,9 @@
 
   /* ---------------- editors ---------------- */
   async function dhEdit(it) {
-    dhToast("⬇️ File aa rahi hai… (" + (it.title || "") + ")");
+    dhToast("Loading " + (it.title || "file") + "&hellip;");
     var bytes = await fetchDriveBytes(it.fileId);
-    if (!bytes) { dhErr("File fetch nahi hui — 📥 Download kar ke khud edit karein, ya thodi der baad try karein."); return; }
+    if (!bytes) { dhErr("Could not load the file automatically. Use Download, or try again shortly."); return; }
     var kind = it.kind;
     var name = it.name || (String(it.title || "assignment").replace(/[^\w.\- ]+/g, "_") + "." + (kind === "docx" ? "docx" : kind === "cpp" ? "cpp" : "txt"));
     try {
@@ -310,22 +320,22 @@
         var isZip = bytes[0] === 0x50 && bytes[1] === 0x4b;
         if (isZip) {
           var html = await DOCXKIT.docxToHtml(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
-          if (!html) { dhErr("Word file parhi nahi ja saki — shayad purana .doc format ho. 📥 Download karein."); return; }
+          if (!html) { dhErr("This Word file cannot be opened in the editor (old .doc format). Please use Download."); return; }
           wpOpen(it.title || name, html, /\.(docx|doc)$/i.test(name) ? name.replace(/\.(doc)$/i, ".docx") : name + ".docx");
         } else {
           dtOpen(it.title || name, new TextDecoder().decode(bytes), name.replace(/\.[^.]+$/, "") + ".txt");
         }
       } else if (kind === "cpp") {
         openInCppLab(name, new TextDecoder().decode(bytes));
-        dhToast("💻 C++ Lab mein khul gaya — ▶️ Run dabayein!");
+        dhToast("Opened in C++ Lab &mdash; press Run to compile and execute.");
       } else if (kind === "text") {
         dtOpen(it.title || name, new TextDecoder().decode(bytes), name);
       } else {
         dhPreview(it);
-        dhToast("Yeh file type edit support nahi karta — preview / download karein.");
+        dhToast("This file type cannot be edited here. Use Preview or Download.");
       }
     } catch (e) {
-      dhErr("Kholne mein masla: " + esc(e.message || e));
+      dhErr("Could not open the file: " + esc(e.message || e));
     }
   }
 
@@ -371,7 +381,7 @@
     a.download = W.fileName || "assignment.docx";
     document.body.appendChild(a); a.click();
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
-    dhToast("✅ MS Word file download ho gayi — <b>" + esc(a.download) + "</b>");
+    dhToast("Downloaded <b>" + esc(a.download) + "</b>");
   }
 
   function dtOpen(title, text, fileName) {
@@ -389,7 +399,7 @@
     a.download = W.fileName || "assignment.txt";
     document.body.appendChild(a); a.click();
     setTimeout(function () { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
-    dhToast("✅ Download ho gaya — <b>" + esc(a.download) + "</b>");
+    dhToast("Downloaded <b>" + esc(a.download) + "</b>");
   }
 
   /* ---------------- add link dialog (topbar ➕) ---------------- */
@@ -406,11 +416,11 @@
       } catch (e) {}
       dhCloseAdd();
       dhScanFolders(true);
-      dhToast("✅ Folder jud gaya — files aa rahi hain…");
+      dhToast("Folder added. Loading its files&hellip;");
       return;
     }
     var fileId = DOCXKIT.fileIdFromLink(link);
-    if (!fileId) { dhErr("Link theek nahi lag rahi — Drive ki file/folder wali link paste karein."); return; }
+    if (!fileId) { dhErr("That does not look like a valid Google Drive link."); return; }
     var it = {
       id: "dhx" + Date.now(),
       title: $("dhAddTitle").value.trim() || "Assignment",
@@ -427,7 +437,7 @@
     } catch (e) {}
     dhCloseAdd();
     dhRender();
-    dhToast("✅ Assignment jud gayi — list mein dikh rahi hai.");
+    dhToast("Thank you! The link has been added to the library.");
   }
 
   /* ---------------- toasts ---------------- */
