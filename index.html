@@ -23,7 +23,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%237c3aed'/%3E%3Ctext x='32' y='42' font-size='26' font-family='Arial' font-weight='900' fill='white' text-anchor='middle'%3EAHW%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-build="ahw16">
+<body data-build="ahw17">
 
 <div class="blob" style="left:6%;top:14%;animation-duration:11s">📡</div>
 <div class="blob" style="left:88%;top:10%;animation-duration:8s">🌐</div>
@@ -393,6 +393,7 @@
         <div class="sub">Google Drive se assignment 📥 download karein, 👁️ preview dekhein, ya ✏️ Edit mein khol ke <b>Word jaise editor</b> se badal ke wapas <b>.docx</b> save karein. 💻 .cpp files seedhe <b>C++ Lab</b> mein compile/run ke liye khulti hain.</div>
         <input id="dhSearch" class="dh-search" placeholder="🔍 Search — CS601, STA301, assignment..." oninput="dhRender()">
         <div id="dhMsg"></div>
+        <div id="dhFolderBox"></div>
         <div id="dhList"></div>
       </div>
       <div class="card dh-help">
@@ -463,7 +464,7 @@
     <div id="dhAddBox" class="dh-overlay" style="display:none">
       <div class="dh-dialog card">
         <div class="big-title" style="font-size:19px">➕ Assignment link add karein</div>
-        <label>Google Drive link *<input id="dhAddLink" placeholder="https://drive.google.com/file/d/.../view"></label>
+        <label>Google Drive link * (file ya folder)<input id="dhAddLink" placeholder="https://drive.google.com/file/d/.../view ya /folders/..."></label>
         <label>Title *<input id="dhAddTitle" placeholder="CS601 Assignment 1 Solution"></label>
         <label>Subject code<input id="dhAddSubj" placeholder="CS601"></label>
         <label>Detail (semester etc.)<input id="dhAddDesc" placeholder="Fall 2026"></label>
@@ -758,12 +759,12 @@
 
 <div class="streak-banner" id="streakBanner"></div>
 
-<script src="data/mcqs.js?v=ahw16"></script>
-<script src="js/app.js?v=ahw16"></script>
-<script src="js/compiler.js?v=ahw16"></script>
-<script src="js/english.js?v=ahw16"></script>
-<script src="data/assignments.js?v=ahw16"></script>
-  <script src="js/docxkit.js?v=ahw16"></script>
-  <script src="js/drivehub.js?v=ahw16"></script>
+<script src="data/mcqs.js?v=ahw17"></script>
+<script src="js/app.js?v=ahw17"></script>
+<script src="js/compiler.js?v=ahw17"></script>
+<script src="js/english.js?v=ahw17"></script>
+<script src="data/assignments.js?v=ahw17"></script>
+  <script src="js/docxkit.js?v=ahw17"></script>
+  <script src="js/drivehub.js?v=ahw17"></script>
 </body>
 </html>

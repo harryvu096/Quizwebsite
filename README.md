@@ -3,7 +3,7 @@
 Gamified MCQ practice arena for Virtual University students: **68 subjects · 4,152 past-paper style MCQs · Mid + Finalterm arenas**, with hearts, streaks, boss battles, XP levels, certificates and a Mistake Vault.
 
 ## 🆕 Assignment Library — Google Drive (English)
-- **📚 Assignment Library** — a catalog of assignment files hosted on **Google Drive**: 📥 **Download**, 👁️ **Preview** (Drive viewer), ✏️ **Edit** in the browser.
+- **📚 Assignment Library** — a catalog of assignment files hosted on **Google Drive**. Point it at a **Drive folder link** and every file inside is listed automatically: 📥 **Download**, 👁️ **Preview** (Drive viewer), ✏️ **Edit** in the browser. Individual file links work too.
 - **Word-style editor** for `.docx` — files open on an **A4 printable page** (like desktop Word) with a full formatting ribbon (font, size, bold/italic/underline, colors, highlight, alignment, lists, headings, undo/redo, subscript/superscript) and export back to **.docx** / 🖨️ Print.
 - **.cpp files open in the built-in C++ Lab** (mini-IDE) where they can be compiled and run.
 - **Admin**: ➕ add Google Drive links in one click (stored locally); `data/assignments.js` holds the permanent list.

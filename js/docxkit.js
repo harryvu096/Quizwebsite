@@ -464,6 +464,52 @@
     return "other";
   }
 
+  /* ---------- folder link + folder HTML listing parse ---------- */
+  function folderIdFromLink(link) {
+    var m = String(link || "").match(/\/folders\/([a-zA-Z0-9_-]{10,})/);
+    return m ? m[1] : null;
+  }
+
+  function parseFolderHtml(html) {
+    var s = String(html || "");
+    // JS string escapes ko normalise karein taake quoted patterns match hon
+    var t = s.replace(/\\u003d/gi, "=").replace(/\\u0026/gi, "&")
+             .replace(/\\x3d/gi, "=").replace(/\\"/g, '"').replace(/\\\//g, "/");
+    var files = [], seen = {};
+    function add(id, name) {
+      if (!id || !name) return;
+      if (seen[id]) return;
+      name = String(name).replace(/\s+/g, " ").trim();
+      if (name.length < 3 || name.length > 150) return;
+      if (!/\.[a-z0-9]{2,6}$/i.test(name)) return;   // real file name jaisi honi chahiye
+      if (!/^[^\/\\]+$/.test(name)) return;
+      seen[id] = 1;
+      files.push({ fileId: id, name: name, kind: detectKind(name) });
+    }
+    // entries arrays hoti hain: ["<id>", mid..., "<name>"] ya ["<name>", mid..., "<id>"]
+    var mid = '(?:null|"[^"]*"|[0-9.]+|true|false|\\[\\])';
+    var namePat = '"([^"\\\\]{3,150}\\.[A-Za-z0-9]{2,6})"';
+    var idPat = '"([A-Za-z0-9_-]{25,45})"';
+    function scan(idFirst) {
+      for (var k = 0; k <= 4; k++) {
+        var mids = "";
+        for (var j = 0; j < k; j++) mids += mid + ",";
+        var src = idFirst
+          ? "\\[" + idPat + "," + mids + namePat
+          : "\\[" + namePat + "," + mids + idPat;
+        var re = new RegExp(src, "g");
+        var m;
+        while ((m = re.exec(t))) {
+          if (idFirst) add(m[1], m[2]);
+          else add(m[2], m[1]);
+        }
+      }
+    }
+    scan(true);
+    scan(false);
+    return files;
+  }
+
   globalThis.DOCXKIT = {
     crc32: crc32,
     zipStore: zipStore,
@@ -472,6 +518,8 @@
     docxToHtml: docxToHtml,
     extractDocxText: extractDocxText,
     fileIdFromLink: fileIdFromLink,
+    folderIdFromLink: folderIdFromLink,
+    parseFolderHtml: parseFolderHtml,
     detectKind: detectKind
   };
 })();

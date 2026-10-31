@@ -69,7 +69,7 @@ function assert(cond, label) {
   assert(nb > 100, "MCQ data loaded (" + nb + " banks)");
   assert($("#modal-dialog") !== null, "dialog modal exists");
   assert($("#fbReportBtn") !== null, "Report button exists");
-  assert(doc.body.getAttribute("data-build") === "ahw16", "build tag synced");
+  assert(doc.body.getAttribute("data-build") === "ahw17", "build tag synced");
 
   console.log("\n[2] Home → Subjects");
   doc.getElementById("playerName").value = "SmokeTester";
@@ -253,6 +253,16 @@ function assert(cond, label) {
   assert(K.fileIdFromLink("not a drive link") === null, "junk link -> null");
   assert(K.detectKind("a.cpp") === "cpp" && K.detectKind("a.docx") === "docx" && K.detectKind("a.pdf") === "pdf" && K.detectKind("a.txt") === "text", "detectKind mapping");
 
+  // -- folder link + folder listing parse
+  assert(K.folderIdFromLink("https://drive.google.com/drive/folders/1ImDidPTeNxMEbwT28qG1ILwMNYzxf247") === "1ImDidPTeNxMEbwT28qG1ILwMNYzxf247", "folderId from folder link");
+  assert(K.folderIdFromLink("https://drive.google.com/file/d/1AbCdEfGhIjKlMnOpQrStUv/view") === null, "file link is not a folder");
+  const fh = 'window[\'_DRIVE_ivd\'] = \'[[null,[[\\"1AbCdEfGhIjKlMnOpQrStUvXyZ12345\\",null,\\"CS601_Assignment1.docx\\",0],[\\"1BcDeFgHiJkLmNoPqRsTuVwXyZ23456\\",null,\\"STA301_Solution.pdf\\",0]]]]\';';
+  const pf = K.parseFolderHtml(fh);
+  assert(pf.length === 2 && pf[0].kind === "docx" && pf[1].kind === "pdf", "parseFolderHtml: _DRIVE_ivd entries (" + pf.length + ")");
+  const fh2 = 'AF_initDataCallback({key:\'ds:1\', data:[[[["1CdEfGhIjKlMnOpQrStUvXyZ34567",null,"CS403_Lab.cpp"]]]]});';
+  const pf2 = K.parseFolderHtml(fh2);
+  assert(pf2.length === 1 && pf2[0].kind === "cpp", "parseFolderHtml: AF_initDataCallback entries");
+
   // -- docx write/read roundtrip with formatting
   const docHtml = '<h2>Question 1</h2><p><b>Bold move</b> and <i>italic words</i> with <span style="font-size:14pt">big text</span>.</p><p style="text-align:center">Centered para</p>';
   const blob = K.buildDocxFromHtml(docHtml, { title: "Round Trip" });
@@ -278,6 +288,8 @@ function assert(cond, label) {
   assert($("#screen-drive").classList.contains("active"), "library screen opens");
   assert(doc.querySelectorAll("#dhList .dh-card").length >= 1, "assignment card rendered");
   assert($("#dhList").innerHTML.indexOf("Demo Assignment") > -1, "card shows title");
+  assert($("#dhFolderBox").innerHTML.indexOf("Assignment Folder") > -1, "folder box rendered");
+  assert(window.AHW_ASSIGN_FOLDERS && window.AHW_ASSIGN_FOLDERS.length === 1, "user folder registered");
 
   // -- editor panes
   window.wpOpen("Demo", "<p><b>Hello</b> world</p>", "demo.docx");
