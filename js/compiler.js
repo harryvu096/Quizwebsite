@@ -9,7 +9,7 @@
 
 /* Build self-heal: agar index.html aur compiler.js ke versions mix ho jayen
    (stale cache), ek dafa auto-reload kar ke fresh pair le lo. */
-const AHW_BUILD="ahw18";
+const AHW_BUILD="ahw19";
 (function(){
   try{
     const b=document.body ? document.body.getAttribute("data-build") : null;

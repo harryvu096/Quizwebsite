@@ -871,3 +871,46 @@ section#screen-mock{padding-bottom:120px}
   .dhx-hero-t{font-size:29px}
   .dhx-btn{padding:8px 12px;font-size:12px}
 }
+
+/* ===================== Assignment Library v3 (ahw19) — professional, organised ===================== */
+.dhx-hero{padding:26px 28px;border-radius:22px;background:linear-gradient(120deg,#1e1b4b 0%,#312e81 45%,#4c1d95 100%);
+  box-shadow:0 16px 40px rgba(30,27,75,.35);display:flex;align-items:center;justify-content:space-between;gap:18px;flex-wrap:wrap}
+.dhx-hero::after{display:none}
+.dhx-hero-t{font-size:31px;font-weight:900;letter-spacing:.5px;color:#fff;margin:0}
+.dhx-stats{display:flex;gap:10px;flex-wrap:wrap}
+.dhx-stat{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22);border-radius:12px;
+  padding:9px 16px;font-size:13px;font-weight:600;color:#e3e0f5}
+.dhx-stat b{font-size:16px;color:#fff;margin-right:4px}
+.dhx-upd{opacity:.85;font-size:12px}
+.dhx-search{min-width:260px;box-shadow:none}
+.dhx-group{margin-bottom:30px}
+.dhx-ghead{display:flex;align-items:center;gap:16px;margin:0 2px 14px;padding:14px 18px;border-radius:18px;
+  background:linear-gradient(100deg,color-mix(in srgb,var(--gc,#4c1d95) 12%,#fff) 0%,#fff 70%);
+  border:2px solid color-mix(in srgb,var(--gc,#4c1d95) 28%,#fff);flex-wrap:wrap}
+.dhx-gicon{width:62px;height:62px;border-radius:16px;font-size:33px;
+  background:linear-gradient(135deg,var(--gc,#4c1d95),color-mix(in srgb,var(--gc,#4c1d95) 55%,#fff));
+  box-shadow:0 10px 24px color-mix(in srgb,var(--gc,#4c1d95) 30%,transparent)}
+.dhx-gtitle{display:flex;flex-direction:column;line-height:1.25}
+.dhx-gtitle b{font-size:23px;color:#1e1b4b;letter-spacing:.6px;font-weight:900}
+.dhx-gtitle span{font-size:13.5px;font-weight:700;color:#6b5f8e;margin-top:3px}
+.dhx-card{border-radius:16px;padding:15px 18px;border:1.5px solid #ebe6f8;box-shadow:0 4px 12px rgba(30,27,75,.05)}
+.dhx-card:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(30,27,75,.11)}
+.dhx-ic{width:52px;height:52px;border-radius:12px;font-size:25px}
+.dhx-t{font-size:15.5px;font-weight:800;color:#1e1b4b}
+.dhx-m{font-size:12px;color:#8b7db5;font-weight:600}
+.dhx-acts{gap:9px}
+.dhx-btn{border-radius:11px;padding:10px 18px;font-size:13px;font-weight:800;letter-spacing:.2px}
+.dhx-btn-dl{background:#1e40af}
+.dhx-btn-ed{background:#15803d}
+.dhx-btn-pv{background:#fff;color:#4c1d95;border:1.5px solid #cfc4ef!important}
+.dhx-empty{font-size:14px;padding:20px;color:#7a6da0;font-weight:600}
+.dhx-strip{border-radius:14px;font-size:13px}
+.dhx-dialog .big-title{color:#1e1b4b}
+.dhx-dialog label{color:#4a3d6e}
+@media (max-width:620px){
+  .dhx-hero{padding:20px 18px}
+  .dhx-hero-t{font-size:24px}
+  .dhx-gtitle b{font-size:19px}
+  .dhx-gicon{width:52px;height:52px;font-size:27px}
+  .dhx-btn{padding:9px 13px;font-size:12px}
+}
