@@ -23,7 +23,7 @@
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%237c3aed'/%3E%3Ctext x='32' y='42' font-size='26' font-family='Arial' font-weight='900' fill='white' text-anchor='middle'%3EAHW%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="css/style.css">
 </head>
-<body data-build="ahw18">
+<body data-build="ahw19">
 
 <div class="blob" style="left:6%;top:14%;animation-duration:11s">📡</div>
 <div class="blob" style="left:88%;top:10%;animation-duration:8s">🌐</div>
@@ -382,20 +382,19 @@
     <div class="topbar">
       <div class="mini-logo" onclick="goHome()" style="cursor:pointer" title="Home">📚 Assignment Library <span style="opacity:.8;font-size:13px">· Download &amp; Edit</span></div>
       <div style="display:flex;gap:10px">
-        <button class="icon-btn" title="Link add karein" onclick="dhAddDialog()">➕</button>
         <button class="icon-btn" title="Home" aria-label="Home" onclick="goHome()">🏠</button>
       </div>
     </div>
 
     <div class="dh-wrap" id="dhWrap">
       <div class="dhx-hero">
-        <div class="dhx-hero-t">📚 Assignments</div>
-        <div class="dhx-hero-s">Jo bhi assignment Drive mein dalenge, yahan khud nazar aayegi &mdash; 📥 download karo, ✏️ edit karo, submit karo.</div>
+        <div class="dhx-hero-t">Assignment Library</div>
         <div class="dhx-stats" id="dhStats"></div>
       </div>
       <div class="dhx-searchrow">
-        <input id="dhSearch" class="dhx-search" placeholder="🔍 Assignment dhoondein — CS601, STA301..." oninput="dhRender()">
-        <button class="dhx-btn dhx-btn-ed" onclick="dhScanFolders(true)">🔄 Nayi assignments check</button>
+        <input id="dhSearch" class="dhx-search" placeholder="Search by subject code or file name..." oninput="dhRender()">
+        <button class="dhx-btn dhx-btn-ed" onclick="dhScanFolders(true)">Refresh</button>
+        <button class="dhx-btn dhx-btn-dl" onclick="dhAddDialog()">Submit an Assignment Link</button>
       </div>
       <div id="dhMsg"></div>
       <div id="dhFolderBox"></div>
@@ -462,16 +461,17 @@
     <!-- add-link dialog -->
     <div id="dhAddBox" class="dh-overlay" style="display:none">
       <div class="dh-dialog card">
-        <div class="big-title" style="font-size:19px">➕ Nayi assignment jodein</div>
-        <label>Google Drive link<input id="dhAddLink" placeholder="Drive ki file ya folder ka link paste karein"></label>
-        <label>Assignment ka naam<input id="dhAddTitle" placeholder="CS601 Assignment 1"></label>
-        <label>Subject (agar pata ho)<input id="dhAddSubj" placeholder="CS601"></label>
+        <div class="big-title" style="font-size:19px">Submit an Assignment Link</div>
+        <div class="sub" style="margin:6px 0 4px">If an assignment for your subject is missing from this library and you have the file on Google Drive, share its link below so other students can use it.</div>
+        <label>Google Drive file link<input id="dhAddLink" placeholder="https://drive.google.com/file/d/.../view"></label>
+        <label>Assignment title<input id="dhAddTitle" placeholder="CS601 Assignment 1"></label>
+        <label>Subject code<input id="dhAddSubj" placeholder="CS601"></label>
         <label>Semester / detail<input id="dhAddDesc" placeholder="Fall 2026"></label>
         <label>File name (optional)<input id="dhAddName" placeholder="CS601_Assignment1.docx"></label>
-        <label>Type<select id="dhAddKind"><option value="docx">📄 MS Word (.docx)</option><option value="pdf">📕 PDF</option><option value="cpp">💻 C++ (.cpp)</option><option value="text">📝 Text</option></select></label>
+        <label>File type<select id="dhAddKind"><option value="docx">MS Word (.docx)</option><option value="pdf">PDF</option><option value="cpp">C++ source (.cpp)</option><option value="text">Text file</option></select></label>
         <div class="as-row" style="margin-top:12px">
-          <button class="btn btn-green" onclick="dhAddSave()">✅ Jor dein</button>
-          <button class="btn btn-gray" onclick="dhCloseAdd()">✕ Rehne dein</button>
+          <button class="btn btn-green" onclick="dhAddSave()">Submit Link</button>
+          <button class="btn btn-gray" onclick="dhCloseAdd()">Cancel</button>
         </div>
       </div>
     </div>
@@ -758,12 +758,12 @@
 
 <div class="streak-banner" id="streakBanner"></div>
 
-<script src="data/mcqs.js?v=ahw18"></script>
-<script src="js/app.js?v=ahw18"></script>
-<script src="js/compiler.js?v=ahw18"></script>
-<script src="js/english.js?v=ahw18"></script>
-<script src="data/assignments.js?v=ahw18"></script>
-  <script src="js/docxkit.js?v=ahw18"></script>
-  <script src="js/drivehub.js?v=ahw18"></script>
+<script src="data/mcqs.js?v=ahw19"></script>
+<script src="js/app.js?v=ahw19"></script>
+<script src="js/compiler.js?v=ahw19"></script>
+<script src="js/english.js?v=ahw19"></script>
+<script src="data/assignments.js?v=ahw19"></script>
+  <script src="js/docxkit.js?v=ahw19"></script>
+  <script src="js/drivehub.js?v=ahw19"></script>
 </body>
 </html>

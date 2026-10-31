@@ -472,54 +472,76 @@
 
   function parseFolderHtml(html) {
     var s = String(html || "");
-    // JS string escapes ko normalise karein taake quoted patterns match hon
+    // JS string escapes normalise karein
     var t = s.replace(/\\u003d/gi, "=").replace(/\\u0026/gi, "&")
-             .replace(/\\x3d/gi, "=").replace(/\\"/g, '"').replace(/\\\//g, "/");
-    var files = [], seen = {};
+             .replace(/\\x3d/gi, "=").replace(/\\"/g, '"').replace(/\\\//g, "/")
+             .replace(/&#39;/g, "'").replace(/&quot;/g, '"');
+    var files = [], seen = {}, usedNames = {};
     function add(id, name) {
       if (!id || !name) return;
       if (seen[id]) return;
-      name = String(name).replace(/\s+/g, " ").trim();
+      name = String(name).replace(/\s+/g, " ").trim().replace(/^["']|["']$/g, "");
       if (name.length < 3 || name.length > 150) return;
-      if (!/\.[a-z0-9]{2,6}$/i.test(name)) return;   // real file name jaisi honi chahiye
-      if (!/^[^\/\\]+$/.test(name)) return;
+      if (!/\.[a-z0-9]{2,6}$/i.test(name)) return;      // real file name jaisi
+      if (!/^[^\/\\<>]+$/.test(name)) return;
+      if (usedNames[name.toLowerCase()]) return;
       seen[id] = 1;
+      usedNames[name.toLowerCase()] = 1;
       files.push({ fileId: id, name: name, kind: detectKind(name) });
     }
-    // entries arrays hoti hain: ["<id>", mid..., "<name>"] ya ["<name>", mid..., "<id>"]
+    function idFromAny(x) {
+      var m = String(x).match(/(?:\/file\/d\/|[?&]id=|\/open\/)([A-Za-z0-9_-]{20,})/);
+      return m ? m[1] : null;
+    }
+
+    /* 1) anchors — href single/double quotes dono */
+    var reA = /<a\b[^>]*?href\s*=\s*(['"])([^'"]+)\1[^>]*?>([\s\S]{0,700}?)<\/a>/gi;
+    var ma;
+    while ((ma = reA.exec(t))) {
+      var id2 = idFromAny(ma[2]);
+      if (!id2) continue;
+      var tagPart = ma[0].slice(0, ma[0].indexOf(">") + 1);
+      var tm = /title\s*=\s*['"]([^'"<>]{3,150})['"]/.exec(tagPart) || /title\s*=\s*['"]([^'"<>]{3,150})['"]/.exec(ma[3]);
+      var name2 = tm ? tm[1] : ma[3].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
+      add(id2, name2);
+    }
+
+    /* 2) flip-entry: id="entry_FILEID" ... title="name.ext" */
+    var reE = /id\s*=\s*['"]entry_([A-Za-z0-9_-]{20,})['"][\s\S]{0,900}?title\s*=\s*['"]([^'"<>]{3,150}\.[A-Za-z0-9]{2,6})['"]/gi;
+    while ((ma = reE.exec(t))) add(ma[1], ma[2]);
+
+    /* 3) markdown links (text proxies jaise r.jina.ai): [name.ext](drive url) */
+    var reM = /\[([^\]\n]{3,150}\.[A-Za-z0-9]{2,6})\]\((https?:\/\/drive\.google\.com\/[^)\s]+)\)/gi;
+    while ((ma = reM.exec(t))) {
+      var id4 = idFromAny(ma[2]);
+      if (id4) add(id4, ma[1]);
+    }
+
+    /* 4) raw file links + nearest filename string (300 char window, both orders) */
+    var reR = /(?:\/file\/d\/|[?&]id=)([A-Za-z0-9_-]{20,})[\s\S]{0,300}?["']([^"']{3,150}\.[A-Za-z0-9]{2,6})["']/gi;
+    while ((ma = reR.exec(t))) add(ma[1], ma[2]);
+    var reR2 = /["']([^"']{3,150}\.[A-Za-z0-9]{2,6})["'][\s\S]{0,300}?(?:\/file\/d\/|[?&]id=)([A-Za-z0-9_-]{20,})/gi;
+    while ((ma = reR2.exec(t))) add(ma[2], ma[1]);
+
+    /* 5) positional JSON arrays: ["<id>", mid..., "<name>"] (dono order) */
     var mid = '(?:null|"[^"]*"|[0-9.]+|true|false|\\[\\])';
     var namePat = '"([^"\\\\]{3,150}\\.[A-Za-z0-9]{2,6})"';
     var idPat = '"([A-Za-z0-9_-]{25,45})"';
-    function scan(idFirst) {
+    function scanJson(idFirst) {
       for (var k = 0; k <= 4; k++) {
         var mids = "";
         for (var j = 0; j < k; j++) mids += mid + ",";
-        var src = idFirst
-          ? "\\[" + idPat + "," + mids + namePat
-          : "\\[" + namePat + "," + mids + idPat;
+        var src = idFirst ? "\\[" + idPat + "," + mids + namePat : "\\[" + namePat + "," + mids + idPat;
         var re = new RegExp(src, "g");
         var m;
         while ((m = re.exec(t))) {
-          if (idFirst) add(m[1], m[2]);
-          else add(m[2], m[1]);
+          if (idFirst) add(m[1], m[2]); else add(m[2], m[1]);
         }
       }
     }
-    scan(true);
-    scan(false);
+    scanJson(true);
+    scanJson(false);
 
-    /* anchor-based parse — embeddedfoldiew/server-rendered pages:
-       <a href=".../file/d/ID/view"><span title="name.docx">..</span></a> */
-    var reA = /<a\b[^>]*?href="([^"]+)"[^>]*?>([\s\S]{0,700}?)<\/a>/gi;
-    var ma;
-    while ((ma = reA.exec(t))) {
-      var id2 = fileIdFromLink(ma[1]);
-      if (!id2) continue;
-      var tagPart = ma[0].slice(0, ma[0].indexOf(">") + 1);
-      var tm = /title="([^"<>]{3,150})"/.exec(tagPart) || /title="([^"<>]{3,150})"/.exec(ma[2]);
-      var name2 = tm ? tm[1] : ma[2].replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim();
-      add(id2, name2);
-    }
     return files;
   }
 

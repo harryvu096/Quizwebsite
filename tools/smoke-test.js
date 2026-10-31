@@ -69,7 +69,7 @@ function assert(cond, label) {
   assert(nb > 100, "MCQ data loaded (" + nb + " banks)");
   assert($("#modal-dialog") !== null, "dialog modal exists");
   assert($("#fbReportBtn") !== null, "Report button exists");
-  assert(doc.body.getAttribute("data-build") === "ahw18", "build tag synced");
+  assert(doc.body.getAttribute("data-build") === "ahw19", "build tag synced");
 
   console.log("\n[2] Home → Subjects");
   doc.getElementById("playerName").value = "SmokeTester";
@@ -265,6 +265,12 @@ function assert(cond, label) {
   const fh3 = '<a href="https://drive.google.com/file/d/1XyZabCdEfGhIjKlMnOpQrStUvWx9876/view?usp=drive_web"><span class="flip-entry-title" title="CS601_A1.docx">CS601_A1.docx</span></a>';
   const pf3 = K.parseFolderHtml(fh3);
   assert(pf3.length === 1 && pf3[0].kind === "docx" && pf3[0].name === "CS601_A1.docx", "parseFolderHtml: anchor/embeddedfoldiew entries");
+  const fh4 = "<a href='https://drive.google.com/open?id=1QwErTyUiOpAsDfGhJkLzXcVbNm12345'><b title='STA301_A2.pdf'>STA301_A2.pdf</b></a>" +
+    '<div id="entry_1ZaXsWvUtSrQpOnMlKjIhGfEdCb09876"><span title="CS403_Notes.docx">CS403_Notes.docx</span></div>' +
+    "[CS601_Final.cpp](https://drive.google.com/file/d/1MnBvCxZaQwErTyUiOpAsDfGhJkLzXcVb/view)";
+  const pf4 = K.parseFolderHtml(fh4);
+  assert(pf4.length === 3, "parseFolderHtml: single-quote + entry_ + markdown (" + pf4.length + ")");
+  assert(pf4.some(f => f.kind === "pdf") && pf4.some(f => f.kind === "cpp") && pf4.some(f => f.kind === "docx"), "parseFolderHtml: mixed kinds detected");
 
   // -- docx write/read roundtrip with formatting
   const docHtml = '<h2>Question 1</h2><p><b>Bold move</b> and <i>italic words</i> with <span style="font-size:14pt">big text</span>.</p><p style="text-align:center">Centered para</p>';
@@ -298,6 +304,7 @@ function assert(cond, label) {
   assert($("#dhList").innerHTML.indexOf("CS601") > -1, "CS601 group header shown");
   assert($("#dhFolderBox").innerHTML.toLowerCase().indexOf("folder") > -1, "folder strip rendered");
   assert($("#dhStats").innerHTML.indexOf("assignments") > -1, "hero stats rendered");
+  assert(doc.getElementById("dhAddBox").innerHTML.indexOf("Submit an Assignment Link") > -1, "submit-link dialog (English) present");
   assert(window.AHW_ASSIGN_FOLDERS && window.AHW_ASSIGN_FOLDERS.length === 1, "user folder registered");
 
   // -- editor panes
