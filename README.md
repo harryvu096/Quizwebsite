@@ -2,13 +2,11 @@
 
 Gamified MCQ practice arena for Virtual University students: **68 subjects · 4,152 past-paper style MCQs · Mid + Finalterm arenas**, with hearts, streaks, boss battles, XP levels, certificates and a Mistake Vault.
 
-## 🆕 Assignment Studio — VU-style .docx builder (English)
-
-- **🪄 AI Assignment Maker** — upload the VU-LMS question file (**.pdf / .docx / .txt**) and the built-in **free AI** (keyless, VU handouts-style student voice) writes the complete assignment answers automatically — then download the VU-format **MS Word (.docx)**. Cover page (subject, semester, due date) is auto-filled from the file. Smart LMS parser handles "Question No. X", "Question # 1 of 3", "Q1: ... [Marks: 5]" and skips instruction blocks.
-- **VU format output** — real **MS Word (.docx)** with cover page (Student ID, Name, Subject, Assignment No, Semester, Due Date — larger fonts), body with **question text 14pt bold** and **answer 12pt** (clear visual difference), "Question No. X / (Marks: Y) / Answer:" structure, **Times New Roman** — matching VU assignment instructions. File name follows the VU convention: `BC123456789_CS101_AssignmentNo1_Fall2026.docx`.
-- **✨ Humanize (offline)** — student-voice polish: strips markdown & AI-sounding phrases, adds natural openers ("According to the handouts…"). No internet needed.
-- **🤖 Optional AI Humanize** — rewrite answers in a real student's voice using **your own API key** (Google Gemini free tier, or any OpenAI-compatible API). The key stays in your browser only.
-- **🖨️ Print / PDF backup** — same content printable if Word is not available. Everything runs in the browser — works offline.
+## 🆕 Assignment Library — Google Drive (English)
+- **📚 Assignment Library** — a catalog of assignment files hosted on **Google Drive**: 📥 **Download**, 👁️ **Preview** (Drive viewer), ✏️ **Edit** in the browser.
+- **Word-style editor** for `.docx` — files open on an **A4 printable page** (like desktop Word) with a full formatting ribbon (font, size, bold/italic/underline, colors, highlight, alignment, lists, headings, undo/redo, subscript/superscript) and export back to **.docx** / 🖨️ Print.
+- **.cpp files open in the built-in C++ Lab** (mini-IDE) where they can be compiled and run.
+- **Admin**: ➕ add Google Drive links in one click (stored locally); `data/assignments.js` holds the permanent list.
 
 ## 🆕 What's New — Oct 2026 Polish Round (English)
 

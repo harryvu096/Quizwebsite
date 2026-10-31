@@ -9,7 +9,7 @@
 
 /* Build self-heal: agar index.html aur compiler.js ke versions mix ho jayen
    (stale cache), ek dafa auto-reload kar ke fresh pair le lo. */
-const AHW_BUILD="ahw15";
+const AHW_BUILD="ahw16";
 (function(){
   try{
     const b=document.body ? document.body.getAttribute("data-build") : null;
@@ -111,6 +111,19 @@ function cppSetCode(code, fname){
   if(i<0){ CPP_FILES.push({name:fname, code:code}); i=CPP_FILES.length-1; }
   else CPP_FILES[i].code = code;
   CPP_CUR=i; cppLoadCurrent();
+}
+
+/* Assignment Library (.cpp) -> open here + compile/run */
+function openInCppLab(name, code){
+  try{
+    let n = String(name||"file.cpp").replace(/[^\w.\-]/g,"_");
+    if(!/\.(cpp|cc|c|h|hpp|txt)$/i.test(n)) n += ".cpp";
+    cppSetCode(code==null?"":code, n);
+    cppPersist();
+    show("screen-cpp");
+    if(typeof sfx!=="undefined" && sfx.click) sfx.click();
+    return true;
+  }catch(e){ return false; }
 }
 
 /* ---------------- files: new / open(multi) / download ---------------- */
