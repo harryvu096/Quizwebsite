@@ -1,10 +1,10 @@
 /* ============================================================
-   QuizVerse — 📚 Assignment Library (Drive Hub) (v1 — ahw16)
-   Google Drive assignments: download / preview / edit.
-   - .docx -> Word-style editor (A4 printable page + ribbon toolbar)
-   - .cpp  -> opens in C++ Lab (compile + run)
-   - .txt  -> simple text editor
-   - .pdf  -> preview + download
+   QuizVerse — 📚 Assignment Library (Drive Hub) (v2 — ahw18)
+   - Folder link se saari assignments auto-list (har visit par fresh)
+   - Subject-wise grouping (AHW.SUBJECTS ke colors/icons se)
+   - 📥 Download / 👁️ Preview / ✏️ Edit
+   - .docx -> Word-style editor (A4 page + ribbon) -> .docx export
+   - .cpp  -> C++ Lab (compile + run) | .txt -> text editor
    ============================================================ */
 (function () {
   "use strict";
@@ -13,9 +13,14 @@
   var FOLDER_KEY = "ahw_folder_cache_v1";
   var FOLDER_EXTRA_KEY = "ahw_folder_extra_v1";
   var W = { title: "", fileName: "" };
+  var scanning = false;
 
   function $(id) { return document.getElementById(id); }
+  function esc(s) {
+    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  }
 
+  /* ---------------- data ---------------- */
   function folderIds() {
     var ids = (globalThis.AHW_ASSIGN_FOLDERS || []).slice();
     try {
@@ -32,13 +37,8 @@
       (c.files || []).forEach(function (f) {
         if (!f || !f.fileId) return;
         out.push({
-          id: "f_" + f.fileId,
-          title: f.name,
-          name: f.name,
-          fileId: f.fileId,
-          kind: f.kind || DOCXKIT.detectKind(f.name),
-          desc: "📁 Folder",
-          fromFolder: true
+          id: "f_" + f.fileId, title: f.name, name: f.name, fileId: f.fileId,
+          kind: f.kind || DOCXKIT.detectKind(f.name), desc: "Drive folder", fromFolder: true
         });
       });
     } catch (e) {}
@@ -62,68 +62,96 @@
     return items.concat(folderFiles());
   }
 
-  function dhRenderFolderBox() {
-    var box = $("dhFolderBox");
-    if (!box) return;
-    var ids = folderIds();
-    if (!ids.length) { box.innerHTML = ""; return; }
-    var n = folderFiles().length;
-    var frames = ids.map(function (fid) {
-      return '<iframe class="dh-folder-frame" loading="lazy" src="https://drive.google.com/embeddedfolderview?id=' + esc(fid) + '#list"></iframe>';
-    }).join("");
-    box.innerHTML = '<div class="dh-folder card">' +
-      '<div class="dh-fold-head">📁 Assignment Folder' + (n ? " — <b>" + n + " files</b> list hue" : "") + "</div>" +
-      '<div class="sub" style="margin-top:4px">Folder ki saari files neeche cards mein — 📥 Download, 👁️ Preview, ✏️ Edit.</div>' +
-      '<div class="dh-acts" style="margin-top:10px">' +
-      '<button class="btn btn-blue btn-sm" data-fact="scan">🔄 List refresh</button>' +
-      '<button class="btn btn-gray btn-sm" data-fact="open">🌐 Drive folder kholein</button>' +
-      "</div>" +
-      '<div id="dhFolderStatus" class="sub" style="margin-top:6px;font-size:12px"></div>' +
-      '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px">📁 Folder browser (Drive view)</summary>' + frames + "</details>" +
-      "</div>";
-    box.querySelectorAll("[data-fact]").forEach(function (b) {
-      b.addEventListener("click", function () {
-        if (b.dataset.fact === "scan") dhScanFolders(true);
-        else dhOpenFolderView();
-      });
-    });
+  /* subject guess: "Fall 2026_CS601_1.pdf" / "CS601_Assignment1.docx" -> CS601 */
+  function guessSubject(it) {
+    if (it.subject) return String(it.subject).toUpperCase();
+    var m = String(it.name || it.title || "").match(/([A-Za-z]{2,4}\s?\d{3})/);
+    return m ? m[1].replace(/\s+/g, "").toUpperCase() : "";
+  }
+  function subjectMeta(code) {
+    var list = (globalThis.AHW && AHW.SUBJECTS) || [];
+    for (var i = 0; i < list.length; i++) {
+      if (String(list[i].code).toUpperCase() === code) return list[i];
+    }
+    return null;
+  }
+  var FALLBACK_COLORS = ["#7c3aed", "#ec4899", "#f97316", "#10b981", "#0ea5e9", "#8b5cf6", "#ef4444", "#14b8a6"];
+  function fallbackColor(code) {
+    var s = 0;
+    for (var i = 0; i < code.length; i++) s += code.charCodeAt(i);
+    return FALLBACK_COLORS[s % FALLBACK_COLORS.length];
   }
 
+  /* ---------------- render ---------------- */
   var KIND_ICON = { docx: "📄", pdf: "📕", cpp: "💻", text: "📝", other: "📦" };
-  var KIND_LABEL = { docx: "MS Word", pdf: "PDF", cpp: "C++ code", text: "Text", other: "File" };
+
+  function agoText(ts) {
+    if (!ts) return "";
+    var d = Math.round((Date.now() - ts) / 60000);
+    if (d < 1) return "abhi abhi";
+    if (d < 60) return d + " minute pehle";
+    var h = Math.round(d / 60);
+    if (h < 24) return h + " ghante pehle";
+    return Math.round(h / 24) + " din pehle";
+  }
 
   function dhRender() {
-    dhRenderFolderBox();
+    renderStats();
+    renderFolderStrip();
     var box = $("dhList");
     if (!box) return;
     var q = (($("dhSearch") && $("dhSearch").value) || "").toLowerCase().trim();
     var items = allItems().filter(function (it) {
       if (!q) return true;
-      return ((it.title || "") + " " + (it.subject || "") + " " + (it.desc || "") + " " + (it.name || "")).toLowerCase().indexOf(q) >= 0;
+      return ((it.title || "") + " " + (it.subject || "") + " " + (it.name || "") + " " + (it.desc || "")).toLowerCase().indexOf(q) >= 0;
     });
+
     if (!items.length) {
-      box.innerHTML = '<div class="dh-empty">' + (q
-        ? "🔍 Koi assignment nahi mili — search badlein."
-        : "📭 Abhi links add nahi hue. Upar ➕ se Google Drive link add karein ya admin se links lein.") + "</div>";
+      box.innerHTML = '<div class="dhx-empty">' + (q
+        ? "🔍 Yeh nahi mila — doosra naam try karein."
+        : "📭 Abhi list khaali hai… folder scan ho raha hai. Thodi der mein sab assignments yahan dikhengi.") + "</div>";
       return;
     }
-    var h = "";
+
+    /* group by subject */
+    var groups = {}, order = [];
     items.forEach(function (it) {
-      var extra = String(it.id).indexOf("dhx") === 0;
-      h += '<div class="dh-card card">' +
-        '<div class="dh-type dh-k-' + it.kind + '">' + (KIND_ICON[it.kind] || "📦") + "</div>" +
-        '<div class="dh-info">' +
-        '<div class="dh-t">' + esc(it.title || it.name || "Assignment") + "</div>" +
-        '<div class="dh-s">' + esc([it.subject, it.desc, KIND_LABEL[it.kind] || it.kind].filter(Boolean).join(" · ")) + "</div>" +
-        "</div>" +
-        '<div class="dh-acts">' +
-        '<button class="btn btn-blue btn-sm" data-act="dl" data-id="' + esc(it.id) + '">📥 Download</button>' +
-        '<button class="btn btn-purple btn-sm" data-act="pv" data-id="' + esc(it.id) + '">👁️ Preview</button>' +
-        (it.kind === "pdf"
-          ? ""
-          : '<button class="btn btn-green btn-sm" data-act="ed" data-id="' + esc(it.id) + '">✏️ Edit</button>') +
-        (extra ? '<button class="btn btn-gray btn-sm" data-act="rm" data-id="' + esc(it.id) + '">🗑️</button>' : "") +
-        "</div></div>";
+      var code = guessSubject(it) || "OTHER";
+      if (!groups[code]) { groups[code] = { items: [] }; order.push(code); }
+      groups[code].items.push(it);
+    });
+    order.sort(function (a, b) {
+      if (a === "OTHER") return 1;
+      if (b === "OTHER") return -1;
+      return a < b ? -1 : 1;
+    });
+
+    var h = "";
+    order.forEach(function (code) {
+      var meta = code !== "OTHER" ? subjectMeta(code) : null;
+      var color = meta ? (meta.c1 || fallbackColor(code)) : fallbackColor(code === "OTHER" ? "zz" : code);
+      var icon = meta ? (meta.icon || "📚") : (code === "OTHER" ? "📁" : "📚");
+      var title = meta ? meta.title : (code === "OTHER" ? "Baqi assignments" : "Assignments");
+      h += '<section class="dhx-group">';
+      h += '<div class="dhx-ghead" style="--gc:' + esc(color) + '">' +
+        '<span class="dhx-gicon">' + icon + "</span>" +
+        '<div class="dhx-gtitle"><b>' + esc(code === "OTHER" ? "📁 Others" : code) + "</b>" +
+        "<span>" + esc(title) + " · " + groups[code].items.length + " file" + (groups[code].items.length > 1 ? "s" : "") + "</span></div>" +
+        "</div>";
+      groups[code].items.forEach(function (it) {
+        h += '<div class="dhx-card">' +
+          '<div class="dhx-ic dhx-k-' + it.kind + '">' + (KIND_ICON[it.kind] || "📦") + "</div>" +
+          '<div class="dhx-info">' +
+          '<div class="dhx-t">' + esc(it.title || it.name || "Assignment") + "</div>" +
+          '<div class="dhx-m">' + esc([(it.name && it.name !== it.title ? it.name : ""), it.desc].filter(Boolean).join(" · ")) + "</div>" +
+          "</div>" +
+          '<div class="dhx-acts">' +
+          '<button class="dhx-btn dhx-btn-dl" data-act="dl" data-id="' + esc(it.id) + '">📥 Download</button>' +
+          (it.kind === "pdf" ? "" : '<button class="dhx-btn dhx-btn-ed" data-act="ed" data-id="' + esc(it.id) + '">✏️ Edit</button>') +
+          '<button class="dhx-btn dhx-btn-pv" data-act="pv" data-id="' + esc(it.id) + '">👁️</button>' +
+          "</div></div>";
+      });
+      h += "</section>";
     });
     box.innerHTML = h;
     box.querySelectorAll("[data-act]").forEach(function (b) {
@@ -133,24 +161,51 @@
         if (b.dataset.act === "dl") dhDownload(it);
         else if (b.dataset.act === "pv") dhPreview(it);
         else if (b.dataset.act === "ed") dhEdit(it);
-        else if (b.dataset.act === "rm") dhRemove(it);
       });
     });
   }
 
-  function esc(s) {
-    return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+  function renderStats() {
+    var el = $("dhStats");
+    if (!el) return;
+    var items = allItems();
+    var subs = {};
+    items.forEach(function (it) { var c = guessSubject(it); if (c) subs[c] = 1; });
+    var cache = readFolderCache();
+    el.innerHTML =
+      '<span class="dhx-stat"><b>' + items.length + "</b> assignments</span>" +
+      '<span class="dhx-stat"><b>' + Object.keys(subs).length + "</b> subjects</span>" +
+      (cache.ts ? '<span class="dhx-stat dhx-upd">🔄 ' + esc(agoText(cache.ts)) + " auto-update</span>" : "");
   }
 
-  function byId(id) { return allItems().filter(function (x) { return x.id === id; })[0]; }
+  function renderFolderStrip() {
+    var box = $("dhFolderBox");
+    if (!box) return;
+    if (!folderIds().length) { box.innerHTML = ""; return; }
+    var n = folderFiles().length;
+    if (n) {
+      box.innerHTML = '<div class="dhx-strip">' +
+        '<span>📁 Google Drive folder se ' + n + " files — nayi upload khud yahan aa jayegi.</span>" +
+        '<button class="dhx-btn dhx-btn-pv" data-fact="open">🌐 Folder kholein</button>' +
+        "</div>";
+    } else {
+      box.innerHTML = '<div class="dhx-strip dhx-strip-warn">' +
+        "<span>⏳ Folder ki list load ho rahi hai… Agar kuch na dikhe to folder kholein:</span>" +
+        '<button class="dhx-btn dhx-btn-pv" data-fact="open">🌐 Folder kholein</button>' +
+        "</div>" +
+        '<iframe class="dhx-folder-frame" loading="lazy" src="https://drive.google.com/embeddedfolderview?id=' +
+        esc(folderIds()[0]) + '#list"></iframe>';
+    }
+    box.querySelectorAll("[data-fact]").forEach(function (b) {
+      b.addEventListener("click", function () { dhOpenFolderView(); });
+    });
+  }
 
-  /* ---------- download / preview ---------- */
+  /* ---------------- download / preview ---------------- */
   function driveDownloadUrl(fileId) { return "https://drive.google.com/uc?export=download&id=" + fileId; }
   function drivePreviewUrl(fileId) { return "https://drive.google.com/file/d/" + fileId + "/preview"; }
 
-  function dhDownload(it) {
-    window.open(driveDownloadUrl(it.fileId), "_blank", "noopener");
-  }
+  function dhDownload(it) { window.open(driveDownloadUrl(it.fileId), "_blank", "noopener"); }
 
   function dhPreview(it) {
     var box = $("dhPreviewBox");
@@ -166,7 +221,7 @@
     if (box) { box.style.display = "none"; box.innerHTML = ""; }
   }
 
-  /* ---------- fetch drive bytes (direct -> CORS proxies) ---------- */
+  /* ---------------- fetch (direct -> CORS proxies) ---------------- */
   function proxyUrls(direct) {
     return [
       direct,
@@ -174,6 +229,18 @@
       "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(direct),
       "https://corsproxy.io/?" + encodeURIComponent(direct)
     ];
+  }
+  async function fetchTextViaProxies(url) {
+    var urls = proxyUrls(url);
+    for (var i = 0; i < urls.length; i++) {
+      try {
+        var r = await fetch(urls[i], { redirect: "follow" });
+        if (!r.ok) continue;
+        var t = await r.text();
+        if (t && t.length > 500) return t;
+      } catch (e) { /* next */ }
+    }
+    return null;
   }
   async function fetchDriveBytes(fileId) {
     var direct = driveDownloadUrl(fileId);
@@ -184,57 +251,45 @@
         if (!r.ok) continue;
         var b = new Uint8Array(await r.arrayBuffer());
         if (b.length < 200) continue;
-        // HTML error / virus-scan page -> next
         var head = String.fromCharCode(b[0], b[1], b[2], b[3], b[4], b[5]).toLowerCase();
-        if (head.indexOf("<") === 0 || head.indexOf("<!do") === 0) continue;
+        if (head.indexOf("<") === 0) continue;   // HTML error page -> next
         return b;
       } catch (e) { /* next */ }
     }
     return null;
   }
 
-  async function fetchFolderHtml(folderId) {
-    var urls = proxyUrls("https://drive.google.com/drive/folders/" + folderId + "?hl=en");
-    for (var i = 0; i < urls.length; i++) {
-      try {
-        var r = await fetch(urls[i], { redirect: "follow" });
-        if (!r.ok) continue;
-        var t = await r.text();
-        if (t && t.length > 2000 && /drive|google/i.test(t)) return t;
-      } catch (e) { /* next */ }
-    }
-    return null;
-  }
-
-  function folderStatus(msg) {
-    var el = $("dhFolderStatus");
-    if (el) el.innerHTML = msg || "";
-  }
-
+  /* ---------------- folder scan (auto) ---------------- */
   function readFolderCache() {
     try { return JSON.parse(localStorage.getItem(FOLDER_KEY) || "{}"); } catch (e) { return {}; }
   }
 
   async function dhScanFolders(force) {
+    if (scanning) return;
     var ids = folderIds();
     if (!ids.length) return;
     var cache = readFolderCache();
-    if (!force && cache.ts && cache.files && cache.files.length && (Date.now() - cache.ts) < 30 * 60 * 1000) return;
-    folderStatus("🔄 Folder scan ho raha hai — saari assignments list ho rahi hain…");
-    var files = [], fail = 0;
+    if (!force && cache.ts && cache.files && cache.files.length && (Date.now() - cache.ts) < 5 * 60 * 1000) return;
+    scanning = true;
+    var files = [];
     for (var i = 0; i < ids.length; i++) {
-      var html = await fetchFolderHtml(ids[i]);
+      /* embeddedfoldiew = server-rendered list — sab se reliable */
+      var html = await fetchTextViaProxies("https://drive.google.com/embeddedfolderview?id=" + ids[i]);
+      if (!html) html = await fetchTextViaProxies("https://drive.google.com/drive/folders/" + ids[i] + "?hl=en");
       if (html) {
-        var got = DOCXKIT.parseFolderHtml(html);
-        got.forEach(function (f) {
+        DOCXKIT.parseFolderHtml(html).forEach(function (f) {
           if (!files.some(function (x) { return x.fileId === f.fileId; })) files.push(f);
         });
-      } else fail++;
+      }
     }
-    try { localStorage.setItem(FOLDER_KEY, JSON.stringify({ ts: Date.now(), files: files })); } catch (e) {}
-    if (files.length) folderStatus("✅ " + files.length + " files mil gayin — cards neeche!");
-    else folderStatus('⚠️ Folder list nahi mili — "🌐 Drive folder kholein" se manually dekhein (folder sharing "Anyone with the link" honi chahiye).');
-    dhRender();
+    scanning = false;
+    if (files.length) {
+      try { localStorage.setItem(FOLDER_KEY, JSON.stringify({ ts: Date.now(), files: files })); } catch (e) {}
+      dhRender();
+    } else {
+      /* purani cache rehne dein, sirf message dikhayein */
+      renderFolderStrip();
+    }
   }
 
   function dhOpenFolderView() {
@@ -243,27 +298,25 @@
     window.open("https://drive.google.com/drive/folders/" + ids[0], "_blank", "noopener");
   }
 
-  /* ---------- open editor by kind ---------- */
+  /* ---------------- editors ---------------- */
   async function dhEdit(it) {
-    dhToast("⬇️ File download ho rahi hai… (" + (it.title || "") + ")");
+    dhToast("⬇️ File aa rahi hai… (" + (it.title || "") + ")");
     var bytes = await fetchDriveBytes(it.fileId);
-    if (!bytes) { dhErr("File fetch nahi ho saki (network/Drive block). 📥 Download kar ke khud edit karein, ya thodi der baad try karein."); return; }
+    if (!bytes) { dhErr("File fetch nahi hui — 📥 Download kar ke khud edit karein, ya thodi der baad try karein."); return; }
     var kind = it.kind;
-    var name = it.name || (String(it.title || "assignment").replace(/[^\w.\- ]+/g, "_") + (kind === "docx" ? ".docx" : kind === "cpp" ? ".cpp" : kind === "pdf" ? ".pdf" : ".txt"));
+    var name = it.name || (String(it.title || "assignment").replace(/[^\w.\- ]+/g, "_") + "." + (kind === "docx" ? "docx" : kind === "cpp" ? "cpp" : "txt"));
     try {
       if (kind === "docx") {
         var isZip = bytes[0] === 0x50 && bytes[1] === 0x4b;
         if (isZip) {
           var html = await DOCXKIT.docxToHtml(bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength));
           if (!html) { dhErr("Word file parhi nahi ja saki — shayad purana .doc format ho. 📥 Download karein."); return; }
-          wpOpen(it.title || name, html, name.endsWith(".docx") ? name : name.replace(/\.(doc|docx)$/i, "") + ".docx");
+          wpOpen(it.title || name, html, /\.(docx|doc)$/i.test(name) ? name.replace(/\.(doc)$/i, ".docx") : name + ".docx");
         } else {
-          var txt = new TextDecoder().decode(bytes);
-          dtOpen(it.title || name, txt, name.replace(/\.[^.]+$/, "") + ".txt");
+          dtOpen(it.title || name, new TextDecoder().decode(bytes), name.replace(/\.[^.]+$/, "") + ".txt");
         }
       } else if (kind === "cpp") {
-        var code = new TextDecoder().decode(bytes);
-        openInCppLab(name, code);
+        openInCppLab(name, new TextDecoder().decode(bytes));
         dhToast("💻 C++ Lab mein khul gaya — ▶️ Run dabayein!");
       } else if (kind === "text") {
         dtOpen(it.title || name, new TextDecoder().decode(bytes), name);
@@ -276,10 +329,9 @@
     }
   }
 
-  /* ---------- Word-style editor ---------- */
   function wpOpen(title, html, fileName) {
     W.title = title; W.fileName = fileName;
-    $("dhList").parentElement && ($("dhWrap").style.display = "none");
+    $("dhWrap").style.display = "none";
     $("dhWordWrap").style.display = "block";
     $("wpTitle").textContent = title + " — ✏️ Edit";
     var page = $("wpPage");
@@ -300,8 +352,7 @@
     $("wpPage").focus();
     try {
       document.execCommand("fontSize", false, "7");
-      var els = document.querySelectorAll('#wpPage font[size="7"]');
-      els.forEach(function (f) {
+      document.querySelectorAll('#wpPage font[size="7"]').forEach(function (f) {
         var s = document.createElement("span");
         s.style.fontSize = pt + "pt";
         while (f.firstChild) s.appendChild(f.firstChild);
@@ -314,8 +365,7 @@
     try { document.execCommand("formatBlock", false, tag); } catch (e) {}
   }
   function wpDownload() {
-    var html = $("wpPage").innerHTML;
-    var blob = DOCXKIT.buildDocxFromHtml(html, { title: W.title, author: "VU Student" });
+    var blob = DOCXKIT.buildDocxFromHtml($("wpPage").innerHTML, { title: W.title, author: "VU Student" });
     var a = document.createElement("a");
     a.href = URL.createObjectURL(blob);
     a.download = W.fileName || "assignment.docx";
@@ -324,7 +374,6 @@
     dhToast("✅ MS Word file download ho gayi — <b>" + esc(a.download) + "</b>");
   }
 
-  /* ---------- text editor ---------- */
   function dtOpen(title, text, fileName) {
     W.title = title; W.fileName = fileName;
     $("dhWrap").style.display = "none";
@@ -343,13 +392,9 @@
     dhToast("✅ Download ho gaya — <b>" + esc(a.download) + "</b>");
   }
 
-  /* ---------- admin: add / remove links ---------- */
-  function dhAddDialog() {
-    $("dhAddBox").style.display = "flex";
-  }
-  function dhCloseAdd() {
-    $("dhAddBox").style.display = "none";
-  }
+  /* ---------------- add link dialog (topbar ➕) ---------------- */
+  function dhAddDialog() { $("dhAddBox").style.display = "flex"; }
+  function dhCloseAdd() { $("dhAddBox").style.display = "none"; }
   function dhAddSave() {
     var link = $("dhAddLink").value.trim();
     var folderId = DOCXKIT.folderIdFromLink(link);
@@ -361,18 +406,17 @@
       } catch (e) {}
       dhCloseAdd();
       dhScanFolders(true);
-      dhToast("✅ Folder add ho gaya — files list ho rahi hain…");
+      dhToast("✅ Folder jud gaya — files aa rahi hain…");
       return;
     }
     var fileId = DOCXKIT.fileIdFromLink(link);
-    if (!fileId) { dhErr("Google Drive link theek nahi — file/d/…, open?id=… ya /folders/… wala link paste karein."); return; }
+    if (!fileId) { dhErr("Link theek nahi lag rahi — Drive ki file/folder wali link paste karein."); return; }
     var it = {
       id: "dhx" + Date.now(),
       title: $("dhAddTitle").value.trim() || "Assignment",
       subject: $("dhAddSubj").value.trim().toUpperCase(),
       desc: $("dhAddDesc").value.trim(),
-      link: link,
-      fileId: fileId,
+      link: link, fileId: fileId,
       kind: $("dhAddKind").value,
       name: $("dhAddName").value.trim()
     };
@@ -383,18 +427,10 @@
     } catch (e) {}
     dhCloseAdd();
     dhRender();
-    dhToast("✅ Link add ho gayi — card neeche dikh raha hai.");
-  }
-  function dhRemove(it) {
-    if (!confirm("Yeh link list se hata dein?")) return;
-    try {
-      var ex = JSON.parse(localStorage.getItem(EXTRA_KEY) || "[]").filter(function (x) { return x.id !== it.id; });
-      localStorage.setItem(EXTRA_KEY, JSON.stringify(ex));
-    } catch (e) {}
-    dhRender();
+    dhToast("✅ Assignment jud gayi — list mein dikh rahi hai.");
   }
 
-  /* ---------- toasts ---------- */
+  /* ---------------- toasts ---------------- */
   function dhToast(msg) {
     var el = $("dhMsg");
     if (!el) return;
@@ -408,7 +444,7 @@
     setTimeout(function () { if (el) el.innerHTML = ""; }, 9000);
   }
 
-  /* ---------- screen ---------- */
+  /* ---------------- screen ---------------- */
   function showDriveHub() {
     document.querySelectorAll(".screen").forEach(function (s) { s.classList.remove("active"); });
     $("screen-drive").classList.add("active");
@@ -416,9 +452,19 @@
     $("dhWordWrap").style.display = "none";
     $("dhTextWrap").style.display = "none";
     dhRender();
-    dhScanFolders(false);   // cache pura ho to turant, warna background mein scan
+    dhScanFolders(false);          // cache 5 min se puraana ho to background mein fresh list
+    dhScanFolders(true);           // nayi upload khud aa jaye — hamesha fresh check
+    if (!showDriveHub._timer) {
+      showDriveHub._timer = setInterval(function () {
+        if ($("screen-drive") && $("screen-drive").classList.contains("active") &&
+            $("dhWrap") && $("dhWrap").style.display !== "none") {
+          dhScanFolders(true);
+        }
+      }, 4 * 60 * 1000);           // har 4 minute mein auto-refresh
+    }
   }
 
+  /* ---------------- globals ---------------- */
   globalThis.showDriveHub = showDriveHub;
   globalThis.dhRender = dhRender;
   globalThis.dhPreview = dhPreview;
@@ -428,13 +474,6 @@
   globalThis.dhAddSave = dhAddSave;
   globalThis.dhScanFolders = dhScanFolders;
   globalThis.dhOpenFolderView = dhOpenFolderView;
-  globalThis.dhAddExtra = function (it) {
-    try {
-      var ex = JSON.parse(localStorage.getItem(EXTRA_KEY) || "[]");
-      ex.push(it);
-      localStorage.setItem(EXTRA_KEY, JSON.stringify(ex));
-    } catch (e) {}
-  };
   globalThis.wpBack = wpBack;
   globalThis.wpCmd = wpCmd;
   globalThis.wpSize = wpSize;
@@ -444,11 +483,7 @@
   globalThis.dtOpen = dtOpen;
   globalThis.dtDownload = dtDownload;
 
-  /* keyboard: Escape closes preview/add dialogs */
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape") {
-      dhClosePreview();
-      dhCloseAdd();
-    }
+    if (e.key === "Escape") { dhClosePreview(); dhCloseAdd(); }
   });
 })();
