@@ -10,9 +10,40 @@
   "use strict";
 
   var EXTRA_KEY = "ahw_drive_extra_v1";
+  var FOLDER_KEY = "ahw_folder_cache_v1";
+  var FOLDER_EXTRA_KEY = "ahw_folder_extra_v1";
   var W = { title: "", fileName: "" };
 
   function $(id) { return document.getElementById(id); }
+
+  function folderIds() {
+    var ids = (globalThis.AHW_ASSIGN_FOLDERS || []).slice();
+    try {
+      var ex = JSON.parse(localStorage.getItem(FOLDER_EXTRA_KEY) || "[]");
+      if (Array.isArray(ex)) ids = ids.concat(ex);
+    } catch (e) {}
+    return ids.filter(Boolean);
+  }
+
+  function folderFiles() {
+    var out = [];
+    try {
+      var c = JSON.parse(localStorage.getItem(FOLDER_KEY) || "{}");
+      (c.files || []).forEach(function (f) {
+        if (!f || !f.fileId) return;
+        out.push({
+          id: "f_" + f.fileId,
+          title: f.name,
+          name: f.name,
+          fileId: f.fileId,
+          kind: f.kind || DOCXKIT.detectKind(f.name),
+          desc: "📁 Folder",
+          fromFolder: true
+        });
+      });
+    } catch (e) {}
+    return out;
+  }
 
   function allItems() {
     var base = (globalThis.AHW_ASSIGNMENTS || []).slice();
@@ -20,7 +51,7 @@
       var ex = JSON.parse(localStorage.getItem(EXTRA_KEY) || "[]");
       if (Array.isArray(ex)) base = base.concat(ex);
     } catch (e) {}
-    return base.map(function (it) {
+    var items = base.map(function (it) {
       var o = {};
       for (var k in it) o[k] = it[k];
       o.fileId = o.fileId || DOCXKIT.fileIdFromLink(o.link || o.url || "");
@@ -28,12 +59,41 @@
       o.id = o.id || ("dh" + String(o.fileId || o.title || Math.random()).slice(-10));
       return o;
     }).filter(function (it) { return it.fileId; });
+    return items.concat(folderFiles());
+  }
+
+  function dhRenderFolderBox() {
+    var box = $("dhFolderBox");
+    if (!box) return;
+    var ids = folderIds();
+    if (!ids.length) { box.innerHTML = ""; return; }
+    var n = folderFiles().length;
+    var frames = ids.map(function (fid) {
+      return '<iframe class="dh-folder-frame" loading="lazy" src="https://drive.google.com/embeddedfolderview?id=' + esc(fid) + '#list"></iframe>';
+    }).join("");
+    box.innerHTML = '<div class="dh-folder card">' +
+      '<div class="dh-fold-head">📁 Assignment Folder' + (n ? " — <b>" + n + " files</b> list hue" : "") + "</div>" +
+      '<div class="sub" style="margin-top:4px">Folder ki saari files neeche cards mein — 📥 Download, 👁️ Preview, ✏️ Edit.</div>' +
+      '<div class="dh-acts" style="margin-top:10px">' +
+      '<button class="btn btn-blue btn-sm" data-fact="scan">🔄 List refresh</button>' +
+      '<button class="btn btn-gray btn-sm" data-fact="open">🌐 Drive folder kholein</button>' +
+      "</div>" +
+      '<div id="dhFolderStatus" class="sub" style="margin-top:6px;font-size:12px"></div>' +
+      '<details style="margin-top:8px"><summary style="cursor:pointer;font-size:12.5px">📁 Folder browser (Drive view)</summary>' + frames + "</details>" +
+      "</div>";
+    box.querySelectorAll("[data-fact]").forEach(function (b) {
+      b.addEventListener("click", function () {
+        if (b.dataset.fact === "scan") dhScanFolders(true);
+        else dhOpenFolderView();
+      });
+    });
   }
 
   var KIND_ICON = { docx: "📄", pdf: "📕", cpp: "💻", text: "📝", other: "📦" };
   var KIND_LABEL = { docx: "MS Word", pdf: "PDF", cpp: "C++ code", text: "Text", other: "File" };
 
   function dhRender() {
+    dhRenderFolderBox();
     var box = $("dhList");
     if (!box) return;
     var q = (($("dhSearch") && $("dhSearch").value) || "").toLowerCase().trim();
@@ -107,14 +167,17 @@
   }
 
   /* ---------- fetch drive bytes (direct -> CORS proxies) ---------- */
-  async function fetchDriveBytes(fileId) {
-    var direct = driveDownloadUrl(fileId);
-    var urls = [
+  function proxyUrls(direct) {
+    return [
       direct,
       "https://api.allorigins.win/raw?url=" + encodeURIComponent(direct),
       "https://api.codetabs.com/v1/proxy?quest=" + encodeURIComponent(direct),
       "https://corsproxy.io/?" + encodeURIComponent(direct)
     ];
+  }
+  async function fetchDriveBytes(fileId) {
+    var direct = driveDownloadUrl(fileId);
+    var urls = proxyUrls(direct);
     for (var i = 0; i < urls.length; i++) {
       try {
         var r = await fetch(urls[i], { redirect: "follow" });
@@ -128,6 +191,56 @@
       } catch (e) { /* next */ }
     }
     return null;
+  }
+
+  async function fetchFolderHtml(folderId) {
+    var urls = proxyUrls("https://drive.google.com/drive/folders/" + folderId + "?hl=en");
+    for (var i = 0; i < urls.length; i++) {
+      try {
+        var r = await fetch(urls[i], { redirect: "follow" });
+        if (!r.ok) continue;
+        var t = await r.text();
+        if (t && t.length > 2000 && /drive|google/i.test(t)) return t;
+      } catch (e) { /* next */ }
+    }
+    return null;
+  }
+
+  function folderStatus(msg) {
+    var el = $("dhFolderStatus");
+    if (el) el.innerHTML = msg || "";
+  }
+
+  function readFolderCache() {
+    try { return JSON.parse(localStorage.getItem(FOLDER_KEY) || "{}"); } catch (e) { return {}; }
+  }
+
+  async function dhScanFolders(force) {
+    var ids = folderIds();
+    if (!ids.length) return;
+    var cache = readFolderCache();
+    if (!force && cache.ts && cache.files && cache.files.length && (Date.now() - cache.ts) < 30 * 60 * 1000) return;
+    folderStatus("🔄 Folder scan ho raha hai — saari assignments list ho rahi hain…");
+    var files = [], fail = 0;
+    for (var i = 0; i < ids.length; i++) {
+      var html = await fetchFolderHtml(ids[i]);
+      if (html) {
+        var got = DOCXKIT.parseFolderHtml(html);
+        got.forEach(function (f) {
+          if (!files.some(function (x) { return x.fileId === f.fileId; })) files.push(f);
+        });
+      } else fail++;
+    }
+    try { localStorage.setItem(FOLDER_KEY, JSON.stringify({ ts: Date.now(), files: files })); } catch (e) {}
+    if (files.length) folderStatus("✅ " + files.length + " files mil gayin — cards neeche!");
+    else folderStatus('⚠️ Folder list nahi mili — "🌐 Drive folder kholein" se manually dekhein (folder sharing "Anyone with the link" honi chahiye).');
+    dhRender();
+  }
+
+  function dhOpenFolderView() {
+    var ids = folderIds();
+    if (!ids.length) return;
+    window.open("https://drive.google.com/drive/folders/" + ids[0], "_blank", "noopener");
   }
 
   /* ---------- open editor by kind ---------- */
@@ -239,8 +352,20 @@
   }
   function dhAddSave() {
     var link = $("dhAddLink").value.trim();
+    var folderId = DOCXKIT.folderIdFromLink(link);
+    if (folderId) {
+      try {
+        var fx = JSON.parse(localStorage.getItem(FOLDER_EXTRA_KEY) || "[]");
+        if (fx.indexOf(folderId) < 0) fx.push(folderId);
+        localStorage.setItem(FOLDER_EXTRA_KEY, JSON.stringify(fx));
+      } catch (e) {}
+      dhCloseAdd();
+      dhScanFolders(true);
+      dhToast("✅ Folder add ho gaya — files list ho rahi hain…");
+      return;
+    }
     var fileId = DOCXKIT.fileIdFromLink(link);
-    if (!fileId) { dhErr("Google Drive link theek nahi — file/d/… ya open?id=… wala link paste karein."); return; }
+    if (!fileId) { dhErr("Google Drive link theek nahi — file/d/…, open?id=… ya /folders/… wala link paste karein."); return; }
     var it = {
       id: "dhx" + Date.now(),
       title: $("dhAddTitle").value.trim() || "Assignment",
@@ -291,7 +416,7 @@
     $("dhWordWrap").style.display = "none";
     $("dhTextWrap").style.display = "none";
     dhRender();
-    if (typeof window.fillHome === "function") { /* noop */ }
+    dhScanFolders(false);   // cache pura ho to turant, warna background mein scan
   }
 
   globalThis.showDriveHub = showDriveHub;
@@ -301,6 +426,8 @@
   globalThis.dhAddDialog = dhAddDialog;
   globalThis.dhCloseAdd = dhCloseAdd;
   globalThis.dhAddSave = dhAddSave;
+  globalThis.dhScanFolders = dhScanFolders;
+  globalThis.dhOpenFolderView = dhOpenFolderView;
   globalThis.dhAddExtra = function (it) {
     try {
       var ex = JSON.parse(localStorage.getItem(EXTRA_KEY) || "[]");
